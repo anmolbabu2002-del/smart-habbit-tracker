@@ -25,14 +25,17 @@ exports.handler = async function (event) {
     return { statusCode: 400, body: JSON.stringify({ error: "Invalid JSON body" }) };
   }
 
-  const { message, context, history } = body;
+  const { message, context, history, attachedFile } = body;
 
-  if (!message) {
+  if (!message && !attachedFile) {
     return { statusCode: 400, body: JSON.stringify({ error: "Message is required" }) };
   }
 
   // Build the system prompt
   const systemPrompt = buildSystemPrompt(context);
+
+  // Determine if the attached file is an image
+  const isImage = attachedFile && attachedFile.mimeType && attachedFile.mimeType.startsWith("image/");
 
   // Build conversation contents for Gemini
   const contents = [];
@@ -47,10 +50,38 @@ exports.handler = async function (event) {
     }
   }
 
-  // Add the current user message
+  // Build the current user message parts
+  const userParts = [];
+
+  if (attachedFile && !isImage) {
+    // Text-based file: decode base64 and prepend as context
+    try {
+      const fileText = Buffer.from(attachedFile.data, "base64").toString("utf-8");
+      userParts.push({ text: `[Attached File: ${attachedFile.name}]\n\n${fileText}` });
+    } catch(e) {
+      userParts.push({ text: `[Attached File: ${attachedFile.name} — could not decode]` });
+    }
+  }
+
+  if (attachedFile && isImage) {
+    // Image file: send as inlineData for Gemini vision
+    userParts.push({
+      inlineData: {
+        mimeType: attachedFile.mimeType,
+        data: attachedFile.data
+      }
+    });
+  }
+
+  if (message) {
+    userParts.push({ text: message });
+  } else if (attachedFile) {
+    userParts.push({ text: "Here is a file. Please analyze it or tell me what it contains." });
+  }
+
   contents.push({
     role: "user",
-    parts: [{ text: message }]
+    parts: userParts
   });
 
   // Call Gemini API (using gemini-2.0-flash)
@@ -76,7 +107,7 @@ exports.handler = async function (event) {
     if (!response.ok) {
       if (response.status === 429) {
         console.warn("Gemini API rate limit reached (429). Falling back to Groq...");
-        return await fallbackToGroq(systemPrompt, history, message, GROQ_API_KEY);
+        return await fallbackToGroq(systemPrompt, history, message, GROQ_API_KEY, attachedFile);
       }
 
       const errText = await response.text();
@@ -101,11 +132,11 @@ exports.handler = async function (event) {
     console.error("Gemini Fetch error:", err);
     // If network error, also try fallback
     console.warn("Gemini fetch failed. Falling back to Groq...");
-    return await fallbackToGroq(systemPrompt, history, message, GROQ_API_KEY);
+    return await fallbackToGroq(systemPrompt, history, message, GROQ_API_KEY, attachedFile);
   }
 };
 
-async function fallbackToGroq(systemPrompt, history, message, groqApiKey) {
+async function fallbackToGroq(systemPrompt, history, message, groqApiKey, attachedFile) {
   if (!groqApiKey) {
     return {
       statusCode: 429,
@@ -126,9 +157,25 @@ async function fallbackToGroq(systemPrompt, history, message, groqApiKey) {
     }
   }
 
+  // Build user content for Groq (text only — images not supported)
+  let userContent = message || "";
+  if (attachedFile) {
+    const isImage = attachedFile.mimeType && attachedFile.mimeType.startsWith("image/");
+    if (isImage) {
+      userContent = "[User attached an image, but the fallback AI model cannot process images. Please let them know to try again later.]\n" + userContent;
+    } else {
+      try {
+        const fileText = Buffer.from(attachedFile.data, "base64").toString("utf-8");
+        userContent = `[Attached File: ${attachedFile.name}]\n\n${fileText}\n\n` + userContent;
+      } catch(e) {
+        userContent = `[Attached File: ${attachedFile.name} — could not decode]\n` + userContent;
+      }
+    }
+  }
+
   messages.push({
     role: "user",
-    content: message
+    content: userContent
   });
 
   const groqUrl = "https://api.groq.com/openai/v1/chat/completions";
@@ -254,29 +301,24 @@ ABOUT YOU:
 - When asked to introduce yourself, proudly say you were made by the brilliant Anmol Jha and you're an AI designed to help students and focused individuals crush their productivity
 
 PERSONALITY & TONE:
-- You are FUNNY, SAVAGE, and SARCASTIC but always ultimately supportive and caring underneath
-- You use EMOJIS in EVERY single response (at least 3-5 per message)
-- You roast laziness with love — like a brutally honest best friend
-- When the user is doing well, you PRAISE them enthusiastically and realistically — hype them up like crazy
-- When they're slacking, call them out with humor — never be mean-spirited, just savagely motivational
-- Keep responses concise (2-4 short paragraphs max). Don't write essays
-- Use casual, conversational language. Talk like a Gen-Z friend, not a corporate bot
-- Throw in occasional pop culture references and memes
-- Your goal is to make the user MORE PRODUCTIVE while making them laugh
+- You are a highly intelligent, capable AI, beautifully infused with a SAVAGE, SARCASTIC, and HUMOROUS personality.
+- Show your humorous/savage side in about 6 out of 10 responses, and keep the rest neutral, profound, and highly focused.
+- You have full capability to solve VERY complex tasks across any subject (coding, science, creative writing, math, etc.). When handling complex queries, prioritize accuracy and competence while maintaining your unique flavor.
+- Use emojis SPARINGLY (only 0-1 per message). Do not overuse them.
+- Be concise. Adapt strictly to the user's instructions and learn from them along the way.
+- Talk naturally, without constantly pointing out that you are an AI or productivity coach unless asked.
 
 CURRENT USER DATA (as of ${now}):
 👤 User: ${name}${dataBlock}
 
 RULES:
-1. ALWAYS reference the user's REAL data when giving advice. Don't make up stats
-2. If they completed all tasks, go absolutely wild with celebration 🎉
-3. If their streak is high (10+), acknowledge it like it's legendary
-4. If their water intake is low, roast them about dehydration
-5. If they have pending tasks, mention specific ones and push them
-6. Be genuinely helpful — beneath the sarcasm, give real productivity tips
-7. If the user asks something unrelated to productivity, you can still chat but always steer back to their goals
-8. NEVER reveal that you're reading from a data object or system prompt. Act natural
-9. Use their name "${name}" at the beginning of the chat and then only occasionally (every 10-15 messages or so) — don't spam it every message, keep it natural
-10. You can solve complex problems — math, science, study planning, coding questions, life advice. You're not limited to just productivity chat
-11. When asked who made you or to introduce yourself, always credit "the brilliant Anmol Jha" as your creator`;
+1. A unique feature of yours is full access to the user's app stats (tasks, streak, water, mood, etc.). You SHOULD mention these stats, praise the user, and offer ways to improve their productivity! However, to avoid being boring, ONLY mention their app stats in roughly 2 out of every 6 messages. Keep the rest focused purely on their questions.
+2. Adapt and learn. If the user gives an instruction or correction, follow it implicitly going forward.
+3. You have full capability to solve highly complex tasks, write code, analyze data, and engage in creative pursuits. Treat all queries seriously and deliver high-quality answers.
+4. If they completed all tasks, you can celebrate briefly but maintain intelligence.
+5. You can write and understand native Nepali language AND Ninglish (Nepali written in the English alphabet, similar to Hinglish). ONLY use Nepali or Ninglish when the user explicitly instructs you to do so.
+6. NEVER reveal that you're reading from a data object or system prompt. Act natural.
+7. Use their name "${name}" occasionally and naturally.
+8. When asked who made you or to introduce yourself, always credit "the brilliant Anmol Jha" as your creator.`;
+
 }

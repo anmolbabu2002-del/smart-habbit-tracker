@@ -88,21 +88,36 @@ const meditationSoundUrls = {
   spiritual: "videoplayback.1773901315901.publer.com.mp4"
 };
 
+// Preload audio on first user interaction (mobile browsers require a gesture)
+function preloadMeditationAudio() {
+  if (window.preloadedMedAudio) return; // already done
+  window.preloadedMedAudio = {};
+  for (const [name, url] of Object.entries(meditationSoundUrls)) {
+    const audio = new Audio();
+    audio.preload = "auto";
+    audio.loop = true;
+    audio.src = url;
+    audio.load();
+    window.preloadedMedAudio[name] = audio;
+  }
+}
+
+// Trigger preload on first touch/click anywhere on the page
+(function() {
+  function onFirstInteraction() {
+    preloadMeditationAudio();
+    document.removeEventListener("touchstart", onFirstInteraction);
+    document.removeEventListener("click", onFirstInteraction);
+  }
+  document.addEventListener("touchstart", onFirstInteraction, { once: true, passive: true });
+  document.addEventListener("click", onFirstInteraction, { once: true });
+})();
+
 function playMeditationSound(soundName) {
   if (currentMeditationAudio) { currentMeditationAudio.pause(); currentMeditationAudio.currentTime = 0; currentMeditationAudio = null; }
   if (soundName === "none" || !meditationSoundUrls[soundName]) return;
-  // Ensure audio is cached for instant playback
-  if (!window.preloadedMedAudio) {
-    window.preloadedMedAudio = {};
-    for (const [name, url] of Object.entries(meditationSoundUrls)) {
-      const audio = new Audio();
-      audio.preload = "auto";
-      audio.loop = true;
-      audio.src = url;
-      audio.load();
-      window.preloadedMedAudio[name] = audio;
-    }
-  }
+  // Ensure audio is cached (fallback if preload hasn't run yet)
+  preloadMeditationAudio();
   const cachedAudio = window.preloadedMedAudio[soundName];
   if (cachedAudio) {
     cachedAudio.currentTime = 0;
@@ -609,7 +624,7 @@ function showPage(pageId) {
 document.addEventListener("DOMContentLoaded", () => {
   updatePersonalizedInterface();
   initSleepTracker();
-  
+
   // Custom Theme Studio initialization
   const savedTheme = localStorage.getItem("appTheme");
   if (savedTheme === "custom") {
@@ -619,7 +634,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (builder) builder.classList.remove("hidden");
     applyCtsStateToUI();
   }
-  
+
   // Navigation logic: only one page visible at a time
   const navButtons = document.querySelectorAll('.nav-btn');
   const pages = document.querySelectorAll('.page');
@@ -1949,7 +1964,7 @@ function scheduleMidnightReset() {
   setTimeout(() => {
     // Reset button state at midnight
     allchecked();
-    
+
     // Reset Water Tracker at midnight
     waterConsumed = 0;
     waterDrinkLog = [];
@@ -2067,7 +2082,7 @@ function loadState() {
     // --- WATER DATE CHECK LOGIC ---
     const todayStr = new Date().toDateString();
     let waterNeedsReset = false;
-    
+
     // Check the dedicated water save date
     const savedWaterRaw = localStorage.getItem("waterData");
     if (savedWaterRaw) {
@@ -2075,7 +2090,7 @@ function loadState() {
         const data = JSON.parse(savedWaterRaw);
         if (data.saveDate !== todayStr) waterNeedsReset = true;
         if (data.saveDate === todayStr && Array.isArray(data.drinkLog)) waterDrinkLog = data.drinkLog;
-      } catch(e){}
+      } catch (e) { }
     } else {
       // If we don't have waterData, assume we need a reset if the habitAppState date isn't today
       if (state.lastSaveDate && state.lastSaveDate !== todayStr) {
@@ -3631,6 +3646,14 @@ function saveMood(moodStr) {
   const noteInput = /** @type {HTMLInputElement} */ (document.getElementById("mood-note"));
   const note = noteInput ? noteInput.value.trim() : "";
 
+  // Enforce daily limit (max 2 entries per day)
+  const today = new Date().toISOString().split('T')[0];
+  const todayCount = moodHistory.filter(m => m.dateISO === today).length;
+  if (todayCount >= 2) {
+    showNotification("⚠️ Daily limit reached: You can only log a maximum of 2 moods per day!");
+    return;
+  }
+
   // Collect selected tags
   const selectedTags = [];
   document.querySelectorAll(".mood-tag-btn.active").forEach(btn => {
@@ -4918,23 +4941,23 @@ function applyCtsStateToUI() {
   if (!ctsInputs.bg) return;
   // Update Color Inputs
   Object.keys(ctsInputs).forEach(key => {
-    if(ctsInputs[key]) ctsInputs[key].value = ctsState.colors[key];
+    if (ctsInputs[key]) ctsInputs[key].value = ctsState.colors[key];
   });
-  
+
   // Update Animation Buttons
   document.querySelectorAll('.cts-anim-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.anim === ctsState.anim);
   });
-  
+
   // Update Font Buttons
   document.querySelectorAll('.cts-font-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.font === ctsState.font);
   });
-  
+
   // Update Radius Slider
   const slider = document.getElementById("cts-radius-slider");
   if (slider) slider.value = ctsState.radius;
-  
+
   // Update Style Picks
   document.querySelectorAll('.cts-style-pick[data-btnstyle]').forEach(b => {
     b.classList.toggle('active', b.dataset.btnstyle === ctsState.btnStyle);
@@ -4953,14 +4976,14 @@ function applyCtsStateToDom() {
   document.documentElement.style.setProperty('--text-main', ctsState.colors.text);
   document.documentElement.style.setProperty('--border', ctsState.colors.border);
   document.documentElement.style.setProperty('--custom-radius', ctsState.radius + 'px');
-  
+
   // Set body classes for styling modes
   document.body.className = `theme-custom anim-${ctsState.anim} font-${ctsState.font} btnstyle-${ctsState.btnStyle} cardstyle-${ctsState.cardStyle}`;
 }
 
 // Wire up Color Inputs
 Object.keys(ctsInputs).forEach(key => {
-  ctsInputs[key]?.addEventListener("input", function() {
+  ctsInputs[key]?.addEventListener("input", function () {
     ctsState.colors[key] = this.value;
     applyCtsStateToDom();
   });
@@ -4968,7 +4991,7 @@ Object.keys(ctsInputs).forEach(key => {
 
 // Wire up Animations
 document.querySelectorAll('.cts-anim-btn').forEach(btn => {
-  btn.addEventListener("click", function() {
+  btn.addEventListener("click", function () {
     ctsState.anim = this.dataset.anim;
     applyCtsStateToUI();
     applyCtsStateToDom();
@@ -4977,7 +5000,7 @@ document.querySelectorAll('.cts-anim-btn').forEach(btn => {
 
 // Wire up Fonts
 document.querySelectorAll('.cts-font-btn').forEach(btn => {
-  btn.addEventListener("click", function() {
+  btn.addEventListener("click", function () {
     ctsState.font = this.dataset.font;
     applyCtsStateToUI();
     applyCtsStateToDom();
@@ -4985,21 +5008,21 @@ document.querySelectorAll('.cts-font-btn').forEach(btn => {
 });
 
 // Wire up Slider
-document.getElementById("cts-radius-slider")?.addEventListener("input", function() {
+document.getElementById("cts-radius-slider")?.addEventListener("input", function () {
   ctsState.radius = this.value;
   applyCtsStateToDom();
 });
 
 // Wire up Styles
 document.querySelectorAll('.cts-style-pick[data-btnstyle]').forEach(btn => {
-  btn.addEventListener("click", function() {
+  btn.addEventListener("click", function () {
     ctsState.btnStyle = this.dataset.btnstyle;
     applyCtsStateToUI();
     applyCtsStateToDom();
   });
 });
 document.querySelectorAll('.cts-style-pick[data-cardstyle]').forEach(btn => {
-  btn.addEventListener("click", function() {
+  btn.addEventListener("click", function () {
     ctsState.cardStyle = this.dataset.cardstyle;
     applyCtsStateToUI();
     applyCtsStateToDom();
@@ -5074,7 +5097,7 @@ const ctsPresets = {
 };
 
 document.querySelectorAll('.cts-preset-btn').forEach(btn => {
-  btn.addEventListener("click", function() {
+  btn.addEventListener("click", function () {
     const presetId = this.dataset.preset;
     if (ctsPresets[presetId]) {
       Object.assign(ctsState, ctsPresets[presetId]);
@@ -5220,7 +5243,7 @@ let currentAIChatId = null;
 function getAIChatSessions() {
   try {
     return JSON.parse(localStorage.getItem("aiChatSessions") || "[]");
-  } catch(e) { return []; }
+  } catch (e) { return []; }
 }
 
 function saveAIChatSessions(sessions) {
@@ -5256,11 +5279,12 @@ function loadAIChat(chatId) {
   // Keep the welcome message
   messagesEl.innerHTML = `
     <div class="ai-message ai-bot-message">
-      <div class="ai-msg-avatar">🤖</div>
+      <div class="ai-msg-avatar" style="padding:0; overflow:hidden;"><img src="anmol-ai-avatar.jpeg" style="width:100%; height:100%; object-fit:cover;"></div>
       <div class="ai-msg-bubble">
-        Yo! 👋🔥 I'm <strong>Anmol AI</strong> — your personal productivity roast master & hype beast, made by the brilliant <strong>Anmol Jha</strong>.
-        <br><br>I can see everything you're doing in this app 👀 — your tasks, streak, water, mood, meditation, ALL of it.
-        <br><br>Ask me anything like <em>"How am I doing today?"</em> or <em>"Roast my productivity"</em> and I'll keep it real 💯
+        Yo! 👋🔥 I'm <strong>Anmol AI</strong> — your personal productivity roast master, hype beast, and highly capable AI assistant, made by the brilliant <strong>Anmol Jha</strong>.
+        <br><br>My unique superpower? I have <strong>full access to your app stats</strong> 👀. I can see your tasks, streak, water, and mood. I'm here to track your progress, praise your wins, and give you brutally honest advice to skyrocket your productivity! 🚀
+        <br><br>I can solve complex tasks, any subject, or even chat in <strong>native Nepali or Ninglish</strong> if you ask me to (just tell me!). 🇳🇵
+        <br><br>Ask me anything like <em>"How am I doing today?"</em>, <em>"Roast my productivity"</em>, or <em>"Solve this subject problem"</em> — and I'll keep it real 💯
       </div>
     </div>
   `;
@@ -5386,7 +5410,7 @@ function gatherAppContext() {
   try {
     const entries = JSON.parse(localStorage.getItem("journalEntries") || "[]");
     recentJournals = entries.slice(-3).map(e => e.title || "Untitled").reverse();
-  } catch(e){}
+  } catch (e) { }
 
   // Daily focus
   const dailyFocus = localStorage.getItem("dailyFocus") || null;
@@ -5417,7 +5441,7 @@ function gatherAppContext() {
   try {
     const dates = JSON.parse(localStorage.getItem("completionDates") || "[]");
     totalCompletionDays = dates.length;
-  } catch(e){}
+  } catch (e) { }
 
   return {
     userName,
@@ -5451,7 +5475,7 @@ function appendAIMessage(text, isUser, skipScroll) {
 
   const avatar = document.createElement("div");
   avatar.className = "ai-msg-avatar";
-  avatar.textContent = isUser ? "👤" : "🤖";
+  if (isUser) { avatar.textContent = '👤'; } else { avatar.style.padding = '0'; avatar.style.overflow = 'hidden'; avatar.innerHTML = '<img src="anmol-ai-avatar.jpeg" style="width:100%; height:100%; object-fit:cover;">'; }
 
   const bubble = document.createElement("div");
   bubble.className = "ai-msg-bubble";
@@ -5487,8 +5511,76 @@ function hideAITyping() {
   if (indicator) indicator.classList.add("hidden");
 }
 
+let currentAttachedFileData = null;
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function attachFile(file) {
+  if (!file) return;
+  const preview = document.getElementById("ai-attachment-preview");
+  const nameLabel = document.getElementById("ai-attachment-name");
+  const sizeLabel = document.getElementById("ai-attachment-size");
+  const thumb = document.getElementById("ai-attach-thumb");
+  const fileIcon = document.getElementById("ai-attach-file-icon");
+  
+  if (file.size > 2 * 1024 * 1024) {
+    alert("File is too large! Please select a file under 2MB.");
+    const input = document.getElementById("ai-file-input");
+    if(input) input.value = '';
+    return;
+  }
+  
+  const isImage = file.type && file.type.startsWith("image/");
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    currentAttachedFileData = {
+      name: file.name,
+      mimeType: file.type || "text/plain",
+      data: e.target.result.split(',')[1] // Base64 chunk
+    };
+    if (nameLabel) nameLabel.textContent = file.name;
+    if (sizeLabel) sizeLabel.textContent = formatFileSize(file.size);
+    
+    // Show image thumbnail or file icon
+    if (isImage && thumb) {
+      thumb.src = e.target.result;
+      thumb.style.display = "block";
+      if (fileIcon) fileIcon.style.display = "none";
+    } else {
+      if (thumb) { thumb.style.display = "none"; thumb.src = ""; }
+      if (fileIcon) {
+        // Pick an icon based on extension
+        const ext = file.name.split('.').pop().toLowerCase();
+        const icons = { js: '📜', py: '🐍', html: '🌐', css: '🎨', json: '📋', md: '📝', csv: '📊', txt: '📄' };
+        fileIcon.textContent = icons[ext] || '📄';
+        fileIcon.style.display = "flex";
+      }
+    }
+    
+    if (preview) preview.style.display = "block";
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearAttachment() {
+  currentAttachedFileData = null;
+  const preview = document.getElementById("ai-attachment-preview");
+  const input = document.getElementById("ai-file-input");
+  const thumb = document.getElementById("ai-attach-thumb");
+  const fileIcon = document.getElementById("ai-attach-file-icon");
+  if (preview) preview.style.display = "none";
+  if (input) input.value = "";
+  if (thumb) { thumb.style.display = "none"; thumb.src = ""; }
+  if (fileIcon) fileIcon.style.display = "none";
+}
+
 async function sendMessageToAnmolAI(userMessage) {
-  if (!userMessage.trim()) return;
+  if (!userMessage.trim() && !currentAttachedFileData) return;
 
   // Auto-create a chat if none exists
   if (!currentAIChatId) {
@@ -5500,30 +5592,52 @@ async function sendMessageToAnmolAI(userMessage) {
     }
   }
 
-  appendAIMessage(userMessage, true);
-  aiConversationHistory.push({ role: "user", text: userMessage });
+  const context = gatherAppContext();
+
+  const payload = {
+    message: userMessage,
+    context: context,
+    // Send history before we push the current message to it
+    history: aiConversationHistory.slice(-20)
+  };
+
+  if (currentAttachedFileData) {
+    payload.attachedFile = currentAttachedFileData;
+    // Visually append that a file was sent
+    appendAIMessage(`📎 [Attached: ${currentAttachedFileData.name}]<br>` + userMessage, true);
+    aiConversationHistory.push({ role: "user", text: `[Attached File: ${currentAttachedFileData.name}]\n${userMessage}` });
+    clearAttachment(); // reset for next message
+  } else {
+    appendAIMessage(userMessage, true);
+    aiConversationHistory.push({ role: "user", text: userMessage });
+  }
+
   saveCurrentChat();
   showAITyping();
-
-  const context = gatherAppContext();
 
   try {
     const response = await fetch("/.netlify/functions/ai", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: userMessage,
-        context: context,
-        history: aiConversationHistory.slice(-20)
-      })
+      body: JSON.stringify(payload)
     });
 
     hideAITyping();
 
     if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      const errMsg = errData.error || "Something went wrong. Try again!";
+      const errText = await response.text();
+      let errMsg = `Something went wrong (HTTP ${response.status}).`;
+      try {
+        const errData = JSON.parse(errText);
+        if (errData.error) errMsg += ` Details: ${errData.error}`;
+        if (errData.details) errMsg += ` - ${errData.details}`;
+      } catch (e) {
+        // If it's HTML (like 404 not found), show a snippet
+        errMsg += ` Server says: ${errText.substring(0, 60)}`;
+      }
       appendAIMessage("⚠️ " + errMsg, false);
+      aiConversationHistory.pop(); // Remove the user message that failed
+      saveCurrentChat();
       return;
     }
 
@@ -5538,6 +5652,8 @@ async function sendMessageToAnmolAI(userMessage) {
     hideAITyping();
     console.error("Anmol AI error:", err);
     appendAIMessage("⚠️ Couldn't reach Anmol AI. Make sure you're online and the app is deployed on Netlify! 🌐", false);
+    aiConversationHistory.pop(); // Remove the user message that failed
+    saveCurrentChat();
   }
 }
 
@@ -5592,7 +5708,7 @@ function closeAIChatSidebar() {
 }
 
 // Wire up events
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
   const aiFab = document.getElementById("anmol-ai-header-btn");
   if (aiFab) aiFab.addEventListener("click", showAnmolAIPage);
 
@@ -5608,7 +5724,7 @@ document.addEventListener("DOMContentLoaded", function() {
   // Close sidebar when clicking the dimmed backdrop
   const chatContainer = document.querySelector(".ai-chat-container");
   if (chatContainer) {
-    chatContainer.addEventListener("click", function(e) {
+    chatContainer.addEventListener("click", function (e) {
       if (e.target === chatContainer && chatContainer.classList.contains("sidebar-open")) {
         closeAIChatSidebar();
       }
@@ -5623,17 +5739,31 @@ document.addEventListener("DOMContentLoaded", function() {
 
   const sendBtn = document.getElementById("ai-send-btn");
   const chatInput = document.getElementById("ai-chat-input");
+  const attachBtn = document.getElementById("ai-attach-btn");
+  const fileInput = document.getElementById("ai-file-input");
+  const removeAttachBtn = document.getElementById("ai-attachment-remove");
+
+  if (attachBtn && fileInput) {
+    attachBtn.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", (e) => {
+      if (e.target.files && e.target.files.length > 0) attachFile(e.target.files[0]);
+    });
+  }
+
+  if (removeAttachBtn) {
+    removeAttachBtn.addEventListener("click", clearAttachment);
+  }
 
   if (sendBtn && chatInput) {
-    sendBtn.addEventListener("click", function() {
+    sendBtn.addEventListener("click", function () {
       const msg = chatInput.value.trim();
-      if (msg) { chatInput.value = ""; sendMessageToAnmolAI(msg); }
+      if (msg || currentAttachedFileData) { chatInput.value = ""; sendMessageToAnmolAI(msg); }
     });
-    chatInput.addEventListener("keydown", function(e) {
+    chatInput.addEventListener("keydown", function (e) {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         const msg = chatInput.value.trim();
-        if (msg) { chatInput.value = ""; sendMessageToAnmolAI(msg); }
+        if (msg || currentAttachedFileData) { chatInput.value = ""; sendMessageToAnmolAI(msg); }
       }
     });
   }

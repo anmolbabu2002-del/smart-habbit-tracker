@@ -1649,7 +1649,7 @@
                 <div class="ai-chat-header-left">
                     <button id="ai-history-btn" class="ai-header-btn" title="Chat History">☰</button>
                     <div class="ai-chat-header-info">
-                        <div class="ai-avatar">🤖</div>
+                        <img src="anmol-ai-avatar.jpeg" class="ai-avatar" alt="Anmol AI" style="object-fit: cover; padding: 0; border: 2px solid rgba(255,255,255,0.8);">
                         <div>
                             <div class="ai-chat-title">Anmol AI</div>
                             <div class="ai-chat-subtitle">Your savage productivity coach</div>
@@ -1673,7 +1673,7 @@
 
             <div class="ai-chat-messages" id="ai-chat-messages">
                 <div class="ai-message ai-bot-message">
-                    <div class="ai-msg-avatar">🤖</div>
+                    <div class="ai-msg-avatar" style="padding:0; overflow:hidden;"><img src="anmol-ai-avatar.jpeg" style="width:100%; height:100%; object-fit:cover;"></div>
                     <div class="ai-msg-bubble">
                         Yo! 👋🔥 I'm <strong>Anmol AI</strong> — your personal productivity roast master & hype beast.
                         <br><br>I can see everything you're doing in this app 👀 — your tasks, your streak, your water intake, ALL of it.
@@ -1683,13 +1683,29 @@
             </div>
 
             <div class="ai-typing-indicator hidden" id="ai-typing-indicator">
-                <div class="ai-msg-avatar">🤖</div>
+                <div class="ai-msg-avatar" style="padding:0; overflow:hidden;"><img src="anmol-ai-avatar.jpeg" style="width:100%; height:100%; object-fit:cover;"></div>
                 <div class="ai-typing-dots">
                     <span></span><span></span><span></span>
                 </div>
             </div>
 
+            <!-- Attachment Preview Area (WhatsApp/ChatGPT style) -->
+            <div id="ai-attachment-preview" class="ai-attachment-preview">
+                <div class="ai-attach-card">
+                    <img id="ai-attach-thumb" class="ai-attach-thumb" src="" alt="Preview" style="display:none;">
+                    <div id="ai-attach-file-icon" class="ai-attach-file-icon" style="display:none;">📄</div>
+                    <div class="ai-attach-info">
+                        <span id="ai-attachment-name" class="ai-attach-name">filename.txt</span>
+                        <span id="ai-attachment-size" class="ai-attach-size">0 KB</span>
+                    </div>
+                    <button id="ai-attachment-remove" class="ai-attach-remove" title="Remove">✕</button>
+                </div>
+            </div>
             <div class="ai-chat-input-bar">
+                <input type="file" id="ai-file-input" style="display: none;" accept="image/*,.txt,.js,.py,.html,.css,.json,.md,.csv">
+                <button id="ai-attach-btn" class="ai-attach-btn" title="Attach Image or small Text file (Max 2MB)">
+                    📎
+                </button>
                 <input type="text" id="ai-chat-input" placeholder="Ask Anmol AI anything..." autocomplete="off">
                 <button id="ai-send-btn" class="ai-send-btn">
                     <span>➤</span>
