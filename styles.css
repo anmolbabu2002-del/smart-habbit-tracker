@@ -9147,3 +9147,30 @@ body.theme-custom.cardstyle-neumorphic .task-item {
     }
 }
 
+
+
+/* ==================== MOBILE CHATBOT LAYOUT FIX ==================== */
+@media screen and (max-width: 768px) {
+    #anmol-ai-page {
+        /* Use dynamic viewport height to account for mobile keyboards and URL bars */
+        height: 100dvh !important;
+        bottom: auto !important;
+    }
+    
+    .ai-chat-container {
+        height: 100dvh !important;
+    }
+    
+    .ai-chat-input-bar {
+        /* Add extra padding at the bottom for iPhone home bars and mobile navigation */
+        padding-bottom: max(20px, env(safe-area-inset-bottom, 24px)) !important;
+        /* Ensure it stays above everything */
+        position: relative;
+        z-index: 10000;
+    }
+    
+    .ai-chat-messages {
+        /* Give messages a bit more breathing room at the bottom */
+        padding-bottom: 25px !important;
+    }
+}
