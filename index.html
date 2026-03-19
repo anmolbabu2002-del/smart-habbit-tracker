@@ -1,0 +1,1705 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Habit & Focus Tracker 💪</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700&family=Playfair+Display:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=2.2">
+    <style>
+        .daily-focus-task {
+            border: 3px solid #ffaa00 !important;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.25) 0%, rgba(255, 165, 0, 0.15) 100%) !important;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.6) !important;
+            transform: scale(1.02);
+            position: relative;
+            z-index: 10;
+        }
+
+        .daily-focus-select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 2px solid var(--border);
+            margin-bottom: 10px;
+            font-size: 16px;
+            font-family: inherit;
+            background: rgba(255, 255, 255, 0.8);
+            outline: none;
+            cursor: pointer;
+        }
+
+        .daily-focus-select:focus {
+            border-color: var(--primary);
+        }
+
+        .focus-task-highlight {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 165, 0, 0.15) 100%);
+            border: 2px solid gold;
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2);
+        }
+
+        .focus-emoji {
+            font-size: 28px;
+        }
+
+        /* Journal styling */
+        .journal-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .journal-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .journal-btn {
+            background: var(--card-bg);
+            color: var(--text-main);
+            border: 2px solid var(--border);
+            padding: 12px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .journal-btn:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .journal-btn.delete {
+            color: #f5576c;
+            border-color: rgba(245, 87, 108, 0.3);
+        }
+
+        .journal-btn.delete:hover {
+            background: rgba(245, 87, 108, 0.1);
+            border-color: #f5576c;
+        }
+
+        .journal-search-container input {
+            padding: 12px;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            width: 300px;
+            font-size: 15px;
+            background: var(--card-bg);
+            color: var(--text-main);
+        }
+
+        .journal-entry {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid var(--border);
+            margin-bottom: 15px;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+
+        .journal-entry:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .journal-entry h3 {
+            margin: 0 0 10px 0;
+            color: var(--text-main);
+            font-size: 1.2rem;
+        }
+
+        .journal-entry p {
+            margin: 0;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .journal-entry small {
+            display: block;
+            margin-top: 10px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .journal-entry img {
+            max-width: 100%;
+            max-height: 150px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border: 1px solid var(--border);
+            object-fit: contain;
+            background: white;
+        }
+
+        .journal-entry-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            border-top: 1px solid var(--border);
+            padding-top: 15px;
+        }
+
+        .focus-text {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--text-main);
+            line-height: 1.4;
+            word-break: break-word;
+        }
+
+        .clear-focus-btn {
+            background: rgba(245, 87, 108, 0.1);
+            color: #f5576c;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            transition: all 0.2s ease;
+        }
+
+        .clear-focus-btn:hover {
+            background: rgba(245, 87, 108, 0.2);
+            transform: translateY(-1px);
+        }
+
+        /* Journal Creative Features */
+        .journal-toolbar {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+
+        .format-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-weight: bold;
+            color: var(--text-main);
+            transition: all 0.2s ease;
+        }
+
+        .format-btn:hover {
+            background: var(--hover);
+        }
+
+        .format-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .journal-rich-content {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            background: var(--card-bg);
+            color: var(--text-main);
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            outline: none;
+            transition: all 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .journal-rich-content:focus {
+            border-color: var(--primary);
+        }
+
+        /* Paper Themes */
+        .theme-lined {
+            background-color: var(--card-bg) !important;
+            background-image: repeating-linear-gradient(transparent, transparent 29px, rgba(0, 0, 0, 0.1) 30px) !important;
+            background-attachment: local !important;
+        }
+
+        .theme-grid {
+            background-color: var(--card-bg) !important;
+            background-image:
+                linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px) !important;
+            background-size: 20px 20px !important;
+        }
+
+        .theme-dotted {
+            background-color: var(--card-bg) !important;
+            background-image: radial-gradient(rgba(0, 0, 0, 0.15) 1px, transparent 1px) !important;
+            background-size: 20px 20px !important;
+        }
+
+        .journal-entry-preview {
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            opacity: 0.8;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            word-wrap: break-word;
+        }
+
+        .journal-tags-input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .journal-tag-badge {
+            display: inline-block;
+            background: rgba(94, 92, 230, 0.1);
+            color: var(--primary);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        /* Canvas */
+        .journal-drawing-area {
+            display: none;
+            width: 100%;
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            margin-bottom: 15px;
+            position: relative;
+            background: #fff;
+        }
+
+        .journal-drawing-area.active {
+            display: block;
+        }
+
+        .drawing-canvas {
+            width: 100%;
+            height: 250px;
+            touch-action: none;
+            cursor: crosshair;
+        }
+
+        .drawing-controls {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation Bar -->
+    <nav class="nav-bar">
+        <button class="nav-btn" data-page="dashboard-page">🏠 Dashboard</button>
+        <button class="nav-btn active" data-page="main">📋 Tasks</button>
+        <button class="nav-btn" data-page="streak-page">🔥 Streak</button>
+        <button class="nav-btn" data-page="journal-page">📔 Journal</button>
+        <button class="nav-btn" data-page="water-page">💧 Water</button>
+        <button class="nav-btn" data-page="pomodoro-page">🍅 Pomodoro</button>
+        <button class="nav-btn" data-page="meditation-page">🧘 Meditation</button>
+        <button class="nav-btn" data-page="mood-page">🎭 Mood</button>
+        <button class="nav-btn" data-page="sleep-page">😴 Sleep</button>
+        <button class="nav-btn" data-page="settings-page">⚙️ Settings</button>
+    </nav>
+    <!-- Dashboard Page -->
+    <div id="dashboard-page" class="page">
+        <h1 class="page-title">Welcome Back! 👋</h1>
+
+        <div class="stats-grid">
+            <div class="stat-card streak-card">
+                <span class="stat-icon">🔥</span>
+                <div class="stat-info">
+                    <span class="stat-value" id="dash-streak">0</span>
+                    <span class="stat-label">Day Streak</span>
+                </div>
+            </div>
+            <div class="stat-card task-card">
+                <span class="stat-icon">📋</span>
+                <div class="stat-info">
+                    <span class="stat-value" id="dash-tasks">0/0</span>
+                    <span class="stat-label">Tasks Done</span>
+                </div>
+            </div>
+            <div class="stat-card water-card">
+                <span class="stat-icon">💧</span>
+                <div class="stat-info" style="width: 100%;">
+                    <span class="stat-value" id="dash-water" style="font-size: 1.2rem;">0/0 ml</span>
+                    <span class="stat-label">Water Drunk</span>
+                    <div
+                        style="width: 100%; height: 5px; background: rgba(0,0,0,0.1); border-radius: 3px; margin-top: 5px; overflow: hidden;">
+                        <div id="dash-water-progress"
+                            style="width: 0%; height: 100%; background: var(--primary); transition: width 0.3s;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card mood-card">
+                <span class="stat-icon">🎭</span>
+                <div class="stat-info">
+                    <span class="stat-value" id="dash-mood">-</span>
+                    <span class="stat-label">Last Mood</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="progress-container">
+            <h3>📈 Daily Progress</h3>
+            <div class="circular-progress">
+                <svg viewBox="0 0 36 36" class="circular-chart">
+                    <path class="circle-bg"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path class="circle" id="dash-progress-circle" stroke-dasharray="0, 100"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <text x="18" y="20.35" class="percentage" id="dash-progress-text">0%</text>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Todo List Page -->
+    <div id="main" class="page active">
+        <button id="menuBtn" class="menu-btn" title="Options">≡</button>
+        <div id="menuDropdown" class="menu-dropdown hidden">
+            <button id="focusTaskMenuBtn" class="menu-option">🎯 Highlight Task to Focus</button>
+            <button id="selectionModeBtn" class="menu-option">🗑️ Select & Delete</button>
+            <div class="menu-divider"></div>
+            <button id="taskStatsBtn" class="menu-option">📊 Task Stats</button>
+            <button id="shuffleTasksBtn" class="menu-option">🎲 Shuffle Tasks</button>
+            <button id="zenModeBtn" class="menu-option">🌙 Zen Mode</button>
+            <div class="menu-divider"></div>
+            <button id="resetApp" class="menu-option danger">🔄 Reset App</button>
+        </div>
+
+        <!-- Focus Task Selection Modal -->
+        <div id="focus-modal-overlay" class="hidden"
+            style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; display:flex; align-items:center; justify-content:center;">
+            <div
+                style="background:var(--bg-color); padding:20px; border-radius:15px; width:90%; max-width:400px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+                <h3 style="margin-top:0; color:var(--text-main);">🎯 Select Task to Focus</h3>
+                <select id="modal-focus-select" class="daily-focus-select">
+                    <option value="">Select a task...</option>
+                </select>
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    <button id="modal-focus-apply"
+                        style="flex:1; background:var(--primary); color:white; padding:10px; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">Apply</button>
+                    <button id="modal-focus-cancel"
+                        style="flex:1; background:var(--card-bg); color:var(--text-main); border:1px solid var(--border); padding:10px; border-radius:10px; cursor:pointer;">Cancel</button>
+                </div>
+                <button id="modal-focus-clear"
+                    style="width:100%; margin-top:10px; background:rgba(245, 87, 108, 0.1); color:#f5576c; border:none; padding:10px; border-radius:10px; font-weight:bold; cursor:pointer;">Clear
+                    Focus</button>
+            </div>
+        </div>
+
+        <div id="greeting-container" style="text-align: center; margin-bottom: 20px;">
+            <div class="greeting-row">
+                <h1 id="dynamic-greeting"
+                    style="margin: 0; font-size: 2.2rem; text-align: left; line-height: 1.3; flex: 1;">
+                    <span class="greeting-text" style="background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">Good Morning</span>&nbsp;<span class="greeting-emoji" style="display: inline-block;">🌅</span>
+                </h1>
+            </div>
+            <h2 id="heading" style="margin-top: 5px; font-size: 1.2rem; color: var(--text-muted); font-weight: normal;">
+                Smart Habit & Focus Tracker 💪</h2>
+            <div class="header-action-btns">
+                <button id="anmol-ai-header-btn" class="become-productive-inline"><span class="btn-icon">🤖</span> Anmol AI</button>
+                <button id="cheatsheet-btn" class="become-productive-inline"><span class="btn-icon">💡</span> Productive</button>
+            </div>
+        </div>
+
+        <!-- Name Registration Overlay -->
+        <div id="name-registration-overlay" class="hidden">
+            <div class="name-registration-modal">
+                <div class="name-registration-icon">👋</div>
+                <h2>Welcome!</h2>
+                <p>Let's customize your experience. What should we call you?</p>
+                <div class="name-input-group">
+                    <input type="text" id="overlay-name-input" placeholder="Enter your name (3-10 letters)" minlength="3" maxlength="10" autocomplete="off">
+                    <div id="name-error-msg" class="name-error-msg">Name must be 3-10 characters long</div>
+                </div>
+                <button id="overlay-save-name-btn" class="name-save-btn">Get Started ✨</button>
+            </div>
+        </div>
+
+        <p id="instruction-text">✨ Double-click any task to edit it</p>
+
+        <!-- Daily Quote Card -->
+        <div class="dashboard-quote-card" id="daily-quote-card">
+            <p id="dashboard-quote-text" class="dashboard-quote-text">Fetching daily inspiration...</p>
+            <p id="dashboard-quote-author" class="dashboard-quote-author"></p>
+        </div>
+
+        <div id="selection-controls" class="selection-controls hidden">
+            <button id="deleteSelected" class="menu-option danger">🗑️ Delete Selected (<span
+                    id="selectedCount">0</span>)</button>
+            <button id="cancelSelection" class="menu-option">❌ Cancel</button>
+        </div>
+
+        <div class="input-container">
+            <input id="taskone" type="text" placeholder="✨ What do you want to accomplish today?">
+            <button id="plus">➕</button>
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="empty-state">
+            <div class="empty-state-icon">📝</div>
+            <h3>No tasks yet!</h3>
+            <p>Start your productive day by adding your first task above. Every big achievement starts with a single step.</p>
+            <button class="empty-state-cta" onclick="document.getElementById('taskone').focus();">
+                ✨ Add Your First Task
+            </button>
+        </div>
+
+        <ul id="task"></ul>
+
+        <button id="alldone" style="display:none;">🎉 All Tasks Completed!</button>
+        <p id="all"></p>
+        <p id="streak"></p>
+
+        <!-- Priority Picker Modal -->
+        <div id="priority-modal-overlay" class="priority-modal-overlay hidden">
+            <div class="priority-modal">
+                <div class="priority-modal-header">
+                    <span class="priority-modal-icon">⚡</span>
+                    <h3>Set Priority Level</h3>
+                    <p class="priority-modal-task-name" id="priority-modal-task-name"></p>
+                </div>
+                <div class="priority-levels" id="priority-levels">
+                    <button class="priority-level-btn" data-priority="critical">
+                        <div class="priority-orb priority-orb-critical"><span>🔥</span></div>
+                        <div class="priority-level-info">
+                            <span class="priority-level-name">Critical</span>
+                            <span class="priority-level-desc">Do it NOW or it explodes</span>
+                        </div>
+                        <div class="priority-power-bar"><div class="priority-power-fill power-critical"></div></div>
+                    </button>
+                    <button class="priority-level-btn" data-priority="high">
+                        <div class="priority-orb priority-orb-high"><span>⚡</span></div>
+                        <div class="priority-level-info">
+                            <span class="priority-level-name">High</span>
+                            <span class="priority-level-desc">Top of the list today</span>
+                        </div>
+                        <div class="priority-power-bar"><div class="priority-power-fill power-high"></div></div>
+                    </button>
+                    <button class="priority-level-btn" data-priority="medium">
+                        <div class="priority-orb priority-orb-medium"><span>🎯</span></div>
+                        <div class="priority-level-info">
+                            <span class="priority-level-name">Medium</span>
+                            <span class="priority-level-desc">Important, but not urgent</span>
+                        </div>
+                        <div class="priority-power-bar"><div class="priority-power-fill power-medium"></div></div>
+                    </button>
+                    <button class="priority-level-btn" data-priority="low">
+                        <div class="priority-orb priority-orb-low"><span>🌿</span></div>
+                        <div class="priority-level-info">
+                            <span class="priority-level-name">Low</span>
+                            <span class="priority-level-desc">Get to it when you can</span>
+                        </div>
+                        <div class="priority-power-bar"><div class="priority-power-fill power-low"></div></div>
+                    </button>
+                    <button class="priority-level-btn" data-priority="chill">
+                        <div class="priority-orb priority-orb-chill"><span>🧊</span></div>
+                        <div class="priority-level-info">
+                            <span class="priority-level-name">Chill</span>
+                            <span class="priority-level-desc">Zero stress, whenever vibes</span>
+                        </div>
+                        <div class="priority-power-bar"><div class="priority-power-fill power-chill"></div></div>
+                    </button>
+                </div>
+                <div class="priority-modal-actions">
+                    <button id="priority-clear-btn" class="priority-action-btn priority-clear">🚫 Clear Priority</button>
+                    <button id="priority-cancel-btn" class="priority-action-btn priority-cancel">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Streak Page -->
+    <div id="streak-page" class="page">
+        <button id="closeStreak" class="close-btn">✕</button>
+        <button id="deleteAllStreak" class="delete-btn" title="Reset Everything">🗑️</button>
+        <h1 id="streak-heading">Your Streak Journey 🌟</h1>
+
+        <!-- Current Streak Display -->
+        <div class="streak-hero">
+            <div class="streak-count-display">
+                <span id="streak-number">0</span>
+                <span class="streak-label">Day Streak</span>
+            </div>
+
+            <!-- Gamification: Castle Builder -->
+            <div id="castle-container" class="castle-container">
+                <div class="castle-sky" id="castle-sky">
+                    <div class="castle-stars" id="castle-stars"></div>
+                    <div class="castle-clouds" id="castle-clouds">
+                        <div class="castle-cloud c1"></div>
+                        <div class="castle-cloud c2"></div>
+                    </div>
+                </div>
+                <div class="castle-ground">
+                    <div class="castle-scene" id="castle-scene">
+                        <!-- Castle art injected by JS -->
+                    </div>
+                    <div class="castle-grass"></div>
+                </div>
+                <div id="castle-particles" class="castle-particles-layer"></div>
+            </div>
+            <div id="sparkle-container" class="sparkle-container"></div>
+            <div class="castle-info">
+                <span id="castle-stage-label" class="castle-stage-label">🪨 Foundation</span>
+                <div class="castle-progress-track">
+                    <div id="castle-progress-fill" class="castle-progress-fill"></div>
+                </div>
+                <small id="castle-next-label" class="castle-next-hint">Next: Walls (4 days)</small>
+                <p id="castle-days-left" style="margin: 8px 0 4px 0; font-size: 1.1rem; font-weight: 700; color: var(--primary); text-align: center;">4 days left for the next stage</p>
+                <p id="castle-tagline" style="margin: 0; font-size: 0.85rem; color: var(--text-muted); text-align: center; font-style: italic;">Complete tasks daily to build a flying castle ☁️🏰</p>
+            </div>
+        </div>
+
+        <div id="streak-fire-animation" class="streak-fire" style="display: none;">🔥</div>
+
+        <!-- Premium Achievement Badges -->
+        <div class="rewards-container">
+            <h3>🏆 Achievement Badges</h3>
+            <div class="rewards-grid">
+                <div class="reward-card tier-stone locked" data-days="0">
+                    <div class="badge-ribbon">STONE</div>
+                    <div class="badge-shield">
+                        <span class="reward-icon">
+                            <svg width="36" height="36" viewBox="0 0 36 36"><defs><linearGradient id="g-stone" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#9E9E9E"/><stop offset="100%" stop-color="#616161"/></linearGradient></defs><circle cx="18" cy="18" r="14" fill="url(#g-stone)" opacity="0.9"/><circle cx="18" cy="18" r="9" fill="none" stroke="#BDBDBD" stroke-width="1.5"/><circle cx="18" cy="18" r="4" fill="#E0E0E0"/></svg>
+                        </span>
+                    </div>
+                    <span class="reward-label">Ember</span>
+                    <span class="reward-days">Day 0</span>
+                    <span class="reward-status">🔒 Locked</span>
+                </div>
+                <div class="reward-card tier-bronze locked" data-days="4">
+                    <div class="badge-ribbon">BRONZE</div>
+                    <div class="badge-shield">
+                        <span class="reward-icon">
+                            <svg width="36" height="36" viewBox="0 0 36 36"><defs><linearGradient id="g-bronze" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#CD7F32"/><stop offset="100%" stop-color="#8B5E3C"/></linearGradient></defs><polygon points="18,2 22,13 34,13 24,21 28,33 18,25 8,33 12,21 2,13 14,13" fill="url(#g-bronze)"/><circle cx="18" cy="17" r="5" fill="#FFE0B2" opacity="0.6"/></svg>
+                        </span>
+                    </div>
+                    <span class="reward-label">Spark</span>
+                    <span class="reward-days">Day 4</span>
+                    <span class="reward-status">🔒 Locked</span>
+                </div>
+                <div class="reward-card tier-silver locked" data-days="10">
+                    <div class="badge-ribbon">SILVER</div>
+                    <div class="badge-shield">
+                        <span class="reward-icon">
+                            <svg width="36" height="36" viewBox="0 0 36 36"><defs><linearGradient id="g-silver" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#FF6D00"/><stop offset="50%" stop-color="#FF9100"/><stop offset="100%" stop-color="#FFAB00"/></linearGradient></defs><path d="M18 4 C18 4 24 14 24 20 C24 24 21 28 18 32 C15 28 12 24 12 20 C12 14 18 4 18 4Z" fill="url(#g-silver)"/><ellipse cx="18" cy="20" rx="4" ry="6" fill="#FFF3E0" opacity="0.5"/></svg>
+                        </span>
+                    </div>
+                    <span class="reward-label">Flame</span>
+                    <span class="reward-days">Day 10</span>
+                    <span class="reward-status">🔒 Locked</span>
+                </div>
+                <div class="reward-card tier-gold locked" data-days="20">
+                    <div class="badge-ribbon">GOLD</div>
+                    <div class="badge-shield">
+                        <span class="reward-icon">
+                            <svg width="36" height="36" viewBox="0 0 36 36"><defs><linearGradient id="g-gold" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFD700"/><stop offset="50%" stop-color="#FFA000"/><stop offset="100%" stop-color="#FF6F00"/></linearGradient></defs><circle cx="18" cy="18" r="10" fill="url(#g-gold)"/><line x1="18" y1="3" x2="18" y2="9" stroke="#FFD700" stroke-width="2.5" stroke-linecap="round"/><line x1="18" y1="27" x2="18" y2="33" stroke="#FFD700" stroke-width="2.5" stroke-linecap="round"/><line x1="3" y1="18" x2="9" y2="18" stroke="#FFD700" stroke-width="2.5" stroke-linecap="round"/><line x1="27" y1="18" x2="33" y2="18" stroke="#FFD700" stroke-width="2.5" stroke-linecap="round"/><line x1="7" y1="7" x2="11" y2="11" stroke="#FFA000" stroke-width="2" stroke-linecap="round"/><line x1="25" y1="7" x2="29" y2="3" stroke="#FFA000" stroke-width="2" stroke-linecap="round"/><line x1="7" y1="29" x2="11" y2="25" stroke="#FFA000" stroke-width="2" stroke-linecap="round"/><line x1="25" y1="25" x2="29" y2="29" stroke="#FFA000" stroke-width="2" stroke-linecap="round"/><circle cx="18" cy="18" r="5" fill="#FFF8E1"/></svg>
+                        </span>
+                    </div>
+                    <span class="reward-label">Blaze</span>
+                    <span class="reward-days">Day 20</span>
+                    <span class="reward-status">🔒 Locked</span>
+                </div>
+                <div class="reward-card tier-platinum locked" data-days="35">
+                    <div class="badge-ribbon">PLATINUM</div>
+                    <div class="badge-shield">
+                        <span class="reward-icon">
+                            <svg width="36" height="36" viewBox="0 0 36 36"><defs><linearGradient id="g-plat" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#78909C"/><stop offset="50%" stop-color="#B0BEC5"/><stop offset="100%" stop-color="#546E7A"/></linearGradient></defs><path d="M18 3 L24 14 L34 14 L26 22 L30 33 L18 26 L6 33 L10 22 L2 14 L12 14Z" fill="url(#g-plat)" stroke="#90A4AE" stroke-width="1"/><path d="M18 3 L24 14 L34 14 L26 22 L30 33 L18 26 L6 33 L10 22 L2 14 L12 14Z" fill="none" stroke="white" stroke-width="0.5" opacity="0.3"/><circle cx="18" cy="18" r="5" fill="#CFD8DC" opacity="0.7"/></svg>
+                        </span>
+                    </div>
+                    <span class="reward-label">Inferno</span>
+                    <span class="reward-days">Day 35</span>
+                    <span class="reward-status">🔒 Locked</span>
+                </div>
+                <div class="reward-card tier-diamond locked" data-days="60">
+                    <div class="badge-ribbon">DIAMOND</div>
+                    <div class="badge-shield">
+                        <span class="reward-icon">
+                            <svg width="36" height="36" viewBox="0 0 36 36"><defs><linearGradient id="g-dia" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4DD0E1"/><stop offset="50%" stop-color="#00BCD4"/><stop offset="100%" stop-color="#0097A7"/></linearGradient></defs><polygon points="18,2 28,14 18,34 8,14" fill="url(#g-dia)"/><polygon points="18,2 23,14 18,10 13,14" fill="#E0F7FA" opacity="0.5"/><line x1="18" y1="10" x2="18" y2="34" stroke="#B2EBF2" stroke-width="0.6" opacity="0.5"/></svg>
+                        </span>
+                    </div>
+                    <span class="reward-label">Phoenix</span>
+                    <span class="reward-days">Day 60</span>
+                    <span class="reward-status">🔒 Locked</span>
+                </div>
+                <div class="reward-card tier-mythic locked" data-days="100">
+                    <div class="badge-ribbon">MYTHIC</div>
+                    <div class="badge-shield">
+                        <span class="reward-icon">
+                            <svg width="36" height="36" viewBox="0 0 36 36"><defs><linearGradient id="g-myth" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#CE93D8"/><stop offset="50%" stop-color="#AB47BC"/><stop offset="100%" stop-color="#7B1FA2"/></linearGradient></defs><circle cx="18" cy="18" r="12" fill="url(#g-myth)"/><circle cx="18" cy="18" r="12" fill="none" stroke="#E1BEE7" stroke-width="1.5" stroke-dasharray="3 2"/><polygon points="18,6 20,15 29,15 22,20 24,29 18,24 12,29 14,20 7,15 16,15" fill="#F3E5F5" opacity="0.7"/><circle cx="18" cy="18" r="3" fill="#EDE7F6"/></svg>
+                        </span>
+                    </div>
+                    <span class="reward-label">Supernova</span>
+                    <span class="reward-days">Day 100</span>
+                    <span class="reward-status">🔒 Locked</span>
+                </div>
+                <div class="reward-card tier-legendary locked" data-days="200">
+                    <div class="badge-ribbon">LEGENDARY</div>
+                    <div class="badge-shield">
+                        <span class="reward-icon">
+                            <svg width="36" height="36" viewBox="0 0 36 36"><defs><linearGradient id="g-legend" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFD700"/><stop offset="30%" stop-color="#FFA000"/><stop offset="70%" stop-color="#FF6F00"/><stop offset="100%" stop-color="#E65100"/></linearGradient></defs><path d="M18 4 L22 12 L14 12 Z" fill="url(#g-legend)"/><path d="M10 12 L26 12 L30 20 L18 32 L6 20 Z" fill="url(#g-legend)"/><circle cx="18" cy="19" r="4" fill="#FFF8E1" opacity="0.6"/><path d="M18 4 L22 12 L14 12 Z" fill="none" stroke="#FFD54F" stroke-width="0.8" opacity="0.5"/></svg>
+                        </span>
+                    </div>
+                    <span class="reward-label">Eternal</span>
+                    <span class="reward-days">Day 200</span>
+                    <span class="reward-status">🔒 Locked</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="streak-container"></div>
+        <div id="streak-stats"></div>
+
+    </div>
+
+    <!-- Journal Page -->
+    <div id="journal-page" class="page">
+        <button id="closeJournal" class="close-btn">✕</button>
+        <h1 id="journal-heading">📔 My Journal</h1>
+        <div class="journal-controls">
+            <button id="newJournal" class="journal-btn" style="flex:1;">➕ New Entry</button>
+            <div class="journal-search-container" style="flex:2; display:flex; gap:10px;">
+                <input type="text" id="journal-search" placeholder="🔍 Search entries or #tags..." style="flex:2;">
+                <input type="date" id="journal-date-filter"
+                    style="flex:1; padding:10px; border-radius:10px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
+            </div>
+        </div>
+        <div id="journal-entries"></div>
+        <div id="journal-editor" class="journal-editor hidden">
+            <!-- Creative Prompts -->
+            <div
+                style="margin-bottom: 15px; background: rgba(255,215,0,0.1); padding: 15px; border-radius: 10px; border: 1px dashed gold; display: flex; justify-content: space-between; align-items: center;">
+                <span id="journal-prompt-text"
+                    style="font-style: italic; color: var(--text-main); font-size: 14px;">Need inspiration? Get a
+                    creative prompt!</span>
+                <button id="get-prompt-btn" class="format-btn" style="min-width: 100px;">💡 Inspire Me</button>
+            </div>
+
+            <input type="text" id="journal-title" placeholder="Entry Title...">
+            <input type="text" id="journal-tags" class="journal-tags-input"
+                placeholder="Add tags (e.g. #personal #wins)...">
+
+            <!-- Toolbar -->
+            <div class="journal-toolbar">
+                <button id="btn-bold" class="format-btn"
+                    onclick="document.execCommand('bold',false,null); updateFormatButtons();"><b>B</b></button>
+                <button id="btn-italic" class="format-btn"
+                    onclick="document.execCommand('italic',false,null); updateFormatButtons();"><i>I</i></button>
+                <button id="btn-underline" class="format-btn"
+                    onclick="document.execCommand('underline',false,null); updateFormatButtons();"><u>U</u></button>
+                <div style="flex-grow: 1;"></div>
+                <select id="journal-paper-style" class="format-btn" style="appearance: auto; padding-right: 25px;">
+                    <option value="">Blank Paper</option>
+                    <option value="theme-lined">Lined Paper</option>
+                    <option value="theme-grid">Grid Paper</option>
+                    <option value="theme-dotted">Dotted Paper</option>
+                </select>
+                <button id="toggle-doodle-btn" class="format-btn">🎨 Draw</button>
+            </div>
+
+            <!-- Drawing Area -->
+            <div id="journal-drawing-area" class="journal-drawing-area">
+                <canvas id="drawing-canvas" class="drawing-canvas"></canvas>
+                <div class="drawing-controls">
+                    <input type="color" id="drawing-color" value="#000000"
+                        style="width:30px; height:30px; padding:0; border:none; border-radius:50%; cursor:pointer;">
+                    <input type="range" id="drawing-size" min="1" max="20" value="3" style="width: 80px;">
+                    <button id="clear-doodle-btn" class="format-btn"
+                        style="font-size:12px; padding:2px 8px;">Clear</button>
+                </div>
+            </div>
+
+            <!-- Rich Text Body -->
+            <div id="journal-content" class="journal-rich-content" contenteditable="true"
+                placeholder="Write your thoughts here..."></div>
+
+            <div class="journal-editor-buttons">
+                <button id="saveJournal" class="journal-btn">💾 Save</button>
+                <button id="cancelJournal" class="journal-btn">❌ Cancel</button>
+                <button id="deleteJournal" class="journal-btn delete">🗑️ Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Water Tracker Page -->
+    <div id="water-page" class="page">
+        <button id="closeWater" class="close-btn">✕</button>
+        <h1 id="water-heading">💧 Water Tracker</h1>
+        <div class="water-container">
+            <div class="water-goal-section">
+                <label>Daily Goal (ml):</label>
+                <input type="number" id="water-goal" placeholder="2000" min="0">
+                <button id="set-water-goal" class="water-btn">Set Goal</button>
+            </div>
+            <div class="water-progress">
+                <div class="water-glass">
+                    <div id="water-fill" class="water-fill"></div>
+                    <div class="water-stats">
+                        <span id="water-consumed">0</span> / <span id="water-goal-display">2000</span> ml
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Add Buttons -->
+            <div class="water-add-section">
+                <button class="water-add-btn" data-amount="250">🥤 +250ml</button>
+                <button class="water-add-btn" data-amount="500">🫗 +500ml</button>
+                <button class="water-add-btn" data-amount="750">🍶 +750ml</button>
+                <button class="water-add-btn" data-amount="1000">🧴 +1L</button>
+            </div>
+            <div class="water-custom-add-section"
+                style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; align-items: center;">
+                <input type="number" id="water-custom-amount" placeholder="Custom ml" min="1"
+                    style="width: 120px; padding: 10px; border-radius: 10px; border: 1px solid var(--border);">
+                <button id="add-custom-water-btn" class="water-btn" style="width: auto; padding: 10px 20px;">+
+                    Add</button>
+                <button id="undo-water-btn" class="water-btn"
+                    style="width: auto; padding: 10px 20px; background: rgba(245, 87, 108, 0.15); color: #e53e3e; border: 1px solid rgba(245, 87, 108, 0.3);">↩
+                    Undo</button>
+            </div>
+
+            <!-- Daily Drink Log -->
+            <div style="margin-top: 25px;">
+                <h3>🕐 Today's Drinks</h3>
+                <div id="water-drink-log"
+                    style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
+                    <p style="color: var(--text-muted); text-align: center; font-size: 0.9rem;">No drinks logged yet
+                        today. Stay hydrated!</p>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div style="margin-top: 25px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                <div style="background: rgba(255,255,255,0.4); padding: 12px; border-radius: 12px; text-align: center;">
+                    <span style="display: block; font-size: 20px; font-weight: bold; color: var(--primary);"
+                        id="water-remaining">2000</span>
+                    <small style="color: var(--text-muted); font-weight: 600;">Remaining</small>
+                </div>
+                <div style="background: rgba(255,255,255,0.4); padding: 12px; border-radius: 12px; text-align: center;">
+                    <span style="display: block; font-size: 20px; font-weight: bold; color: var(--primary);"
+                        id="water-avg-daily">0</span>
+                    <small style="color: var(--text-muted); font-weight: 600;">7-Day Avg</small>
+                </div>
+                <div style="background: rgba(255,255,255,0.4); padding: 12px; border-radius: 12px; text-align: center;">
+                    <span style="display: block; font-size: 20px; font-weight: bold; color: var(--primary);"
+                        id="water-glasses-count">0</span>
+                    <small style="color: var(--text-muted); font-weight: 600;">Glasses (250ml)</small>
+                </div>
+            </div>
+
+            <div class="water-history-section">
+                <h3>📅 Last 7 Days</h3>
+                <div id="water-history-chart" class="water-chart">
+                    <!-- Bars will be generated by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pomodoro Page -->
+    <div id="pomodoro-page" class="page">
+        <button id="closePomodoro" class="close-btn">✕</button>
+        <h1 id="pomodoro-heading">🍅 Pomodoro Timer</h1>
+        <div id="focus-task-banner" class="focus-task-banner hidden"></div>
+
+        <div class="pomodoro-container">
+            <div class="pomodoro-controls">
+                <div class="timer-type-selector">
+                    <button class="timer-type-btn active" data-type="ice">🧊 Ice Melting</button>
+                    <button class="timer-type-btn" data-type="candle">🕯️ Candle Burning</button>
+                    <button class="timer-type-btn" data-type="minimal">🔢 Minimal Numbers</button>
+                </div>
+
+                <!-- Presets removed per user request -->
+                <div class="time-controls">
+                    <select id="pomodoro-duration-type"
+                        style="padding: 10px; border-radius: 10px; border: 2px solid #e0e0e0; font-size: 16px;">
+                        <option value="minutes" selected>Minutes</option>
+                        <option value="hours">Hours</option>
+                    </select>
+                    <input type="number" id="pomodoro-time" placeholder="Duration" min="1" max="60" value="25">
+                    <button id="start-pomodoro" class="pomodoro-btn">Start</button>
+                    <button id="pause-pomodoro" class="pomodoro-btn hidden">Pause</button>
+                    <button id="reset-pomodoro" class="pomodoro-btn">Reset</button>
+                </div>
+
+                <!-- Strict Focus Toggle -->
+                <div
+                    style="margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; background: rgba(255,255,255,0.4); padding: 10px; border-radius: 10px;">
+                    <input type="checkbox" id="strict-focus-toggle" style="width: 18px; height: 18px; cursor: pointer;">
+                    <label for="strict-focus-toggle"
+                        style="font-weight: bold; color: var(--text-main); cursor: pointer;">🔒 Strict Focus Mode
+                        (Locks Everything)</label>
+                </div>
+                <button id="exit-focus-btn" class="menu-option danger hidden" style="margin-top: 15px; width: 100%;">🚪
+                    Emergency Exit Focus Mode</button>
+            </div>
+            <div class="pomodoro-display">
+                <!-- Ice Melting Animation -->
+                <div id="ice-animation" class="timer-animation active">
+                    <div class="ice-glass">
+                        <div class="ice-water-fill">
+                            <!-- Rising bubbles -->
+                            <div class="water-bubble"
+                                style="left:10%; width:7px; height:7px; --duration:3.2s; --delay:0s;"></div>
+                            <div class="water-bubble"
+                                style="left:25%; width:5px; height:5px; --duration:2.5s; --delay:0.6s;"></div>
+                            <div class="water-bubble"
+                                style="left:40%; width:9px; height:9px; --duration:3.8s; --delay:1.1s;"></div>
+                            <div class="water-bubble"
+                                style="left:55%; width:6px; height:6px; --duration:2.9s; --delay:0.3s;"></div>
+                            <div class="water-bubble"
+                                style="left:70%; width:8px; height:8px; --duration:3.5s; --delay:1.7s;"></div>
+                            <div class="water-bubble"
+                                style="left:82%; width:4px; height:4px; --duration:2.2s; --delay:0.8s;"></div>
+                            <div class="water-bubble"
+                                style="left:18%; width:6px; height:6px; --duration:3.1s; --delay:2.2s;"></div>
+                            <div class="water-bubble"
+                                style="left:62%; width:10px; height:10px; --duration:4.0s; --delay:0.4s;"></div>
+                            <div class="water-bubble"
+                                style="left:35%; width:5px; height:5px; --duration:2.7s; --delay:1.5s;"></div>
+                            <div class="water-bubble"
+                                style="left:78%; width:7px; height:7px; --duration:3.4s; --delay:2.8s;"></div>
+                            <!-- Upward water flow streaks -->
+                            <div class="water-stream" style="left:15%; --duration:2.4s; --delay:0s;"></div>
+                            <div class="water-stream" style="left:32%; --duration:3.0s; --delay:0.9s;"></div>
+                            <div class="water-stream" style="left:50%; --duration:2.7s; --delay:1.6s;"></div>
+                            <div class="water-stream" style="left:65%; --duration:3.3s; --delay:0.4s;"></div>
+                            <div class="water-stream" style="left:80%; --duration:2.1s; --delay:2.1s;"></div>
+                            <div class="water-stream" style="left:22%; --duration:2.9s; --delay:1.3s;"></div>
+                        </div>
+                        <div class="condensation-layer">
+                            <div class="droplet" style="left: 10%; animation-delay: 0s;"></div>
+                            <div class="droplet" style="left: 30%; animation-delay: 0.5s;"></div>
+                            <div class="droplet" style="left: 50%; animation-delay: 1s;"></div>
+                            <div class="droplet" style="left: 70%; animation-delay: 1.5s;"></div>
+                            <div class="droplet" style="left: 90%; animation-delay: 2s;"></div>
+                        </div>
+                        <div class="ice-cubes-container">
+                            <!-- Extra left edge cubes for visual density -->
+                            <div class="ice-cube" style="left: -6%; top: 90%;">🧊</div>
+                            <div class="ice-cube" style="left: -6%; top: 78%;">🧊</div>
+                            <div class="ice-cube" style="left: -6%; top: 66%;">🧊</div>
+                            <div class="ice-cube" style="left: -6%; top: 54%;">🧊</div>
+                            <div class="ice-cube" style="left: -6%; top: 42%;">🧊</div>
+                            <div class="ice-cube" style="left: -6%; top: 30%;">🧊</div>
+                            <div class="ice-cube" style="left: -6%; top: 18%;">🧊</div>
+                            <div class="ice-cube" style="left: -6%; top: 6%;">🧊</div>
+                            <!-- FULL GLASS ICE GRID: 9 rows x 9 columns -->
+                            <div class="ice-cube" style="left: 0%; top: 90%;">🧊</div>
+                            <div class="ice-cube" style="left: 12%; top: 90%;">🧊</div>
+                            <div class="ice-cube" style="left: 24%; top: 90%;">🧊</div>
+                            <div class="ice-cube" style="left: 36%; top: 90%;">🧊</div>
+                            <div class="ice-cube" style="left: 48%; top: 90%;">🧊</div>
+                            <div class="ice-cube" style="left: 60%; top: 90%;">🧊</div>
+                            <div class="ice-cube" style="left: 72%; top: 90%;">🧊</div>
+                            <div class="ice-cube" style="left: 84%; top: 90%;">🧊</div>
+                            <div class="ice-cube" style="left: 96%; top: 90%;">🧊</div>
+
+                            <div class="ice-cube" style="left: 0%; top: 78%;">🧊</div>
+                            <div class="ice-cube" style="left: 12%; top: 78%;">🧊</div>
+                            <div class="ice-cube" style="left: 24%; top: 78%;">🧊</div>
+                            <div class="ice-cube" style="left: 36%; top: 78%;">🧊</div>
+                            <div class="ice-cube" style="left: 48%; top: 78%;">🧊</div>
+                            <div class="ice-cube" style="left: 60%; top: 78%;">🧊</div>
+                            <div class="ice-cube" style="left: 72%; top: 78%;">🧊</div>
+                            <div class="ice-cube" style="left: 84%; top: 78%;">🧊</div>
+                            <div class="ice-cube" style="left: 96%; top: 78%;">🧊</div>
+
+                            <div class="ice-cube" style="left: 0%; top: 66%;">🧊</div>
+                            <div class="ice-cube" style="left: 12%; top: 66%;">🧊</div>
+                            <div class="ice-cube" style="left: 24%; top: 66%;">🧊</div>
+                            <div class="ice-cube" style="left: 36%; top: 66%;">🧊</div>
+                            <div class="ice-cube" style="left: 48%; top: 66%;">🧊</div>
+                            <div class="ice-cube" style="left: 60%; top: 66%;">🧊</div>
+                            <div class="ice-cube" style="left: 72%; top: 66%;">🧊</div>
+                            <div class="ice-cube" style="left: 84%; top: 66%;">🧊</div>
+                            <div class="ice-cube" style="left: 96%; top: 66%;">🧊</div>
+
+                            <div class="ice-cube" style="left: 0%; top: 54%;">🧊</div>
+                            <div class="ice-cube" style="left: 12%; top: 54%;">🧊</div>
+                            <div class="ice-cube" style="left: 24%; top: 54%;">🧊</div>
+                            <div class="ice-cube" style="left: 36%; top: 54%;">🧊</div>
+                            <div class="ice-cube" style="left: 48%; top: 54%;">🧊</div>
+                            <div class="ice-cube" style="left: 60%; top: 54%;">🧊</div>
+                            <div class="ice-cube" style="left: 72%; top: 54%;">🧊</div>
+                            <div class="ice-cube" style="left: 84%; top: 54%;">🧊</div>
+                            <div class="ice-cube" style="left: 96%; top: 54%;">🧊</div>
+
+                            <div class="ice-cube" style="left: 0%; top: 42%;">🧊</div>
+                            <div class="ice-cube" style="left: 12%; top: 42%;">🧊</div>
+                            <div class="ice-cube" style="left: 24%; top: 42%;">🧊</div>
+                            <div class="ice-cube" style="left: 36%; top: 42%;">🧊</div>
+                            <div class="ice-cube" style="left: 48%; top: 42%;">🧊</div>
+                            <div class="ice-cube" style="left: 60%; top: 42%;">🧊</div>
+                            <div class="ice-cube" style="left: 72%; top: 42%;">🧊</div>
+                            <div class="ice-cube" style="left: 84%; top: 42%;">🧊</div>
+                            <div class="ice-cube" style="left: 96%; top: 42%;">🧊</div>
+
+                            <div class="ice-cube" style="left: 0%; top: 30%;">🧊</div>
+                            <div class="ice-cube" style="left: 12%; top: 30%;">🧊</div>
+                            <div class="ice-cube" style="left: 24%; top: 30%;">🧊</div>
+                            <div class="ice-cube" style="left: 36%; top: 30%;">🧊</div>
+                            <div class="ice-cube" style="left: 48%; top: 30%;">🧊</div>
+                            <div class="ice-cube" style="left: 60%; top: 30%;">🧊</div>
+                            <div class="ice-cube" style="left: 72%; top: 30%;">🧊</div>
+                            <div class="ice-cube" style="left: 84%; top: 30%;">🧊</div>
+                            <div class="ice-cube" style="left: 96%; top: 30%;">🧊</div>
+
+                            <div class="ice-cube" style="left: 0%; top: 18%;">🧊</div>
+                            <div class="ice-cube" style="left: 12%; top: 18%;">🧊</div>
+                            <div class="ice-cube" style="left: 24%; top: 18%;">🧊</div>
+                            <div class="ice-cube" style="left: 36%; top: 18%;">🧊</div>
+                            <div class="ice-cube" style="left: 48%; top: 18%;">🧊</div>
+                            <div class="ice-cube" style="left: 60%; top: 18%;">🧊</div>
+                            <div class="ice-cube" style="left: 72%; top: 18%;">🧊</div>
+                            <div class="ice-cube" style="left: 84%; top: 18%;">🧊</div>
+                            <div class="ice-cube" style="left: 96%; top: 18%;">🧊</div>
+
+                            <div class="ice-cube" style="left: 0%; top: 6%;">🧊</div>
+                            <div class="ice-cube" style="left: 12%; top: 6%;">🧊</div>
+                            <div class="ice-cube" style="left: 24%; top: 6%;">🧊</div>
+                            <div class="ice-cube" style="left: 36%; top: 6%;">🧊</div>
+                            <div class="ice-cube" style="left: 48%; top: 6%;">🧊</div>
+                            <div class="ice-cube" style="left: 60%; top: 6%;">🧊</div>
+                            <div class="ice-cube" style="left: 72%; top: 6%;">🧊</div>
+                            <div class="ice-cube" style="left: 84%; top: 6%;">🧊</div>
+                            <div class="ice-cube" style="left: 96%; top: 6%;">🧊</div>
+                            <!-- LEFT EDGE ICE CUBES -->
+                            <div class="ice-cube" style="left: 0%; top: 85%;">🧊</div>
+                            <div class="ice-cube" style="left: 0%; top: 65%;">🧊</div>
+                            <div class="ice-cube" style="left: 0%; top: 45%;">🧊</div>
+                            <div class="ice-cube" style="left: 0%; top: 25%;">🧊</div>
+                            <div class="ice-cube" style="left: 0%; top: 5%;">🧊</div>
+                            <!-- RIGHT EDGE ICE CUBES -->
+                            <div class="ice-cube" style="left: 95%; top: 85%;">🧊</div>
+                            <div class="ice-cube" style="left: 95%; top: 65%;">🧊</div>
+                            <div class="ice-cube" style="left: 95%; top: 45%;">🧊</div>
+                            <div class="ice-cube" style="left: 95%; top: 25%;">🧊</div>
+                            <div class="ice-cube" style="left: 95%; top: 5%;">🧊</div>
+                            <!-- BOTTOM ROW -->
+                            <div class="ice-cube" style="left: 5%; top: 80%;">🧊</div>
+                            <div class="ice-cube" style="left: 15%; top: 82%;">🧊</div>
+                            <div class="ice-cube" style="left: 25%; top: 84%;">🧊</div>
+                            <div class="ice-cube" style="left: 35%; top: 86%;">🧊</div>
+                            <div class="ice-cube" style="left: 45%; top: 88%;">🧊</div>
+                            <div class="ice-cube" style="left: 55%; top: 86%;">🧊</div>
+                            <div class="ice-cube" style="left: 65%; top: 84%;">🧊</div>
+                            <div class="ice-cube" style="left: 75%; top: 82%;">🧊</div>
+                            <div class="ice-cube" style="left: 85%; top: 80%;">🧊</div>
+                            <!-- 2ND ROW -->
+                            <div class="ice-cube" style="left: 10%; top: 70%;">🧊</div>
+                            <div class="ice-cube" style="left: 20%; top: 72%;">🧊</div>
+                            <div class="ice-cube" style="left: 30%; top: 74%;">🧊</div>
+                            <div class="ice-cube" style="left: 40%; top: 76%;">🧊</div>
+                            <div class="ice-cube" style="left: 50%; top: 78%;">🧊</div>
+                            <div class="ice-cube" style="left: 60%; top: 76%;">🧊</div>
+                            <div class="ice-cube" style="left: 70%; top: 74%;">🧊</div>
+                            <div class="ice-cube" style="left: 80%; top: 72%;">🧊</div>
+                            <!-- 3RD ROW -->
+                            <div class="ice-cube" style="left: 15%; top: 60%;">🧊</div>
+                            <div class="ice-cube" style="left: 25%; top: 62%;">🧊</div>
+                            <div class="ice-cube" style="left: 35%; top: 64%;">🧊</div>
+                            <div class="ice-cube" style="left: 45%; top: 66%;">🧊</div>
+                            <div class="ice-cube" style="left: 55%; top: 64%;">🧊</div>
+                            <div class="ice-cube" style="left: 65%; top: 62%;">🧊</div>
+                            <div class="ice-cube" style="left: 75%; top: 60%;">🧊</div>
+                            <!-- 4TH ROW -->
+                            <div class="ice-cube" style="left: 20%; top: 50%;">🧊</div>
+                            <div class="ice-cube" style="left: 30%; top: 52%;">🧊</div>
+                            <div class="ice-cube" style="left: 40%; top: 54%;">🧊</div>
+                            <div class="ice-cube" style="left: 50%; top: 56%;">🧊</div>
+                            <div class="ice-cube" style="left: 60%; top: 54%;">🧊</div>
+                            <div class="ice-cube" style="left: 70%; top: 52%;">🧊</div>
+                            <div class="ice-cube" style="left: 80%; top: 50%;">🧊</div>
+                            <!-- 5TH ROW -->
+                            <div class="ice-cube" style="left: 25%; top: 40%;">🧊</div>
+                            <div class="ice-cube" style="left: 35%; top: 42%;">🧊</div>
+                            <div class="ice-cube" style="left: 45%; top: 44%;">🧊</div>
+                            <div class="ice-cube" style="left: 55%; top: 42%;">🧊</div>
+                            <div class="ice-cube" style="left: 65%; top: 40%;">🧊</div>
+                            <!-- 6TH ROW -->
+                            <div class="ice-cube" style="left: 30%; top: 30%;">🧊</div>
+                            <div class="ice-cube" style="left: 40%; top: 32%;">🧊</div>
+                            <div class="ice-cube" style="left: 50%; top: 34%;">🧊</div>
+                            <div class="ice-cube" style="left: 60%; top: 32%;">🧊</div>
+                            <div class="ice-cube" style="left: 70%; top: 30%;">🧊</div>
+                            <!-- 7TH ROW -->
+                            <div class="ice-cube" style="left: 35%; top: 20%;">🧊</div>
+                            <div class="ice-cube" style="left: 45%; top: 22%;">🧊</div>
+                            <div class="ice-cube" style="left: 55%; top: 20%;">🧊</div>
+                            <!-- 8TH ROW -->
+                            <div class="ice-cube" style="left: 40%; top: 10%;">🧊</div>
+                            <div class="ice-cube" style="left: 50%; top: 12%;">🧊</div>
+                            <div class="ice-cube" style="left: 60%; top: 10%;">🧊</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Candle Burning Animation -->
+                <div id="candle-animation" class="timer-animation">
+                    <div class="candle-container">
+                        <div class="candle-wax">
+                            <div class="candle-flame">
+                                <div class="flame-inner"></div>
+                                <div class="flame-outer"></div>
+                                <div class="spark spark1"></div>
+                                <div class="spark spark2"></div>
+                                <div class="spark spark3"></div>
+                            </div>
+                        </div>
+                        <div class="candle-base"></div>
+                    </div>
+                </div>
+
+                <!-- Plant Growing Animation -->
+
+                <!-- Minimal Timer -->
+                <div id="minimal-animation" class="timer-animation">
+                    <svg class="minimal-ring-svg" viewBox="0 0 200 200">
+                        <circle class="minimal-ring-bg" cx="100" cy="100" r="90" />
+                        <circle class="minimal-ring-progress" id="minimal-progress-circle" cx="100" cy="100" r="90" />
+                    </svg>
+                </div>
+
+                <div id="pomodoro-timer" class="pomodoro-timer">25:00</div>
+            </div>
+            <div id="pomodoro-message" class="pomodoro-message"></div>
+        </div>
+    </div>
+
+
+    <!-- Mood Tracker Page -->
+    <div id="mood-page" class="page">
+        <button id="closeMood" class="close-btn">✕</button>
+        <h1 id="mood-heading">🎭 Mood Tracker</h1>
+        <div class="mood-container">
+            <p>How are you feeling today?</p>
+            <div class="mood-selector">
+                <button class="mood-btn" data-mood="great" title="Great">🤩</button>
+                <button class="mood-btn" data-mood="good" title="Good">😊</button>
+                <button class="mood-btn" data-mood="okay" title="Okay">😐</button>
+                <button class="mood-btn" data-mood="bad" title="Bad">😔</button>
+                <button class="mood-btn" data-mood="terrible" title="Terrible">😫</button>
+            </div>
+
+            <div class="mood-tags-container hidden" id="mood-tags-section" style="margin-top: 25px;">
+                <p style="font-weight: 600; margin-bottom: 10px;">What influenced your mood?</p>
+                <div class="mood-tags-grid">
+                    <button class="mood-tag-btn" data-tag="exercise">🏃 Exercise</button>
+                    <button class="mood-tag-btn" data-tag="work">💻 Work</button>
+                    <button class="mood-tag-btn" data-tag="social">👥 Social</button>
+                    <button class="mood-tag-btn" data-tag="relax">🧘 Relaxing</button>
+                    <button class="mood-tag-btn" data-tag="sleep">😴 Sleep</button>
+                    <button class="mood-tag-btn" data-tag="family">👨‍👩‍👧 Family</button>
+                    <button class="mood-tag-btn" data-tag="hobby">🎨 Hobby</button>
+                    <button class="mood-tag-btn" data-tag="weather">🌤 Weather</button>
+                </div>
+                <input type="text" id="mood-note" placeholder="Or add a custom note..."
+                    style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); box-sizing: border-box; font-family: inherit; margin-top: 15px; background: rgba(255,255,255,0.5);">
+                <button id="saveMoodBtn" class="mood-save-btn"
+                    style="margin-top: 15px; width: 100%; padding: 12px; border: none; border-radius: 10px; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: white; font-weight: bold; cursor: pointer;">Save
+                    Entry</button>
+            </div>
+
+            <!-- Advanced Mood Stats -->
+            <div class="mood-stats-summary"
+                style="margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="insight-box"
+                    style="background: rgba(255,255,255,0.4); padding: 15px; border-radius: 12px; text-align: center;">
+                    <span style="display: block; font-size: 24px;" id="mood-trend-emoji">➖</span>
+                    <small style="color: var(--text-muted); font-weight: bold;">7-Day Trend</small>
+                </div>
+                <div class="insight-box"
+                    style="background: rgba(255,255,255,0.4); padding: 15px; border-radius: 12px; text-align: center;">
+                    <span style="display: block; font-size: 20px; font-weight: bold; color: var(--primary);"
+                        id="mood-count-total">0</span>
+                    <small style="color: var(--text-muted); font-weight: bold;">Total Entries</small>
+                </div>
+            </div>
+
+            <!-- AI Mood Insights (Correlation) -->
+            <div id="mood-ai-insights"
+                style="margin-top: 20px; background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); padding: 20px; border-radius: 15px; border-left: 4px solid var(--primary);">
+                <h4 style="margin-top: 0; margin-bottom: 10px; color: var(--primary);">✨ Mood Insights</h4>
+                <p id="mood-insight-text"
+                    style="margin: 0; font-size: 0.95rem; line-height: 1.5; color: var(--text-main);">Log more moods
+                    across different days to generate AI insights about what makes you happiest!</p>
+            </div>
+
+            <!-- Calendar Heatmap -->
+            <div class="mood-heatmap-container" style="margin-top: 30px;">
+                <h3>Activity Heatmap (Last 14 Days)</h3>
+                <div id="mood-heatmap-grid" class="heatmap-grid"
+                    style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 15px;">
+                    <!-- JS will populate blocks here -->
+                </div>
+            </div>
+
+            <div id="mood-history" class="mood-history" style="margin-top: 30px;">
+                <h3>Recent Context</h3>
+                <div id="mood-list" class="mood-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sleep Tracker Page -->
+    <div id="sleep-page" class="page">
+        <button id="closeSleep" class="close-btn">✕</button>
+        <h1 id="sleep-heading">😴 Sleep Tracker</h1>
+        <div class="sleep-container">
+            <!-- Sleep Timing & Quality Inputs -->
+            <div
+                style="background: rgba(255,255,255,0.5); padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div class="sleep-input-group" style="flex: 1;">
+                        <label
+                            style="display: block; font-weight: bold; margin-bottom: 5px; color: var(--text-main);">Bedtime:</label>
+                        <input type="time" id="sleep-bedtime"
+                            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: inherit; background: var(--card-bg);">
+                    </div>
+                    <div class="sleep-input-group" style="flex: 1;">
+                        <label
+                            style="display: block; font-weight: bold; margin-bottom: 5px; color: var(--text-main);">Wake
+                            Up:</label>
+                        <input type="time" id="sleep-wakeup"
+                            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-family: inherit; background: var(--card-bg);">
+                    </div>
+                </div>
+
+                <div class="sleep-input-group" style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px; color: var(--text-main);">Sleep
+                        Quality:</label>
+                    <div class="star-rating"
+                        style="justify-content: center; gap: 5px; background: var(--card-bg); padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+                        <input type="radio" name="sleep-quality" value="5" id="s5"><label for="s5">★</label>
+                        <input type="radio" name="sleep-quality" value="4" id="s4"><label for="s4">★</label>
+                        <input type="radio" name="sleep-quality" value="3" id="s3"><label for="s3">★</label>
+                        <input type="radio" name="sleep-quality" value="2" id="s2"><label for="s2">★</label>
+                        <input type="radio" name="sleep-quality" value="1" id="s1"><label for="s1">★</label>
+                    </div>
+                </div>
+
+                <div class="sleep-input-group" style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 8px; color: var(--text-main);">Sleep
+                        Factors (Optional):</label>
+                    <div id="sleep-factors" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        <button class="sleep-factor-btn" data-factor="exercise">🏃 Exercise</button>
+                        <button class="sleep-factor-btn" data-factor="caffeine">☕ Caffeine</button>
+                        <button class="sleep-factor-btn" data-factor="screens">📱 Late Screens</button>
+                        <button class="sleep-factor-btn" data-factor="stress">😫 Stress</button>
+                        <button class="sleep-factor-btn" data-factor="alcohol">🍷 Alcohol</button>
+                        <button class="sleep-factor-btn" data-factor="reading">📖 Reading</button>
+                    </div>
+                </div>
+
+                <button id="saveSleep" class="sleep-btn"
+                    style="width: 100%; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 1.1rem; cursor: pointer; transition: transform 0.2s;">Log
+                    Sleep</button>
+            </div>
+
+            <!-- Dashboard Analytics -->
+            <div id="sleep-analytics"
+                style="margin-top: 25px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <!-- Sleep Score Metric -->
+                <div class="sleep-stat-box"
+                    style="background: rgba(102, 126, 234, 0.1); padding: 15px; border-radius: 12px; text-align: center; grid-column: span 2; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="text-align: left;">
+                        <h3 style="margin: 0; color: var(--primary); font-size: 1.2rem;">Sleep Score</h3>
+                        <small style="color: var(--text-muted); font-weight: bold;">Based on duration & quality</small>
+                    </div>
+                    <div
+                        style="position: relative; width: 60px; height: 60px; border-radius: 50%; background: conic-gradient(var(--primary) calc(var(--score-pct, 0) * 1%), rgba(0,0,0,0.1) 0); display: flex; align-items: center; justify-content: center;">
+                        <div
+                            style="position: absolute; width: 50px; height: 50px; background: var(--bg-color); border-radius: 50%; z-index: 1;">
+                        </div>
+                        <span id="sleep-score-value"
+                            style="position: relative; z-index: 2; font-weight: bold; font-size: 1.2rem; color: var(--text-main);">0</span>
+                    </div>
+                </div>
+
+                <div class="sleep-stat-box"
+                    style="background: rgba(102, 126, 234, 0.1); padding: 15px; border-radius: 12px; text-align: center;">
+                    <h3 style="margin: 0; color: var(--primary); font-size: 24px;"><span id="avg-sleep-hours">0</span>h
+                    </h3>
+                    <small style="color: var(--text-muted); font-weight: bold;">7-Day Average</small>
+                </div>
+
+                <div class="sleep-stat-box"
+                    style="background: rgba(245, 87, 108, 0.1); padding: 15px; border-radius: 12px; text-align: center; position: relative;">
+                    <button id="edit-sleep-goal"
+                        style="position: absolute; top: 5px; right: 5px; background: none; border: none; cursor: pointer; opacity: 0.6; font-size: 12px;">✏️</button>
+                    <h3 style="margin: 0; color: #f5576c; font-size: 24px;"><span id="sleep-debt">0</span>h</h3>
+                    <small style="color: var(--text-muted); font-weight: bold;">Sleep Debt (vs <span
+                            id="sleep-goal-display">8</span>h goal)</small>
+                </div>
+            </div>
+
+            <!-- Visualization: Sleep Chart -->
+            <div id="sleep-chart-section"
+                style="margin-top: 25px; background: rgba(255,255,255,0.4); padding: 15px; border-radius: 12px;">
+                <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1rem;">📅 7-Day Sleep Duration</h3>
+                <div id="sleep-chart"
+                    style="display: flex; align-items: flex-end; justify-content: space-between; height: 120px; padding-top: 10px; border-bottom: 1px solid var(--border);">
+                    <!-- Bars injected by JS -->
+                </div>
+            </div>
+
+            <!-- Sleep History List -->
+            <div id="sleep-history-container" style="margin-top: 25px;">
+                <h3 style="margin-bottom: 10px;">Recent Rest Log</h3>
+                <div id="sleep-list"
+                    style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Page -->
+    <div id="settings-page" class="page">
+        <button id="closeSettings" class="close-btn">✕</button>
+        <h1 id="settings-heading">⚙️ Settings</h1>
+        <div class="settings-container">
+            <h3>Theme Customization</h3>
+            <div class="theme-selector">
+                <button class="theme-btn active" data-theme="classic"
+                    style="background: linear-gradient(135deg, #667eea, #764ba2);">Classic</button>
+                <button class="theme-btn" data-theme="dark" style="background: #2c3e50;">Dark</button>
+                <button class="theme-btn" data-theme="ocean"
+                    style="background: linear-gradient(135deg, #2193b0, #6dd5ed);">Ocean</button>
+                <button class="theme-btn" data-theme="forest"
+                    style="background: linear-gradient(135deg, #11998e, #38ef7d);">Forest</button>
+                <button class="theme-btn" data-theme="glass"
+                    style="background: linear-gradient(135deg, #a8c0ff, #fbc2eb); border: 2px solid white;">💎 Ultra
+                    Glass</button>
+
+                <!-- Premium Themes -->
+                <button class="theme-btn premium-btn" data-theme="cyberpunk"
+                    style="background: #120422; box-shadow: 0 0 10px #f0f, inset 0 0 5px #0ff; color: #0ff; border: 1px solid #f0f; font-weight: bold;">🌆
+                    Cyberpunk</button>
+                <button class="theme-btn premium-btn" data-theme="zen"
+                    style="background: #fbfbf9; color: #5a5a5a; border: 1px solid #ddd; box-shadow: 0 10px 20px rgba(0,0,0,0.03);">🧘
+                    Zen</button>
+                <button class="theme-btn premium-btn" data-theme="sunset"
+                    style="background: linear-gradient(45deg, #ff512f, #dd2476); color: white; font-weight: bold;">🌅
+                    Sunset</button>
+
+                <!-- Custom Theme Generator Button -->
+                <button class="theme-btn" data-theme="custom"
+                    style="background: repeating-linear-gradient(45deg, #eee, #eee 10px, #fff 10px, #fff 20px); border: 2px dashed #999; color: #333;">✨
+                    Custom</button>
+            </div>
+
+                        <!-- Advanced Custom Theme Studio -->
+            <div id="custom-theme-builder" class="custom-theme-builder hidden">
+                <div class="cts-header">
+                    <h4>🎨 Theme Studio</h4>
+                    <span class="cts-subtitle">Design your perfect look</span>
+                </div>
+                <div class="cts-section">
+                    <div class="cts-section-label">⚡ Quick Presets</div>
+                    <div class="cts-presets-row" id="cts-presets">
+                        <button class="cts-preset-btn" data-preset="midnight" style="background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);">🌙 Midnight</button>
+                        <button class="cts-preset-btn" data-preset="aurora" style="background: linear-gradient(135deg, #00c9ff, #92fe9d);">🌌 Aurora</button>
+                        <button class="cts-preset-btn" data-preset="sakura" style="background: linear-gradient(135deg, #fbc2eb, #a6c1ee);">🌸 Sakura</button>
+                        <button class="cts-preset-btn" data-preset="emerald" style="background: linear-gradient(135deg, #11998e, #38ef7d);">💎 Emerald</button>
+                        <button class="cts-preset-btn" data-preset="lava" style="background: linear-gradient(135deg, #f12711, #f5af19);">🌋 Lava</button>
+                        <button class="cts-preset-btn" data-preset="pastel" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">🍬 Pastel</button>
+                    </div>
+                </div>
+                <div class="cts-section">
+                    <div class="cts-section-label">🎨 Colors</div>
+                    <div class="cts-color-grid">
+                        <div class="cts-color-item"><input type="color" id="custom-bg-color" value="#f4f7f6" class="cts-color-input"><span class="cts-color-label">Background</span></div>
+                        <div class="cts-color-item"><input type="color" id="custom-card-color" value="#ffffff" class="cts-color-input"><span class="cts-color-label">Card</span></div>
+                        <div class="cts-color-item"><input type="color" id="custom-primary-color" value="#667eea" class="cts-color-input"><span class="cts-color-label">Primary</span></div>
+                        <div class="cts-color-item"><input type="color" id="custom-secondary-color" value="#764ba2" class="cts-color-input"><span class="cts-color-label">Secondary</span></div>
+                        <div class="cts-color-item"><input type="color" id="custom-text-color" value="#2d3748" class="cts-color-input"><span class="cts-color-label">Text</span></div>
+                        <div class="cts-color-item"><input type="color" id="custom-border-color" value="#e0e0e0" class="cts-color-input"><span class="cts-color-label">Border</span></div>
+                    </div>
+                </div>
+                <div class="cts-section">
+                    <div class="cts-section-label">✨ Animation Style</div>
+                    <div class="cts-anim-grid" id="cts-anim-grid">
+                        <button class="cts-anim-btn active" data-anim="none"><span class="cts-anim-icon">🚫</span><span>None</span></button>
+                        <button class="cts-anim-btn" data-anim="pulse-glow"><span class="cts-anim-icon">💫</span><span>Pulse Glow</span></button>
+                        <button class="cts-anim-btn" data-anim="float"><span class="cts-anim-icon">🎈</span><span>Float</span></button>
+                        <button class="cts-anim-btn" data-anim="neon"><span class="cts-anim-icon">⚡</span><span>Neon Flicker</span></button>
+                        <button class="cts-anim-btn" data-anim="shimmer"><span class="cts-anim-icon">🪞</span><span>Shimmer</span></button>
+                    </div>
+                </div>
+                <div class="cts-section">
+                    <div class="cts-section-label">🔤 Typography</div>
+                    <div class="cts-font-grid" id="cts-font-grid">
+                        <button class="cts-font-btn active" data-font="default" style="font-family: 'Segoe UI', sans-serif;">Aa Default</button>
+                        <button class="cts-font-btn" data-font="inter" style="font-family: 'Inter', sans-serif;">Aa Inter</button>
+                        <button class="cts-font-btn" data-font="outfit" style="font-family: 'Outfit', sans-serif;">Aa Outfit</button>
+                        <button class="cts-font-btn" data-font="space-grotesk" style="font-family: 'Space Grotesk', sans-serif;">Aa Space</button>
+                        <button class="cts-font-btn" data-font="jetbrains" style="font-family: 'JetBrains Mono', monospace;">Aa Mono</button>
+                        <button class="cts-font-btn" data-font="playfair" style="font-family: 'Playfair Display', serif;">Aa Serif</button>
+                    </div>
+                </div>
+                <div class="cts-section">
+                    <div class="cts-section-label">🔘 Shape &amp; Style</div>
+                    <div class="cts-style-row">
+                        <label class="cts-slider-label">Border Radius</label>
+                        <div class="cts-slider-wrap"><span class="cts-slider-tag">Sharp</span><input type="range" id="cts-radius-slider" min="0" max="30" value="12" class="cts-slider"><span class="cts-slider-tag">Pill</span></div>
+                    </div>
+                    <div class="cts-style-row" style="margin-top: 12px;">
+                        <label class="cts-slider-label">Button Style</label>
+                        <div class="cts-btn-style-grid" id="cts-btn-style">
+                            <button class="cts-style-pick active" data-btnstyle="solid">Solid</button>
+                            <button class="cts-style-pick" data-btnstyle="outline">Outline</button>
+                            <button class="cts-style-pick" data-btnstyle="ghost">Ghost</button>
+                            <button class="cts-style-pick" data-btnstyle="gradient">Gradient</button>
+                        </div>
+                    </div>
+                    <div class="cts-style-row" style="margin-top: 12px;">
+                        <label class="cts-slider-label">Card Effect</label>
+                        <div class="cts-btn-style-grid" id="cts-card-style">
+                            <button class="cts-style-pick active" data-cardstyle="shadow">Shadow</button>
+                            <button class="cts-style-pick" data-cardstyle="flat">Flat</button>
+                            <button class="cts-style-pick" data-cardstyle="glass">Glass</button>
+                            <button class="cts-style-pick" data-cardstyle="neumorphic">Neumorphic</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="cts-section">
+                    <div class="cts-section-label">👁️ Live Preview</div>
+                    <div class="cts-preview-card" id="cts-preview-card">
+                        <div class="cts-preview-heading">Sample Heading</div>
+                        <div class="cts-preview-task"><span class="cts-preview-emoji">📝</span><span class="cts-preview-text">Example Task Item</span></div>
+                        <div class="cts-preview-btn-row"><button class="cts-preview-btn" id="cts-preview-btn">Action Button</button></div>
+                    </div>
+                </div>
+                <div class="cts-actions">
+                    <button id="save-custom-theme-btn" class="cts-save-btn">💾 Save Theme</button>
+                    <button id="reset-custom-theme-btn" class="cts-reset-btn">🔄 Reset</button>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px;">Data Management</h3>
+            <div class="backup-controls">
+                <button id="export-btn" class="settings-action-btn">📤 Export Backup (JSON)</button>
+                <button id="import-btn" class="settings-action-btn">📥 Import Restore</button>
+                <input type="file" id="import-file" class="hidden" accept=".json">
+            </div>
+        </div>
+    </div>
+
+    <!-- Meditation Page -->
+    <div id="meditation-page" class="page">
+        <div class="meditation-card">
+            <button id="closeMeditation" class="close-btn">✕</button>
+            <div class="meditation-header">
+                <img src="https://cdn.pixabay.com/photo/2016/05/10/21/50/meditation-1384758_1280.jpg"
+                    alt="Meditation Yogi" class="meditation-yogi-img">
+            </div>
+            <h1 class="meditation-title">🧘 Meditation</h1>
+            <div class="meditation-desc">Set your duration, choose a sound, and relax.</div>
+
+            <!-- Duration Selector -->
+            <div class="med-duration-block">
+                <h3>⏱ Session Duration</h3>
+                <div class="med-duration-row">
+                    <button class="med-dur-btn" id="med-dur-minus">−</button>
+                    <div class="med-dur-display">
+                        <span id="med-dur-value">10</span>
+                        <span class="med-dur-unit">min</span>
+                    </div>
+                    <button class="med-dur-btn" id="med-dur-plus">+</button>
+                </div>
+                <!-- Predefined quick picks -->
+                <div class="med-quick-picks">
+                    <button class="med-quick-btn active" data-mins="5">5m</button>
+                    <button class="med-quick-btn" data-mins="10">10m</button>
+                    <button class="med-quick-btn" data-mins="15">15m</button>
+                    <button class="med-quick-btn" data-mins="20">20m</button>
+                    <button class="med-quick-btn" data-mins="30">30m</button>
+                </div>
+            </div>
+
+            <!-- Countdown Timer Display -->
+            <div class="med-countdown-wrap">
+                <div class="med-countdown" id="med-countdown">05:00</div>
+                <div class="med-countdown-label" id="med-countdown-label">Ready to begin</div>
+            </div>
+
+            <!-- Sound Selection -->
+            <div class="sound-selector-container">
+                <h3>🔊 Choose Atmosphere</h3>
+                <div class="sound-grid">
+                    <button class="sound-btn active" data-sound="none">
+                        <span>❌</span> <span>None</span>
+                    </button>
+                    <button class="sound-btn" data-sound="nature">
+                        <span>🌿</span> <span>Nature</span>
+                    </button>
+                    <button class="sound-btn" data-sound="deepfocus">
+                        <span>🧘</span> <span>Deep Focus</span>
+                    </button>
+                    <button class="sound-btn" data-sound="peaceful">
+                        <span>🍃</span> <span>Peaceful</span>
+                    </button>
+                    <button class="sound-btn" data-sound="spiritual">
+                        <span>✨</span> <span>Spiritual</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Breathing Toggle -->
+            <div class="breathing-toggle-row">
+                <span class="breathing-toggle-label">🌬 Breathing Guide</span>
+                <div class="breathing-toggle-btns">
+                    <button class="breath-toggle-btn" id="breath-enable-btn">Enable</button>
+                    <button class="breath-toggle-btn active" id="breath-disable-btn">Disable</button>
+                </div>
+            </div>
+
+            <!-- Breathing Section (hidden by default) -->
+            <div id="breathing-section" class="breathing-section hidden">
+                <!-- Breathing Mode Selection -->
+                <div class="breathing-modes">
+                    <button id="mode-478" class="breathing-mode-btn active" data-mode="478">
+                        <span class="mode-label">Relax</span>
+                        <span class="mode-timing">4-7-8</span>
+                    </button>
+                    <button id="mode-426" class="breathing-mode-btn" data-mode="426">
+                        <span class="mode-label">Focus</span>
+                        <span class="mode-timing">4-2-6</span>
+                    </button>
+                </div>
+                <div class="breathing-visual">
+                    <div class="breathing-circle" id="breathing-circle"></div>
+                    <div class="breathing-text" id="breathing-text">Ready?</div>
+                </div>
+                <div class="breathing-instructions" id="breathing-instructions">
+                    <span>Inhale</span> <b>4s</b> &nbsp;•&nbsp; <span>Hold</span> <b>7s</b> &nbsp;•&nbsp;
+                    <span>Exhale</span> <b>8s</b>
+                </div>
+            </div>
+
+            <!-- Unified Session Controls -->
+            <div class="med-controls">
+                <button id="start-breathing" class="meditation-btn">▶ Start Session</button>
+                <button id="stop-breathing" class="meditation-btn med-stop-btn" style="display:none;">⏹ Stop
+                    Session</button>
+            </div>
+
+            <!-- Pre/Post Meditation Mood Check-in -->
+            <div id="meditation-mood-overlay" class="med-mood-overlay hidden">
+                <div class="med-mood-content">
+                    <h2 id="med-mood-title" class="med-mood-title">How are you feeling right now?</h2>
+                    <p id="med-mood-subtitle" class="med-mood-subtitle">Take a deep breath and check in with yourself.</p>
+                    <div class="med-mood-options">
+                        <button class="med-mood-btn" data-val="1">
+                            <span class="med-mood-emoji">😫</span>
+                            <span class="med-mood-label">Anxious</span>
+                        </button>
+                        <button class="med-mood-btn" data-val="2">
+                            <span class="med-mood-emoji">😔</span>
+                            <span class="med-mood-label">Heavy</span>
+                        </button>
+                        <button class="med-mood-btn" data-val="3">
+                            <span class="med-mood-emoji">😐</span>
+                            <span class="med-mood-label">Neutral</span>
+                        </button>
+                        <button class="med-mood-btn" data-val="4">
+                            <span class="med-mood-emoji">😌</span>
+                            <span class="med-mood-label">Calm</span>
+                        </button>
+                        <button class="med-mood-btn" data-val="5">
+                            <span class="med-mood-emoji">✨</span>
+                            <span class="med-mood-label">Peaceful</span>
+                        </button>
+                    </div>
+                    <p id="med-mood-feedback" class="med-mood-feedback hidden"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Productivity Hub Modal -->
+    <div id="cheatsheet-modal" class="modal-overlay hidden">
+        <div class="modal-content hub-modal-content">
+            <button id="close-cheatsheet" class="close-btn">✕</button>
+
+            <!-- Category Selection View -->
+            <div id="hub-categories-view">
+                <h3>🚀 Productivity Hub</h3>
+                
+                <!-- Game Changing Tips Generator -->
+                <div class="game-changing-tips-card">
+                    <button id="generate-tip-btn" class="become-productive-inline">
+                        <span class="btn-icon">🧠</span> Mind Hacks
+                    </button>
+                    <div id="tip-display-area" class="tip-display-area hidden">
+                        <span id="tip-text" class="tip-text"></span>
+                    </div>
+                </div>
+
+                <div class="hub-grid">
+                    <div class="hub-card" data-category="cheatsheet">
+                        <div class="hub-icon">💡</div>
+                        <span>Productive Cheatsheet</span>
+                    </div>
+                    <div class="hub-card" data-category="habits">
+                        <div class="hub-icon">🚫</div>
+                        <span>Break Bad Habits</span>
+                    </div>
+                    <div class="hub-card" data-category="time">
+                        <div class="hub-icon">⏱️</div>
+                        <span>Time Management</span>
+                    </div>
+                    <div class="hub-card" data-category="focus">
+                        <div class="hub-icon">🧘</div>
+                        <span>solve with meditation</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content View -->
+            <div id="hub-content-view" class="hidden">
+                <div class="hub-header">
+                    <button id="back-to-hub" class="back-btn">⬅ Back to Hub</button>
+                    <h3 id="hub-content-title">Cheatsheet</h3>
+                </div>
+
+                <div id="hub-content-body" class="hub-scrollable-content">
+                    <!-- 1. Productive Cheatsheet -->
+                    <div id="cat-cheatsheet" class="cat-content hidden">
+                        <div class="hub-image-wrapper">
+                            <img src="file_00000000164871fa8242a2f408db55dc.png" alt="Productivity Cheatsheet" class="expandable-img">
+                        </div>
+                    </div>
+
+                    <!-- 2. Break Bad Habits -->
+                    <div id="cat-habits" class="cat-content hidden">
+                        <div class="hub-image-wrapper">
+                            <img src="file_00000000ca207208bab30f2ec889c89f.png" alt="Break Bad Habits" class="expandable-img">
+                        </div>
+                    </div>
+
+                    <!-- 3. Time Management -->
+                    <div id="cat-time" class="cat-content hidden">
+                        <div class="hub-image-wrapper">
+                            <img src="file_000000005c3871fab43858a38fc3b6a8.png" alt="Time Management Tips" class="expandable-img">
+                        </div>
+                    </div>
+
+                    <!-- 4. Daily Focus -->
+                    <div id="cat-focus" class="cat-content hidden">
+                        <div class="hub-image-wrapper">
+                            <img src="file_0000000074b4720899d764b82548f222.png" alt="Daily Focus" class="expandable-img">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="quotes.js"></script>
+    <script src="tips.js"></script>
+    <script src="script.js"></script>
+
+
+    <!-- ==================== ANMOL AI CHATBOT PAGE ==================== -->
+    <div id="anmol-ai-page" class="page">
+        <div class="ai-chat-container">
+            <div class="ai-chat-header">
+                <div class="ai-chat-header-left">
+                    <button id="ai-history-btn" class="ai-header-btn" title="Chat History">☰</button>
+                    <div class="ai-chat-header-info">
+                        <div class="ai-avatar">🤖</div>
+                        <div>
+                            <div class="ai-chat-title">Anmol AI</div>
+                            <div class="ai-chat-subtitle">Your savage productivity coach</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ai-chat-header-right">
+                    <button id="ai-new-chat-btn" class="ai-header-btn" title="New Chat">✚</button>
+                    <button id="closeAnmolAI" class="ai-close-btn">✕</button>
+                </div>
+            </div>
+
+            <!-- Chat History Sidebar -->
+            <div id="ai-chat-sidebar" class="ai-chat-sidebar">
+                <div class="ai-sidebar-header">
+                    <h3>💬 Chat History</h3>
+                    <button id="ai-sidebar-close-btn" class="ai-sidebar-close" title="Close">✕</button>
+                </div>
+                <div id="ai-chat-sidebar-list" class="ai-sidebar-list"></div>
+            </div>
+
+            <div class="ai-chat-messages" id="ai-chat-messages">
+                <div class="ai-message ai-bot-message">
+                    <div class="ai-msg-avatar">🤖</div>
+                    <div class="ai-msg-bubble">
+                        Yo! 👋🔥 I'm <strong>Anmol AI</strong> — your personal productivity roast master & hype beast.
+                        <br><br>I can see everything you're doing in this app 👀 — your tasks, your streak, your water intake, ALL of it.
+                        <br><br>Ask me anything like <em>"How am I doing today?"</em> or <em>"Roast my productivity"</em> and I'll keep it real 💯
+                    </div>
+                </div>
+            </div>
+
+            <div class="ai-typing-indicator hidden" id="ai-typing-indicator">
+                <div class="ai-msg-avatar">🤖</div>
+                <div class="ai-typing-dots">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+
+            <div class="ai-chat-input-bar">
+                <input type="text" id="ai-chat-input" placeholder="Ask Anmol AI anything..." autocomplete="off">
+                <button id="ai-send-btn" class="ai-send-btn">
+                    <span>➤</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating AI Button Removed -->
+
+</body>
+
+</html>
