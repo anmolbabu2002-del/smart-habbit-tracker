@@ -105,17 +105,19 @@ exports.handler = async function (event) {
     });
 
     if (!response.ok) {
-      if (response.status === 429) {
-        console.warn("Gemini API rate limit reached (429). Falling back to Groq...");
-        return await fallbackToGroq(systemPrompt, history, message, GROQ_API_KEY, attachedFile);
+      if (response.status === 400) {
+        // Bad request (usually consecutive user roles or invalid payload). Better to return the exact error.
+        const errText = await response.text();
+        console.error("Gemini API 400 error:", errText);
+        return {
+          statusCode: response.status,
+          body: JSON.stringify({ error: "Gemini API error (400)", details: errText })
+        };
       }
 
-      const errText = await response.text();
-      console.error("Gemini API error:", errText);
-      return {
-        statusCode: response.status,
-        body: JSON.stringify({ error: "Gemini API error", details: errText })
-      };
+      // For ANY other error (429 Rate Limit, 500 Server Error, 503 Unavailable), fall back to Groq!
+      console.warn(`Gemini API failed with status ${response.status}. Falling back to Groq...`);
+      return await fallbackToGroq(systemPrompt, history, message, GROQ_API_KEY, attachedFile);
     }
 
     const data = await response.json();
