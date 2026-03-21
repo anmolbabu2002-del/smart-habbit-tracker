@@ -6174,7 +6174,7 @@ function startStroop(mode) {
             stroopState.timeLeft--;
             document.getElementById("stroop-time-display").textContent = stroopState.timeLeft;
             if (stroopState.timeLeft <= 0) {
-                endStroopGame();
+                endStroopGame("Time's Up! 🏁");
             }
         }, 1000);
     } else {
@@ -6307,7 +6307,7 @@ function checkStroopMatch(clickedHex) {
         }
         
         // Instant Death on wrong tap for BOTH modes
-        endStroopGame();
+        endStroopGame("Wrong Color! ❌");
     }
 }
 
@@ -6325,7 +6325,7 @@ function startSurvivalLoop() {
 
         if (remainingStrpt <= 0) {
              // Time ran out
-            endStroopGame();
+            endStroopGame("Time's Up! 🏁");
             return;
         }
         
@@ -6334,10 +6334,14 @@ function startSurvivalLoop() {
     stroopState.rafId = requestAnimationFrame(tick);
 }
 
-function endStroopGame() {
+function endStroopGame(reason = "Time's Up! 🏁") {
     stroopState.isActive = false;
     clearInterval(stroopState.timerInt);
     cancelAnimationFrame(stroopState.rafId);
+    
+    // Update End Modal Title
+    const titleEl = document.getElementById("stroop-end-title");
+    if(titleEl) titleEl.textContent = reason;
 
     // Check High Scores
     let isNewHS = false;
