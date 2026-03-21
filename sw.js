@@ -1,8 +1,9 @@
-const CACHE_NAME = 'ultradian-v2';
+const CACHE_NAME = 'ultradian-v3';
 const urlsToCache = [
   '/',
   '/index.html',
   '/styles.css',
+  '/styles.css?v=2.2',
   '/script.js',
   '/quotes.js',
   '/tips.js',
@@ -10,7 +11,6 @@ const urlsToCache = [
   '/icon-192.png',
   '/icon-512.png',
   '/ultradian_app_icon_1774120827802.png',
-  // Google Fonts - cache the CSS that loads the font files
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700&family=Playfair+Display:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap'
 ];
 
@@ -26,7 +26,7 @@ self.addEventListener('install', event => {
   );
 });
 
-// Activate: clean up old caches
+// Activate: clean up old caches and take over immediately
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => {
@@ -44,7 +44,13 @@ self.addEventListener('fetch', event => {
 
   // Never cache API calls (AI chatbot needs internet)
   if (url.pathname.startsWith('/api') || url.pathname.startsWith('/.netlify/functions')) {
-    event.respondWith(fetch(event.request));
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return new Response(JSON.stringify({ error: 'You are offline' }), {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      })
+    );
     return;
   }
 
@@ -54,22 +60,30 @@ self.addEventListener('fetch', event => {
         if (cachedResponse) {
           return cachedResponse;
         }
-        // Not in cache - fetch from network and cache it for next time
-        return fetch(event.request).then(response => {
-          // Only cache successful responses
-          if (!response || response.status !== 200) {
-            return response;
+
+        // Try without query string as fallback
+        const urlWithoutQuery = event.request.url.split('?')[0];
+        return caches.match(urlWithoutQuery).then(fallbackResponse => {
+          if (fallbackResponse) {
+            return fallbackResponse;
           }
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, responseToCache);
+
+          // Not in cache at all - fetch from network and cache it
+          return fetch(event.request).then(response => {
+            if (!response || response.status !== 200) {
+              return response;
+            }
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, responseToCache);
+            });
+            return response;
           });
-          return response;
         });
       })
       .catch(() => {
-        // If both cache and network fail, show offline fallback for HTML pages
-        if (event.request.headers.get('accept').includes('text/html')) {
+        // If everything fails and it's an HTML request, serve index.html
+        if (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html')) {
           return caches.match('/index.html');
         }
       })

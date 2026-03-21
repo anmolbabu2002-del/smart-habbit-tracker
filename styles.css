@@ -10188,3 +10188,133 @@ body.theme-custom.cardstyle-neumorphic .task-item {
     transform: scale(0.95);
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
+
+/* ==================== MOBILE-FIRST OVERRIDES ==================== */
+
+/* Kill all horizontal overflow globally */
+html, body {
+    max-width: 100vw;
+    overflow-x: hidden;
+}
+
+@media screen and (max-width: 480px) {
+
+    /* --- NAVIGATION BAR: fit all tabs on screen --- */
+    .nav-bar {
+        justify-content: space-around !important;
+        overflow-x: hidden !important;
+        gap: 0 !important;
+        padding: 6px 4px !important;
+    }
+
+    .nav-btn {
+        flex: 1 1 0 !important;
+        padding: 8px 4px !important;
+        font-size: 11px !important;
+        text-align: center;
+        justify-content: center;
+        min-width: 0 !important;
+    }
+
+    .nav-btn span {
+        font-size: 11px !important;
+    }
+
+    /* --- HEADER: reduce vertical space on phone --- */
+    .page-title {
+        font-size: 1.6rem !important;
+        margin-bottom: 5px !important;
+    }
+
+    .subtitle {
+        font-size: 0.9rem !important;
+        margin-bottom: 8px !important;
+    }
+
+    /* --- MAIN CONTAINER: prevent overflow --- */
+    .container, .main-content, .app-container {
+        max-width: 100vw !important;
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+        box-sizing: border-box !important;
+    }
+
+    /* --- QUOTE CARD: smaller on mobile --- */
+    .quote-card {
+        padding: 15px !important;
+        margin-bottom: 10px !important;
+    }
+
+    .quote-card p {
+        font-size: 0.95rem !important;
+    }
+
+    /* --- TASK INPUT: full width --- */
+    .task-input-container {
+        padding: 8px !important;
+    }
+
+    #taskone {
+        font-size: 14px !important;
+    }
+
+    /* --- BUTTONS: bigger touch targets --- */
+    .primary-btn, button {
+        min-height: 44px;
+    }
+
+    /* --- TUG OF WAR: optimize for phone --- */
+    .tug-game-container {
+        padding: 15px 10px !important;
+    }
+
+    .tug-num-btn {
+        font-size: 1.4rem !important;
+        padding: 14px 0 !important;
+    }
+
+    /* --- STROOP/BRAIN CLATTER: phone layout --- */
+    .stroop-game-container {
+        padding: 15px 10px !important;
+    }
+
+    /* --- GAMES HUB: single column cards --- */
+    .games-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+
+    /* --- GENERAL CARDS: tighter on phone --- */
+    .card, .glass-card {
+        padding: 15px !important;
+        border-radius: 15px !important;
+    }
+
+    /* --- AI CHAT: phone optimized --- */
+    .ai-chat-container {
+        padding: 10px !important;
+    }
+
+    /* --- BOTTOM PADDING for fixed navbar --- */
+    .main-content {
+        padding-bottom: 80px !important;
+    }
+}
+
+/* Extra small phones (iPhone SE, etc.) */
+@media screen and (max-width: 360px) {
+    .nav-btn {
+        font-size: 10px !important;
+        padding: 6px 2px !important;
+    }
+
+    .page-title {
+        font-size: 1.3rem !important;
+    }
+
+    .tug-num-btn {
+        font-size: 1.2rem !important;
+        padding: 10px 0 !important;
+    }
+}
+
