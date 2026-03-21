@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#121212">
     <title>Smart Habit & Focus Tracker 💪</title>
-    <link rel="icon" type="image/png" href="ultradian_app_icon_1774120827802.png">
-    <link rel="apple-touch-icon" href="ultradian_app_icon_1774120827802.png">
+    <link rel="icon" type="image/png" href="icon-512.png">
+    <link rel="apple-touch-icon" href="icon-512.png">
     <link rel="manifest" href="manifest.json">
     <script>
         if ('serviceWorker' in navigator) {
@@ -1894,7 +1894,8 @@
                     style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 30px 20px; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
                     <div style="font-size: 3.5rem; margin-bottom: 15px;">🪢</div>
                     <h3 style="color: var(--text-main); margin-bottom: 10px; font-size: 1.3rem;">Tug of War</h3>
-                    <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.4;">1v1 Math Battle. Pull the rope to your side.</p>
+                    <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.4;">1v1 Math Battle. Pull the
+                        rope to your side.</p>
                 </div>
             </div>
         </div>
@@ -2061,7 +2062,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- ================= SYNAPTIC TUG OF WAR VIEW ================= -->
         <div id="tug-game-view" class="hidden">
             <div style="max-width: 500px; margin: 0 auto 15px auto;">
@@ -2074,7 +2075,8 @@
             <h1 class="page-title"
                 style="text-align:center; font-size: 2.5rem; background: linear-gradient(135deg, #f6d365, #fda085); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 5px;">
                 Tug of War 🪢</h1>
-            <p style="text-align:center; color:var(--text-muted); margin-bottom: 20px;">Solve the math faster than your opponent.</p>
+            <p style="text-align:center; color:var(--text-muted); margin-bottom: 20px;">Solve the math faster than your
+                opponent.</p>
 
             <div class="tug-game-container"
                 style="background: var(--bg-card); padding: 30px 20px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.05); border: 1px solid var(--border); max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; position: relative; overflow: hidden;">
@@ -2082,13 +2084,14 @@
                 <!-- Pre-Game Menu -->
                 <div id="tug-menu-area"
                     style="width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 20px 0;">
-                    
+
                     <!-- Avatar Selection -->
                     <div style="display: flex; gap: 30px; margin-bottom: 25px; align-items: flex-end;">
                         <!-- Player Select -->
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
                             <label style="font-size: 0.9rem; color: var(--text-main); font-weight: bold;">YOU</label>
-                            <select id="tug-player-select" style="font-size: 2.5rem; background: transparent; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; padding: 5px; outline: none;">
+                            <select id="tug-player-select"
+                                style="font-size: 2.5rem; background: transparent; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; padding: 5px; outline: none;">
                                 <option value="🙎‍♂️">🙎‍♂️</option>
                                 <option value="🙎‍♀️">🙎‍♀️</option>
                                 <option value="🥷">🥷</option>
@@ -2103,7 +2106,8 @@
                         <!-- AI Select -->
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
                             <label style="font-size: 0.9rem; color: var(--text-main); font-weight: bold;">AI</label>
-                            <select id="tug-ai-select" style="font-size: 2.5rem; background: transparent; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; padding: 5px; outline: none;">
+                            <select id="tug-ai-select"
+                                style="font-size: 2.5rem; background: transparent; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; padding: 5px; outline: none;">
                                 <option value="🤖">🤖</option>
                                 <option value="👽">👽</option>
                                 <option value="👹">👹</option>
@@ -2113,55 +2117,77 @@
                             </select>
                         </div>
                     </div>
-                    
+
                     <button id="btn-tug-start" class="primary-btn"
                         style="width: 100%; padding: 18px; font-size: 1.2rem; border-radius: 15px; background: linear-gradient(135deg, #f6d365, #fda085); color:white; border:none; cursor:pointer; font-weight:bold; box-shadow: 0 10px 20px rgba(253, 160, 133, 0.3); transition: transform 0.2s;">
                         Enter Arena<br>
-                        <span style="font-size:0.9rem; font-weight:normal; opacity:0.9;">Highest Level: <span id="tug-hs-level">1</span> (Streak: <span id="tug-hs-streak">0</span>)</span>
+                        <span style="font-size:0.9rem; font-weight:normal; opacity:0.9;">Highest Level: <span
+                                id="tug-hs-level">1</span> (Streak: <span id="tug-hs-streak">0</span>)</span>
                     </button>
                 </div>
 
                 <!-- Main Arena -->
-                <div id="tug-play-area" class="hidden" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-                    
-                    <div class="brain-stats-header" style="width: 100%; display: flex; justify-content: space-between; margin-bottom: 20px; font-weight: 600; font-size: 1.1rem; padding: 0 15px;">
+                <div id="tug-play-area" class="hidden"
+                    style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+
+                    <div class="brain-stats-header"
+                        style="width: 100%; display: flex; justify-content: space-between; margin-bottom: 20px; font-weight: 600; font-size: 1.1rem; padding: 0 15px;">
                         <div class="brain-stat" style="color: #00cec9;">Lvl: <span id="tug-level-display">1</span></div>
-                        <div class="brain-stat" style="color: #ff4757;">Streak: <span id="tug-streak-display">0</span></div>
+                        <div class="brain-stat" style="color: #ff4757;">Streak: <span id="tug-streak-display">0</span>
+                        </div>
                     </div>
 
                     <!-- The Rope -->
-                    <div class="tug-arena-wrapper" style="width: 100%; height: 110px; position: relative; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; background: transparent; overflow: visible;">
+                    <div class="tug-arena-wrapper"
+                        style="width: 100%; height: 110px; position: relative; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; background: transparent; overflow: visible;">
                         <!-- Woven Rope -->
-                        <div style="position: absolute; width: 100%; height: 14px; left: 0; top: 65%; transform: translateY(-50%); background: repeating-linear-gradient(45deg, #d1bfae, #d1bfae 4px, #a88e7a 4px, #a88e7a 8px); box-shadow: 0 4px 6px rgba(0,0,0,0.3); border-radius: 6px; z-index: 5;"></div>
-                        
+                        <div
+                            style="position: absolute; width: 100%; height: 14px; left: 0; top: 65%; transform: translateY(-50%); background: repeating-linear-gradient(45deg, #d1bfae, #d1bfae 4px, #a88e7a 4px, #a88e7a 8px); box-shadow: 0 4px 6px rgba(0,0,0,0.3); border-radius: 6px; z-index: 5;">
+                        </div>
+
                         <!-- Entities -->
                         <div style="position: absolute; left: 0; top: 0; text-align: center; z-index: 10;">
-                             <div style="font-size: 0.85rem; font-weight: 800; color: var(--text-main); margin-bottom: -5px;">YOU</div>
-                             <div id="tug-player-avatar" style="font-size: 3.5rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">🙎‍♂️</div>
+                            <div
+                                style="font-size: 0.85rem; font-weight: 800; color: var(--text-main); margin-bottom: -5px;">
+                                YOU</div>
+                            <div id="tug-player-avatar"
+                                style="font-size: 3.5rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">🙎‍♂️</div>
                         </div>
 
                         <div style="position: absolute; right: 0; top: 0; text-align: center; z-index: 10;">
-                             <div style="font-size: 0.85rem; font-weight: 800; color: #ff4757; margin-bottom: -5px;">AI</div>
-                             <div id="tug-ai-avatar" style="font-size: 3.5rem; transform: scaleX(-1); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">🤖</div>
+                            <div style="font-size: 0.85rem; font-weight: 800; color: #ff4757; margin-bottom: -5px;">AI
+                            </div>
+                            <div id="tug-ai-avatar"
+                                style="font-size: 3.5rem; transform: scaleX(-1); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
+                                🤖</div>
                         </div>
 
                         <!-- The Center Red Flag / Knot -->
-                        <div id="tug-knot" style="position: absolute; left: 50%; top: 65%; width: 14px; height: 40px; background: #ff4757; border-radius: 4px; transform: translate(-50%, -50%); box-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 20; transition: left 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);"></div>
+                        <div id="tug-knot"
+                            style="position: absolute; left: 50%; top: 65%; width: 14px; height: 40px; background: #ff4757; border-radius: 4px; transform: translate(-50%, -50%); box-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 20; transition: left 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+                        </div>
                     </div>
 
                     <!-- HUD Equation -->
-                    <div id="tug-equation-container" style="height: 100px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px;">
-                        <h1 id="tug-equation" style="font-size: 3.5rem; font-weight: 900; letter-spacing: 2px; margin: 0; color: var(--text-main);">14 + 8</h1>
+                    <div id="tug-equation-container"
+                        style="height: 100px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px;">
+                        <h1 id="tug-equation"
+                            style="font-size: 3.5rem; font-weight: 900; letter-spacing: 2px; margin: 0; color: var(--text-main);">
+                            14 + 8</h1>
                     </div>
-                    
+
                     <!-- Player Answer Tracker -->
-                    <div style="height: 40px; margin-bottom: 20px; display: flex; align-items: center; background: var(--bg-input); padding: 5px 20px; border-radius: 10px; border: 1px solid var(--border);">
-                        <span id="tug-answer-input" style="font-size: 1.8rem; font-weight: 700; color: #00cec9; letter-spacing: 2px;"></span>
-                        <span id="tug-answer-cursor" style="font-size: 1.8rem; font-weight: 300; color: #00cec9; animation: blink 1s step-end infinite; margin-left: 5px;">|</span>
+                    <div
+                        style="height: 40px; margin-bottom: 20px; display: flex; align-items: center; background: var(--bg-input); padding: 5px 20px; border-radius: 10px; border: 1px solid var(--border);">
+                        <span id="tug-answer-input"
+                            style="font-size: 1.8rem; font-weight: 700; color: #00cec9; letter-spacing: 2px;"></span>
+                        <span id="tug-answer-cursor"
+                            style="font-size: 1.8rem; font-weight: 300; color: #00cec9; animation: blink 1s step-end infinite; margin-left: 5px;">|</span>
                     </div>
 
                     <!-- Custom Numpad -->
-                    <div class="tug-numpad" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; max-width: 300px;">
+                    <div class="tug-numpad"
+                        style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; max-width: 300px;">
                         <button class="tug-num-btn">1</button>
                         <button class="tug-num-btn">2</button>
                         <button class="tug-num-btn">3</button>
@@ -2171,17 +2197,22 @@
                         <button class="tug-num-btn">7</button>
                         <button class="tug-num-btn">8</button>
                         <button class="tug-num-btn">9</button>
-                        <button class="tug-num-btn tug-action-btn" data-action="clear" style="background: #ff4757; color: white; font-weight: 800;">C</button>
+                        <button class="tug-num-btn tug-action-btn" data-action="clear"
+                            style="background: #ff4757; color: white; font-weight: 800;">C</button>
                         <button class="tug-num-btn">0</button>
-                        <button class="tug-num-btn tug-action-btn" data-action="submit" style="background: #2ed573; color: white; font-weight: 800;">↵</button>
+                        <button class="tug-num-btn tug-action-btn" data-action="submit"
+                            style="background: #2ed573; color: white; font-weight: 800;">↵</button>
                     </div>
                 </div>
 
                 <!-- Match Over Overlay -->
                 <div id="tug-end-modal" class="hidden"
                     style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; border-radius: 20px; backdrop-filter: blur(4px);">
-                    <h2 id="tug-end-title" style="color: #ff4757; font-size: 2.8rem; margin-bottom: 10px; text-transform: uppercase;">Defeat</h2>
-                    <p style="color: #ccc; font-size: 1.2rem; margin-bottom: 25px;">Survived to Level <strong id="tug-final-level" style="color: #f6d365; font-size: 1.5rem;">1</strong></p>
+                    <h2 id="tug-end-title"
+                        style="color: #ff4757; font-size: 2.8rem; margin-bottom: 10px; text-transform: uppercase;">
+                        Defeat</h2>
+                    <p style="color: #ccc; font-size: 1.2rem; margin-bottom: 25px;">Survived to Level <strong
+                            id="tug-final-level" style="color: #f6d365; font-size: 1.5rem;">1</strong></p>
                     <button id="tug-play-again-btn" class="primary-btn"
                         style="padding: 15px 40px; font-size: 1.2rem; border-radius: 30px; background: linear-gradient(135deg, #f6d365, #fda085); color:white; border:none; cursor:pointer;">Rematch</button>
                 </div>
