@@ -6,7 +6,9 @@
     <title>Smart Habit & Focus Tracker 💪</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700&family=Playfair+Display:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700&family=Playfair+Display:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=2.2">
     <style>
         .daily-focus-task {
@@ -332,13 +334,25 @@
         <button class="nav-btn" data-page="water-page">💧 Water</button>
         <button class="nav-btn" data-page="pomodoro-page">🍅 Pomodoro</button>
         <button class="nav-btn" data-page="meditation-page">🧘 Meditation</button>
+        <button class="nav-btn" data-page="brain-games-page">🧠Mind Games</button>
         <button class="nav-btn" data-page="mood-page">🎭 Mood</button>
         <button class="nav-btn" data-page="sleep-page">😴 Sleep</button>
         <button class="nav-btn" data-page="settings-page">⚙️ Settings</button>
     </nav>
     <!-- Dashboard Page -->
     <div id="dashboard-page" class="page">
-        <h1 class="page-title">Welcome Back! 👋</h1>
+        <!-- Ultimate Goal Display -->
+        <div id="big-goal-container" class="big-goal-container" style="margin-top: 20px;">
+            <div class="big-goal-header">🎯 My Ultimate Goal <button id="edit-big-goal-btn" class="icon-btn"
+                    style="background:none; border:none; cursor:pointer;" title="Edit Goal">✏️</button></div>
+            <div id="big-goal-display">Set your ultimate big goal...</div>
+            <div id="big-goal-edit-area" class="hidden" style="margin-top:10px; display:flex; gap:10px;">
+                <input type="text" id="big-goal-input" placeholder="What is your main driving goal?"
+                    style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--border); background:var(--bg-input); color:var(--text-main);">
+                <button id="save-big-goal-btn" class="primary-btn"
+                    style="padding:8px 16px; border-radius:8px; background:var(--primary); color:white; border:none; cursor:pointer;">Save</button>
+            </div>
+        </div>
 
         <div class="stats-grid">
             <div class="stat-card streak-card">
@@ -425,18 +439,23 @@
             </div>
         </div>
 
+
         <div id="greeting-container" style="text-align: center; margin-bottom: 20px;">
             <div class="greeting-row">
                 <h1 id="dynamic-greeting"
                     style="margin: 0; font-size: 2.2rem; text-align: left; line-height: 1.3; flex: 1;">
-                    <span class="greeting-text" style="background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">Good Morning</span>&nbsp;<span class="greeting-emoji" style="display: inline-block;">🌅</span>
+                    <span class="greeting-text"
+                        style="background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">Good
+                        Morning</span>&nbsp;<span class="greeting-emoji" style="display: inline-block;">🌅</span>
                 </h1>
             </div>
             <h2 id="heading" style="margin-top: 5px; font-size: 1.2rem; color: var(--text-muted); font-weight: normal;">
                 Smart Habit & Focus Tracker 💪</h2>
             <div class="header-action-btns">
-                <button id="anmol-ai-header-btn" class="become-productive-inline"><span class="btn-icon">🤖</span> Anmol AI</button>
-                <button id="cheatsheet-btn" class="become-productive-inline"><span class="btn-icon">💡</span> Productive</button>
+                <button id="anmol-ai-header-btn" class="become-productive-inline"><span class="btn-icon">🤖</span> Anmol
+                    AI</button>
+                <button id="cheatsheet-btn" class="become-productive-inline"><span class="btn-icon">💡</span>
+                    Productive</button>
             </div>
         </div>
 
@@ -447,7 +466,8 @@
                 <h2>Welcome!</h2>
                 <p>Let's customize your experience. What should we call you?</p>
                 <div class="name-input-group">
-                    <input type="text" id="overlay-name-input" placeholder="Enter your name (3-10 letters)" minlength="3" maxlength="10" autocomplete="off">
+                    <input type="text" id="overlay-name-input" placeholder="Enter your name (3-10 letters)"
+                        minlength="3" maxlength="10" autocomplete="off">
                     <div id="name-error-msg" class="name-error-msg">Name must be 3-10 characters long</div>
                 </div>
                 <button id="overlay-save-name-btn" class="name-save-btn">Get Started ✨</button>
@@ -477,7 +497,8 @@
         <div id="empty-state" class="empty-state">
             <div class="empty-state-icon">📝</div>
             <h3>No tasks yet!</h3>
-            <p>Start your productive day by adding your first task above. Every big achievement starts with a single step.</p>
+            <p>Start your productive day by adding your first task above. Every big achievement starts with a single
+                step.</p>
             <button class="empty-state-cta" onclick="document.getElementById('taskone').focus();">
                 ✨ Add Your First Task
             </button>
@@ -504,7 +525,9 @@
                             <span class="priority-level-name">Critical</span>
                             <span class="priority-level-desc">Do it NOW or it explodes</span>
                         </div>
-                        <div class="priority-power-bar"><div class="priority-power-fill power-critical"></div></div>
+                        <div class="priority-power-bar">
+                            <div class="priority-power-fill power-critical"></div>
+                        </div>
                     </button>
                     <button class="priority-level-btn" data-priority="high">
                         <div class="priority-orb priority-orb-high"><span>⚡</span></div>
@@ -512,7 +535,9 @@
                             <span class="priority-level-name">High</span>
                             <span class="priority-level-desc">Top of the list today</span>
                         </div>
-                        <div class="priority-power-bar"><div class="priority-power-fill power-high"></div></div>
+                        <div class="priority-power-bar">
+                            <div class="priority-power-fill power-high"></div>
+                        </div>
                     </button>
                     <button class="priority-level-btn" data-priority="medium">
                         <div class="priority-orb priority-orb-medium"><span>🎯</span></div>
@@ -520,7 +545,9 @@
                             <span class="priority-level-name">Medium</span>
                             <span class="priority-level-desc">Important, but not urgent</span>
                         </div>
-                        <div class="priority-power-bar"><div class="priority-power-fill power-medium"></div></div>
+                        <div class="priority-power-bar">
+                            <div class="priority-power-fill power-medium"></div>
+                        </div>
                     </button>
                     <button class="priority-level-btn" data-priority="low">
                         <div class="priority-orb priority-orb-low"><span>🌿</span></div>
@@ -528,7 +555,9 @@
                             <span class="priority-level-name">Low</span>
                             <span class="priority-level-desc">Get to it when you can</span>
                         </div>
-                        <div class="priority-power-bar"><div class="priority-power-fill power-low"></div></div>
+                        <div class="priority-power-bar">
+                            <div class="priority-power-fill power-low"></div>
+                        </div>
                     </button>
                     <button class="priority-level-btn" data-priority="chill">
                         <div class="priority-orb priority-orb-chill"><span>🧊</span></div>
@@ -536,11 +565,14 @@
                             <span class="priority-level-name">Chill</span>
                             <span class="priority-level-desc">Zero stress, whenever vibes</span>
                         </div>
-                        <div class="priority-power-bar"><div class="priority-power-fill power-chill"></div></div>
+                        <div class="priority-power-bar">
+                            <div class="priority-power-fill power-chill"></div>
+                        </div>
                     </button>
                 </div>
                 <div class="priority-modal-actions">
-                    <button id="priority-clear-btn" class="priority-action-btn priority-clear">🚫 Clear Priority</button>
+                    <button id="priority-clear-btn" class="priority-action-btn priority-clear">🚫 Clear
+                        Priority</button>
                     <button id="priority-cancel-btn" class="priority-action-btn priority-cancel">Cancel</button>
                 </div>
             </div>
@@ -584,8 +616,12 @@
                     <div id="castle-progress-fill" class="castle-progress-fill"></div>
                 </div>
                 <small id="castle-next-label" class="castle-next-hint">Next: Walls (4 days)</small>
-                <p id="castle-days-left" style="margin: 8px 0 4px 0; font-size: 1.1rem; font-weight: 700; color: var(--primary); text-align: center;">4 days left for the next stage</p>
-                <p id="castle-tagline" style="margin: 0; font-size: 0.85rem; color: var(--text-muted); text-align: center; font-style: italic;">Complete tasks daily to build a flying castle ☁️🏰</p>
+                <p id="castle-days-left"
+                    style="margin: 8px 0 4px 0; font-size: 1.1rem; font-weight: 700; color: var(--primary); text-align: center;">
+                    4 days left for the next stage</p>
+                <p id="castle-tagline"
+                    style="margin: 0; font-size: 0.85rem; color: var(--text-muted); text-align: center; font-style: italic;">
+                    Complete tasks daily to build a flying castle ☁️🏰</p>
             </div>
         </div>
 
@@ -599,7 +635,17 @@
                     <div class="badge-ribbon">STONE</div>
                     <div class="badge-shield">
                         <span class="reward-icon">
-                            <svg width="36" height="36" viewBox="0 0 36 36"><defs><linearGradient id="g-stone" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#9E9E9E"/><stop offset="100%" stop-color="#616161"/></linearGradient></defs><circle cx="18" cy="18" r="14" fill="url(#g-stone)" opacity="0.9"/><circle cx="18" cy="18" r="9" fill="none" stroke="#BDBDBD" stroke-width="1.5"/><circle cx="18" cy="18" r="4" fill="#E0E0E0"/></svg>
+                            <svg width="36" height="36" viewBox="0 0 36 36">
+                                <defs>
+                                    <linearGradient id="g-stone" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#9E9E9E" />
+                                        <stop offset="100%" stop-color="#616161" />
+                                    </linearGradient>
+                                </defs>
+                                <circle cx="18" cy="18" r="14" fill="url(#g-stone)" opacity="0.9" />
+                                <circle cx="18" cy="18" r="9" fill="none" stroke="#BDBDBD" stroke-width="1.5" />
+                                <circle cx="18" cy="18" r="4" fill="#E0E0E0" />
+                            </svg>
                         </span>
                     </div>
                     <span class="reward-label">Ember</span>
@@ -610,7 +656,17 @@
                     <div class="badge-ribbon">BRONZE</div>
                     <div class="badge-shield">
                         <span class="reward-icon">
-                            <svg width="36" height="36" viewBox="0 0 36 36"><defs><linearGradient id="g-bronze" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#CD7F32"/><stop offset="100%" stop-color="#8B5E3C"/></linearGradient></defs><polygon points="18,2 22,13 34,13 24,21 28,33 18,25 8,33 12,21 2,13 14,13" fill="url(#g-bronze)"/><circle cx="18" cy="17" r="5" fill="#FFE0B2" opacity="0.6"/></svg>
+                            <svg width="36" height="36" viewBox="0 0 36 36">
+                                <defs>
+                                    <linearGradient id="g-bronze" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#CD7F32" />
+                                        <stop offset="100%" stop-color="#8B5E3C" />
+                                    </linearGradient>
+                                </defs>
+                                <polygon points="18,2 22,13 34,13 24,21 28,33 18,25 8,33 12,21 2,13 14,13"
+                                    fill="url(#g-bronze)" />
+                                <circle cx="18" cy="17" r="5" fill="#FFE0B2" opacity="0.6" />
+                            </svg>
                         </span>
                     </div>
                     <span class="reward-label">Spark</span>
@@ -621,7 +677,19 @@
                     <div class="badge-ribbon">SILVER</div>
                     <div class="badge-shield">
                         <span class="reward-icon">
-                            <svg width="36" height="36" viewBox="0 0 36 36"><defs><linearGradient id="g-silver" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#FF6D00"/><stop offset="50%" stop-color="#FF9100"/><stop offset="100%" stop-color="#FFAB00"/></linearGradient></defs><path d="M18 4 C18 4 24 14 24 20 C24 24 21 28 18 32 C15 28 12 24 12 20 C12 14 18 4 18 4Z" fill="url(#g-silver)"/><ellipse cx="18" cy="20" rx="4" ry="6" fill="#FFF3E0" opacity="0.5"/></svg>
+                            <svg width="36" height="36" viewBox="0 0 36 36">
+                                <defs>
+                                    <linearGradient id="g-silver" x1="0%" y1="100%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="#FF6D00" />
+                                        <stop offset="50%" stop-color="#FF9100" />
+                                        <stop offset="100%" stop-color="#FFAB00" />
+                                    </linearGradient>
+                                </defs>
+                                <path
+                                    d="M18 4 C18 4 24 14 24 20 C24 24 21 28 18 32 C15 28 12 24 12 20 C12 14 18 4 18 4Z"
+                                    fill="url(#g-silver)" />
+                                <ellipse cx="18" cy="20" rx="4" ry="6" fill="#FFF3E0" opacity="0.5" />
+                            </svg>
                         </span>
                     </div>
                     <span class="reward-label">Flame</span>
@@ -632,7 +700,33 @@
                     <div class="badge-ribbon">GOLD</div>
                     <div class="badge-shield">
                         <span class="reward-icon">
-                            <svg width="36" height="36" viewBox="0 0 36 36"><defs><linearGradient id="g-gold" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFD700"/><stop offset="50%" stop-color="#FFA000"/><stop offset="100%" stop-color="#FF6F00"/></linearGradient></defs><circle cx="18" cy="18" r="10" fill="url(#g-gold)"/><line x1="18" y1="3" x2="18" y2="9" stroke="#FFD700" stroke-width="2.5" stroke-linecap="round"/><line x1="18" y1="27" x2="18" y2="33" stroke="#FFD700" stroke-width="2.5" stroke-linecap="round"/><line x1="3" y1="18" x2="9" y2="18" stroke="#FFD700" stroke-width="2.5" stroke-linecap="round"/><line x1="27" y1="18" x2="33" y2="18" stroke="#FFD700" stroke-width="2.5" stroke-linecap="round"/><line x1="7" y1="7" x2="11" y2="11" stroke="#FFA000" stroke-width="2" stroke-linecap="round"/><line x1="25" y1="7" x2="29" y2="3" stroke="#FFA000" stroke-width="2" stroke-linecap="round"/><line x1="7" y1="29" x2="11" y2="25" stroke="#FFA000" stroke-width="2" stroke-linecap="round"/><line x1="25" y1="25" x2="29" y2="29" stroke="#FFA000" stroke-width="2" stroke-linecap="round"/><circle cx="18" cy="18" r="5" fill="#FFF8E1"/></svg>
+                            <svg width="36" height="36" viewBox="0 0 36 36">
+                                <defs>
+                                    <linearGradient id="g-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#FFD700" />
+                                        <stop offset="50%" stop-color="#FFA000" />
+                                        <stop offset="100%" stop-color="#FF6F00" />
+                                    </linearGradient>
+                                </defs>
+                                <circle cx="18" cy="18" r="10" fill="url(#g-gold)" />
+                                <line x1="18" y1="3" x2="18" y2="9" stroke="#FFD700" stroke-width="2.5"
+                                    stroke-linecap="round" />
+                                <line x1="18" y1="27" x2="18" y2="33" stroke="#FFD700" stroke-width="2.5"
+                                    stroke-linecap="round" />
+                                <line x1="3" y1="18" x2="9" y2="18" stroke="#FFD700" stroke-width="2.5"
+                                    stroke-linecap="round" />
+                                <line x1="27" y1="18" x2="33" y2="18" stroke="#FFD700" stroke-width="2.5"
+                                    stroke-linecap="round" />
+                                <line x1="7" y1="7" x2="11" y2="11" stroke="#FFA000" stroke-width="2"
+                                    stroke-linecap="round" />
+                                <line x1="25" y1="7" x2="29" y2="3" stroke="#FFA000" stroke-width="2"
+                                    stroke-linecap="round" />
+                                <line x1="7" y1="29" x2="11" y2="25" stroke="#FFA000" stroke-width="2"
+                                    stroke-linecap="round" />
+                                <line x1="25" y1="25" x2="29" y2="29" stroke="#FFA000" stroke-width="2"
+                                    stroke-linecap="round" />
+                                <circle cx="18" cy="18" r="5" fill="#FFF8E1" />
+                            </svg>
                         </span>
                     </div>
                     <span class="reward-label">Blaze</span>
@@ -643,7 +737,20 @@
                     <div class="badge-ribbon">PLATINUM</div>
                     <div class="badge-shield">
                         <span class="reward-icon">
-                            <svg width="36" height="36" viewBox="0 0 36 36"><defs><linearGradient id="g-plat" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#78909C"/><stop offset="50%" stop-color="#B0BEC5"/><stop offset="100%" stop-color="#546E7A"/></linearGradient></defs><path d="M18 3 L24 14 L34 14 L26 22 L30 33 L18 26 L6 33 L10 22 L2 14 L12 14Z" fill="url(#g-plat)" stroke="#90A4AE" stroke-width="1"/><path d="M18 3 L24 14 L34 14 L26 22 L30 33 L18 26 L6 33 L10 22 L2 14 L12 14Z" fill="none" stroke="white" stroke-width="0.5" opacity="0.3"/><circle cx="18" cy="18" r="5" fill="#CFD8DC" opacity="0.7"/></svg>
+                            <svg width="36" height="36" viewBox="0 0 36 36">
+                                <defs>
+                                    <linearGradient id="g-plat" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#78909C" />
+                                        <stop offset="50%" stop-color="#B0BEC5" />
+                                        <stop offset="100%" stop-color="#546E7A" />
+                                    </linearGradient>
+                                </defs>
+                                <path d="M18 3 L24 14 L34 14 L26 22 L30 33 L18 26 L6 33 L10 22 L2 14 L12 14Z"
+                                    fill="url(#g-plat)" stroke="#90A4AE" stroke-width="1" />
+                                <path d="M18 3 L24 14 L34 14 L26 22 L30 33 L18 26 L6 33 L10 22 L2 14 L12 14Z"
+                                    fill="none" stroke="white" stroke-width="0.5" opacity="0.3" />
+                                <circle cx="18" cy="18" r="5" fill="#CFD8DC" opacity="0.7" />
+                            </svg>
                         </span>
                     </div>
                     <span class="reward-label">Inferno</span>
@@ -654,7 +761,19 @@
                     <div class="badge-ribbon">DIAMOND</div>
                     <div class="badge-shield">
                         <span class="reward-icon">
-                            <svg width="36" height="36" viewBox="0 0 36 36"><defs><linearGradient id="g-dia" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4DD0E1"/><stop offset="50%" stop-color="#00BCD4"/><stop offset="100%" stop-color="#0097A7"/></linearGradient></defs><polygon points="18,2 28,14 18,34 8,14" fill="url(#g-dia)"/><polygon points="18,2 23,14 18,10 13,14" fill="#E0F7FA" opacity="0.5"/><line x1="18" y1="10" x2="18" y2="34" stroke="#B2EBF2" stroke-width="0.6" opacity="0.5"/></svg>
+                            <svg width="36" height="36" viewBox="0 0 36 36">
+                                <defs>
+                                    <linearGradient id="g-dia" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#4DD0E1" />
+                                        <stop offset="50%" stop-color="#00BCD4" />
+                                        <stop offset="100%" stop-color="#0097A7" />
+                                    </linearGradient>
+                                </defs>
+                                <polygon points="18,2 28,14 18,34 8,14" fill="url(#g-dia)" />
+                                <polygon points="18,2 23,14 18,10 13,14" fill="#E0F7FA" opacity="0.5" />
+                                <line x1="18" y1="10" x2="18" y2="34" stroke="#B2EBF2" stroke-width="0.6"
+                                    opacity="0.5" />
+                            </svg>
                         </span>
                     </div>
                     <span class="reward-label">Phoenix</span>
@@ -665,7 +784,21 @@
                     <div class="badge-ribbon">MYTHIC</div>
                     <div class="badge-shield">
                         <span class="reward-icon">
-                            <svg width="36" height="36" viewBox="0 0 36 36"><defs><linearGradient id="g-myth" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#CE93D8"/><stop offset="50%" stop-color="#AB47BC"/><stop offset="100%" stop-color="#7B1FA2"/></linearGradient></defs><circle cx="18" cy="18" r="12" fill="url(#g-myth)"/><circle cx="18" cy="18" r="12" fill="none" stroke="#E1BEE7" stroke-width="1.5" stroke-dasharray="3 2"/><polygon points="18,6 20,15 29,15 22,20 24,29 18,24 12,29 14,20 7,15 16,15" fill="#F3E5F5" opacity="0.7"/><circle cx="18" cy="18" r="3" fill="#EDE7F6"/></svg>
+                            <svg width="36" height="36" viewBox="0 0 36 36">
+                                <defs>
+                                    <linearGradient id="g-myth" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#CE93D8" />
+                                        <stop offset="50%" stop-color="#AB47BC" />
+                                        <stop offset="100%" stop-color="#7B1FA2" />
+                                    </linearGradient>
+                                </defs>
+                                <circle cx="18" cy="18" r="12" fill="url(#g-myth)" />
+                                <circle cx="18" cy="18" r="12" fill="none" stroke="#E1BEE7" stroke-width="1.5"
+                                    stroke-dasharray="3 2" />
+                                <polygon points="18,6 20,15 29,15 22,20 24,29 18,24 12,29 14,20 7,15 16,15"
+                                    fill="#F3E5F5" opacity="0.7" />
+                                <circle cx="18" cy="18" r="3" fill="#EDE7F6" />
+                            </svg>
                         </span>
                     </div>
                     <span class="reward-label">Supernova</span>
@@ -676,7 +809,21 @@
                     <div class="badge-ribbon">LEGENDARY</div>
                     <div class="badge-shield">
                         <span class="reward-icon">
-                            <svg width="36" height="36" viewBox="0 0 36 36"><defs><linearGradient id="g-legend" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFD700"/><stop offset="30%" stop-color="#FFA000"/><stop offset="70%" stop-color="#FF6F00"/><stop offset="100%" stop-color="#E65100"/></linearGradient></defs><path d="M18 4 L22 12 L14 12 Z" fill="url(#g-legend)"/><path d="M10 12 L26 12 L30 20 L18 32 L6 20 Z" fill="url(#g-legend)"/><circle cx="18" cy="19" r="4" fill="#FFF8E1" opacity="0.6"/><path d="M18 4 L22 12 L14 12 Z" fill="none" stroke="#FFD54F" stroke-width="0.8" opacity="0.5"/></svg>
+                            <svg width="36" height="36" viewBox="0 0 36 36">
+                                <defs>
+                                    <linearGradient id="g-legend" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#FFD700" />
+                                        <stop offset="30%" stop-color="#FFA000" />
+                                        <stop offset="70%" stop-color="#FF6F00" />
+                                        <stop offset="100%" stop-color="#E65100" />
+                                    </linearGradient>
+                                </defs>
+                                <path d="M18 4 L22 12 L14 12 Z" fill="url(#g-legend)" />
+                                <path d="M10 12 L26 12 L30 20 L18 32 L6 20 Z" fill="url(#g-legend)" />
+                                <circle cx="18" cy="19" r="4" fill="#FFF8E1" opacity="0.6" />
+                                <path d="M18 4 L22 12 L14 12 Z" fill="none" stroke="#FFD54F" stroke-width="0.8"
+                                    opacity="0.5" />
+                            </svg>
                         </span>
                     </div>
                     <span class="reward-label">Eternal</span>
@@ -1299,6 +1446,16 @@
         <button id="closeSettings" class="close-btn">✕</button>
         <h1 id="settings-heading">⚙️ Settings</h1>
         <div class="settings-container">
+            <h3>🤖 AI Personality</h3>
+            <div class="theme-selector" id="ai-personality-selector" style="margin-bottom: 25px;">
+                <button class="theme-btn active" data-personality="savage"
+                    style="background: linear-gradient(135deg, #ff416c, #ff4b2b);">🔥 Savage & Witty</button>
+                <button class="theme-btn" data-personality="professional"
+                    style="background: linear-gradient(135deg, #2c3e50, #3498db);">👔 Professional</button>
+                <button class="theme-btn" data-personality="supportive"
+                    style="background: linear-gradient(135deg, #a18cd1, #fbc2eb);">🌸 Gentle Support</button>
+            </div>
+
             <h3>Theme Customization</h3>
             <div class="theme-selector">
                 <button class="theme-btn active" data-theme="classic"
@@ -1329,7 +1486,7 @@
                     Custom</button>
             </div>
 
-                        <!-- Advanced Custom Theme Studio -->
+            <!-- Advanced Custom Theme Studio -->
             <div id="custom-theme-builder" class="custom-theme-builder hidden">
                 <div class="cts-header">
                     <h4>🎨 Theme Studio</h4>
@@ -1338,51 +1495,76 @@
                 <div class="cts-section">
                     <div class="cts-section-label">⚡ Quick Presets</div>
                     <div class="cts-presets-row" id="cts-presets">
-                        <button class="cts-preset-btn" data-preset="midnight" style="background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);">🌙 Midnight</button>
-                        <button class="cts-preset-btn" data-preset="aurora" style="background: linear-gradient(135deg, #00c9ff, #92fe9d);">🌌 Aurora</button>
-                        <button class="cts-preset-btn" data-preset="sakura" style="background: linear-gradient(135deg, #fbc2eb, #a6c1ee);">🌸 Sakura</button>
-                        <button class="cts-preset-btn" data-preset="emerald" style="background: linear-gradient(135deg, #11998e, #38ef7d);">💎 Emerald</button>
-                        <button class="cts-preset-btn" data-preset="lava" style="background: linear-gradient(135deg, #f12711, #f5af19);">🌋 Lava</button>
-                        <button class="cts-preset-btn" data-preset="pastel" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">🍬 Pastel</button>
+                        <button class="cts-preset-btn" data-preset="midnight"
+                            style="background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);">🌙 Midnight</button>
+                        <button class="cts-preset-btn" data-preset="aurora"
+                            style="background: linear-gradient(135deg, #00c9ff, #92fe9d);">🌌 Aurora</button>
+                        <button class="cts-preset-btn" data-preset="sakura"
+                            style="background: linear-gradient(135deg, #fbc2eb, #a6c1ee);">🌸 Sakura</button>
+                        <button class="cts-preset-btn" data-preset="emerald"
+                            style="background: linear-gradient(135deg, #11998e, #38ef7d);">💎 Emerald</button>
+                        <button class="cts-preset-btn" data-preset="lava"
+                            style="background: linear-gradient(135deg, #f12711, #f5af19);">🌋 Lava</button>
+                        <button class="cts-preset-btn" data-preset="pastel"
+                            style="background: linear-gradient(135deg, #ffecd2, #fcb69f);">🍬 Pastel</button>
                     </div>
                 </div>
                 <div class="cts-section">
                     <div class="cts-section-label">🎨 Colors</div>
                     <div class="cts-color-grid">
-                        <div class="cts-color-item"><input type="color" id="custom-bg-color" value="#f4f7f6" class="cts-color-input"><span class="cts-color-label">Background</span></div>
-                        <div class="cts-color-item"><input type="color" id="custom-card-color" value="#ffffff" class="cts-color-input"><span class="cts-color-label">Card</span></div>
-                        <div class="cts-color-item"><input type="color" id="custom-primary-color" value="#667eea" class="cts-color-input"><span class="cts-color-label">Primary</span></div>
-                        <div class="cts-color-item"><input type="color" id="custom-secondary-color" value="#764ba2" class="cts-color-input"><span class="cts-color-label">Secondary</span></div>
-                        <div class="cts-color-item"><input type="color" id="custom-text-color" value="#2d3748" class="cts-color-input"><span class="cts-color-label">Text</span></div>
-                        <div class="cts-color-item"><input type="color" id="custom-border-color" value="#e0e0e0" class="cts-color-input"><span class="cts-color-label">Border</span></div>
+                        <div class="cts-color-item"><input type="color" id="custom-bg-color" value="#f4f7f6"
+                                class="cts-color-input"><span class="cts-color-label">Background</span></div>
+                        <div class="cts-color-item"><input type="color" id="custom-card-color" value="#ffffff"
+                                class="cts-color-input"><span class="cts-color-label">Card</span></div>
+                        <div class="cts-color-item"><input type="color" id="custom-primary-color" value="#667eea"
+                                class="cts-color-input"><span class="cts-color-label">Primary</span></div>
+                        <div class="cts-color-item"><input type="color" id="custom-secondary-color" value="#764ba2"
+                                class="cts-color-input"><span class="cts-color-label">Secondary</span></div>
+                        <div class="cts-color-item"><input type="color" id="custom-text-color" value="#2d3748"
+                                class="cts-color-input"><span class="cts-color-label">Text</span></div>
+                        <div class="cts-color-item"><input type="color" id="custom-border-color" value="#e0e0e0"
+                                class="cts-color-input"><span class="cts-color-label">Border</span></div>
                     </div>
                 </div>
                 <div class="cts-section">
                     <div class="cts-section-label">✨ Animation Style</div>
                     <div class="cts-anim-grid" id="cts-anim-grid">
-                        <button class="cts-anim-btn active" data-anim="none"><span class="cts-anim-icon">🚫</span><span>None</span></button>
-                        <button class="cts-anim-btn" data-anim="pulse-glow"><span class="cts-anim-icon">💫</span><span>Pulse Glow</span></button>
-                        <button class="cts-anim-btn" data-anim="float"><span class="cts-anim-icon">🎈</span><span>Float</span></button>
-                        <button class="cts-anim-btn" data-anim="neon"><span class="cts-anim-icon">⚡</span><span>Neon Flicker</span></button>
-                        <button class="cts-anim-btn" data-anim="shimmer"><span class="cts-anim-icon">🪞</span><span>Shimmer</span></button>
+                        <button class="cts-anim-btn active" data-anim="none"><span
+                                class="cts-anim-icon">🚫</span><span>None</span></button>
+                        <button class="cts-anim-btn" data-anim="pulse-glow"><span
+                                class="cts-anim-icon">💫</span><span>Pulse Glow</span></button>
+                        <button class="cts-anim-btn" data-anim="float"><span
+                                class="cts-anim-icon">🎈</span><span>Float</span></button>
+                        <button class="cts-anim-btn" data-anim="neon"><span class="cts-anim-icon">⚡</span><span>Neon
+                                Flicker</span></button>
+                        <button class="cts-anim-btn" data-anim="shimmer"><span
+                                class="cts-anim-icon">🪞</span><span>Shimmer</span></button>
                     </div>
                 </div>
                 <div class="cts-section">
                     <div class="cts-section-label">🔤 Typography</div>
                     <div class="cts-font-grid" id="cts-font-grid">
-                        <button class="cts-font-btn active" data-font="default" style="font-family: 'Segoe UI', sans-serif;">Aa Default</button>
-                        <button class="cts-font-btn" data-font="inter" style="font-family: 'Inter', sans-serif;">Aa Inter</button>
-                        <button class="cts-font-btn" data-font="outfit" style="font-family: 'Outfit', sans-serif;">Aa Outfit</button>
-                        <button class="cts-font-btn" data-font="space-grotesk" style="font-family: 'Space Grotesk', sans-serif;">Aa Space</button>
-                        <button class="cts-font-btn" data-font="jetbrains" style="font-family: 'JetBrains Mono', monospace;">Aa Mono</button>
-                        <button class="cts-font-btn" data-font="playfair" style="font-family: 'Playfair Display', serif;">Aa Serif</button>
+                        <button class="cts-font-btn active" data-font="default"
+                            style="font-family: 'Segoe UI', sans-serif;">Aa Default</button>
+                        <button class="cts-font-btn" data-font="inter" style="font-family: 'Inter', sans-serif;">Aa
+                            Inter</button>
+                        <button class="cts-font-btn" data-font="outfit" style="font-family: 'Outfit', sans-serif;">Aa
+                            Outfit</button>
+                        <button class="cts-font-btn" data-font="space-grotesk"
+                            style="font-family: 'Space Grotesk', sans-serif;">Aa Space</button>
+                        <button class="cts-font-btn" data-font="jetbrains"
+                            style="font-family: 'JetBrains Mono', monospace;">Aa Mono</button>
+                        <button class="cts-font-btn" data-font="playfair"
+                            style="font-family: 'Playfair Display', serif;">Aa Serif</button>
                     </div>
                 </div>
                 <div class="cts-section">
                     <div class="cts-section-label">🔘 Shape &amp; Style</div>
                     <div class="cts-style-row">
                         <label class="cts-slider-label">Border Radius</label>
-                        <div class="cts-slider-wrap"><span class="cts-slider-tag">Sharp</span><input type="range" id="cts-radius-slider" min="0" max="30" value="12" class="cts-slider"><span class="cts-slider-tag">Pill</span></div>
+                        <div class="cts-slider-wrap"><span class="cts-slider-tag">Sharp</span><input type="range"
+                                id="cts-radius-slider" min="0" max="30" value="12" class="cts-slider"><span
+                                class="cts-slider-tag">Pill</span></div>
                     </div>
                     <div class="cts-style-row" style="margin-top: 12px;">
                         <label class="cts-slider-label">Button Style</label>
@@ -1407,8 +1589,10 @@
                     <div class="cts-section-label">👁️ Live Preview</div>
                     <div class="cts-preview-card" id="cts-preview-card">
                         <div class="cts-preview-heading">Sample Heading</div>
-                        <div class="cts-preview-task"><span class="cts-preview-emoji">📝</span><span class="cts-preview-text">Example Task Item</span></div>
-                        <div class="cts-preview-btn-row"><button class="cts-preview-btn" id="cts-preview-btn">Action Button</button></div>
+                        <div class="cts-preview-task"><span class="cts-preview-emoji">📝</span><span
+                                class="cts-preview-text">Example Task Item</span></div>
+                        <div class="cts-preview-btn-row"><button class="cts-preview-btn" id="cts-preview-btn">Action
+                                Button</button></div>
                     </div>
                 </div>
                 <div class="cts-actions">
@@ -1428,6 +1612,28 @@
 
     <!-- Meditation Page -->
     <div id="meditation-page" class="page">
+        <!-- Immersive Meditation Ambient Background -->
+        <div class="med-ambient-bg" id="med-ambient-bg">
+            <div class="med-aurora"></div>
+            <div class="med-stars" id="med-stars"></div>
+            <div class="med-particles" id="med-particles"></div>
+            <div class="med-mandala">
+                <svg viewBox="0 0 200 200" class="mandala-svg">
+                    <circle cx="100" cy="100" r="90" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="0.5" />
+                    <circle cx="100" cy="100" r="70" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.5" />
+                    <circle cx="100" cy="100" r="50" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="0.5" />
+                    <circle cx="100" cy="100" r="30" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.5" />
+                    <g opacity="0.06">
+                        <ellipse cx="100" cy="40" rx="12" ry="30" fill="white" transform="rotate(0 100 100)" />
+                        <ellipse cx="100" cy="40" rx="12" ry="30" fill="white" transform="rotate(30 100 100)" />
+                        <ellipse cx="100" cy="40" rx="12" ry="30" fill="white" transform="rotate(60 100 100)" />
+                        <ellipse cx="100" cy="40" rx="12" ry="30" fill="white" transform="rotate(90 100 100)" />
+                        <ellipse cx="100" cy="40" rx="12" ry="30" fill="white" transform="rotate(120 100 100)" />
+                        <ellipse cx="100" cy="40" rx="12" ry="30" fill="white" transform="rotate(150 100 100)" />
+                    </g>
+                </svg>
+            </div>
+        </div>
         <div class="meditation-card">
             <button id="closeMeditation" class="close-btn">✕</button>
             <div class="meditation-header">
@@ -1529,7 +1735,8 @@
             <div id="meditation-mood-overlay" class="med-mood-overlay hidden">
                 <div class="med-mood-content">
                     <h2 id="med-mood-title" class="med-mood-title">How are you feeling right now?</h2>
-                    <p id="med-mood-subtitle" class="med-mood-subtitle">Take a deep breath and check in with yourself.</p>
+                    <p id="med-mood-subtitle" class="med-mood-subtitle">Take a deep breath and check in with yourself.
+                    </p>
                     <div class="med-mood-options">
                         <button class="med-mood-btn" data-val="1">
                             <span class="med-mood-emoji">😫</span>
@@ -1566,7 +1773,7 @@
             <!-- Category Selection View -->
             <div id="hub-categories-view">
                 <h3>🚀 Productivity Hub</h3>
-                
+
                 <!-- Game Changing Tips Generator -->
                 <div class="game-changing-tips-card">
                     <button id="generate-tip-btn" class="become-productive-inline">
@@ -1608,31 +1815,364 @@
                     <!-- 1. Productive Cheatsheet -->
                     <div id="cat-cheatsheet" class="cat-content hidden">
                         <div class="hub-image-wrapper">
-                            <img src="file_00000000164871fa8242a2f408db55dc.png" alt="Productivity Cheatsheet" class="expandable-img">
+                            <img src="file_00000000164871fa8242a2f408db55dc.png" alt="Productivity Cheatsheet"
+                                class="expandable-img">
                         </div>
                     </div>
 
                     <!-- 2. Break Bad Habits -->
                     <div id="cat-habits" class="cat-content hidden">
                         <div class="hub-image-wrapper">
-                            <img src="file_00000000ca207208bab30f2ec889c89f.png" alt="Break Bad Habits" class="expandable-img">
+                            <img src="file_00000000ca207208bab30f2ec889c89f.png" alt="Break Bad Habits"
+                                class="expandable-img">
                         </div>
                     </div>
 
                     <!-- 3. Time Management -->
                     <div id="cat-time" class="cat-content hidden">
                         <div class="hub-image-wrapper">
-                            <img src="file_000000005c3871fab43858a38fc3b6a8.png" alt="Time Management Tips" class="expandable-img">
+                            <img src="file_000000005c3871fab43858a38fc3b6a8.png" alt="Time Management Tips"
+                                class="expandable-img">
                         </div>
                     </div>
 
                     <!-- 4. Daily Focus -->
                     <div id="cat-focus" class="cat-content hidden">
                         <div class="hub-image-wrapper">
-                            <img src="file_0000000074b4720899d764b82548f222.png" alt="Daily Focus" class="expandable-img">
+                            <img src="file_0000000074b4720899d764b82548f222.png" alt="Daily Focus"
+                                class="expandable-img">
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Brain Training Game Page -->
+    <div id="brain-games-page" class="page">
+        <!-- ================= GAMES HUB VIEW ================= -->
+        <div id="games-hub-view">
+            <h1 class="page-title"
+                style="text-align:center; font-size: 2.5rem; background: linear-gradient(135deg, #a18cd1, #fbc2eb); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 5px;">
+                Mind Games 🧠</h1>
+            <p style="text-align:center; color:var(--text-muted); margin-bottom: 30px;">Choose your cognitive workout.
+            </p>
+
+            <div class="games-grid"
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; max-width: 600px; margin: 0 auto; padding: 0 20px;">
+                <!-- Memory Matrix Card -->
+                <div class="game-card" id="card-memory-matrix"
+                    style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 30px 20px; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+                    <div style="font-size: 3.5rem; margin-bottom: 15px;">🧠</div>
+                    <h3 style="color: var(--text-main); margin-bottom: 10px; font-size: 1.3rem;">Memory Matrix</h3>
+                    <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.4;">Train your spatial
+                        working memory by recalling grid patterns.</p>
+                </div>
+                <!-- Brain Clatter Card -->
+                <div class="game-card" id="card-stroop"
+                    style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 30px 20px; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+                    <div style="font-size: 3.5rem; margin-bottom: 15px;">🎨</div>
+                    <h3 style="color: var(--text-main); margin-bottom: 10px; font-size: 1.3rem;">Brain Clatter</h3>
+                    <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.4;">Override your impulses.
+                        Tap the color of the ink, not the word.</p>
+                </div>
+                <!-- Tug of War Card -->
+                <div class="game-card" id="card-tug"
+                    style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 30px 20px; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+                    <div style="font-size: 3.5rem; margin-bottom: 15px;">🪢</div>
+                    <h3 style="color: var(--text-main); margin-bottom: 10px; font-size: 1.3rem;">Tug of War</h3>
+                    <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.4;">1v1 Math Battle. Pull the rope to your side.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= MEMORY MATRIX VIEW ================= -->
+        <div id="matrix-game-view" class="hidden">
+            <div style="max-width: 500px; margin: 0 auto 15px auto;">
+                <button id="back-to-hub-matrix" class="icon-btn"
+                    style="background: none; border: none; color: var(--text-muted); font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 0;">
+                    <span>←</span> Back to Games
+                </button>
+            </div>
+
+            <h1 class="page-title"
+                style="text-align:center; font-size: 2.5rem; background: linear-gradient(135deg, #a18cd1, #fbc2eb); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 5px;">
+                Memory Matrix 🧠</h1>
+            <p style="text-align:center; color:var(--text-muted); margin-bottom: 30px;">Train your spatial working
+                memory. Remember the pattern, then tap it.</p>
+
+            <div class="brain-game-container"
+                style="background: var(--bg-card); padding: 30px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.05); border: 1px solid var(--border); max-width: 500px; margin: 0 auto; position: relative; overflow: hidden;">
+                <!-- Splash Screen Overlay -->
+                <div id="matrix-splash-overlay"
+                    style="position: absolute; top:0; left:0; width:100%; height:100%; background: var(--bg-card); z-index: 50; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 20px; text-align: center; padding: 30px; transition: opacity 0.4s ease;">
+                    <h2
+                        style="color: var(--primary); margin-bottom: 25px; font-size: 2rem; background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; background-clip: text; color: transparent; line-height: 1.2;">
+                        How powerful is your memory? 🧠</h2>
+                    <p
+                        style="color: var(--text-main); font-size: 1.15rem; line-height: 1.6; margin-bottom: 40px; max-width: 90%;">
+                        Memorize the grid pattern before it vanishes. <br><br><span
+                            style="color: #ff4757; font-weight: 700; font-size: 1.25rem;">Reaching Level 12 makes you an
+                            absolute beast.</span></p>
+                    <button id="splash-start-matrix-btn" class="primary-btn"
+                        style="padding: 18px 50px; font-size: 1.4rem; border-radius: 40px; background: linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; box-shadow: 0 15px 30px rgba(102, 126, 234, 0.4); cursor:pointer; font-weight:bold; transition: transform 0.2s, box-shadow 0.2s;">Start
+                        Challenge</button>
+                </div>
+
+                <div class="brain-stats-header"
+                    style="display: flex; justify-content: space-between; margin-bottom: 25px; font-weight: 600; font-size: 1.1rem;">
+                    <div class="brain-stat" style="color: var(--primary);">Lvl: <span id="matrix-level-display">1</span>
+                    </div>
+                    <div class="brain-stat" style="color: var(--text-main);">Score: <span
+                            id="matrix-score-display">0</span></div>
+                    <div class="brain-stat" style="color: var(--text-muted); font-size: 0.9rem; align-self: flex-end;">
+                        Best: <span id="matrix-highscore-display">0</span></div>
+                    <div class="brain-stat" style="color: #ff4757; letter-spacing: 2px;"><span
+                            id="matrix-lives-display">❤️❤️❤️</span></div>
+                </div>
+
+                <div id="matrix-grid-container" class="matrix-grid-container"
+                    style="display: grid; gap: 10px; margin: 0 auto; width: 100%; aspect-ratio: 1; perspective: 1000px;">
+                    <!-- HTML empty. Dynamic CSS grid injected via JS -->
+                </div>
+
+                <div class="brain-controls" style="text-align: center; margin-top: 35px;">
+                    <button id="start-matrix-btn" class="primary-btn"
+                        style="padding: 15px 40px; font-size: 1.2rem; border-radius: 30px; background: linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3); cursor:pointer; transition: transform 0.2s, box-shadow 0.2s;">Start
+                        Training</button>
+                </div>
+
+                <div id="matrix-feedback" class="matrix-feedback"
+                    style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); opacity: 0; background: rgba(255,255,255,0.9); padding: 20px 40px; border-radius: 20px; font-size: 2rem; font-weight: 800; color: var(--primary); box-shadow: 0 20px 50px rgba(0,0,0,0.2); pointer-events: none; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 100;">
+                    Level Up!</div>
+            </div>
+        </div>
+
+        <!-- ================= BRAIN CLATTER (STROOP) VIEW ================= -->
+        <div id="stroop-game-view" class="hidden">
+            <div style="max-width: 500px; margin: 0 auto 15px auto;">
+                <button id="back-to-hub-stroop" class="icon-btn"
+                    style="background: none; border: none; color: var(--text-muted); font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 0;">
+                    <span>←</span> Back to Games
+                </button>
+            </div>
+
+            <h1 class="page-title"
+                style="text-align:center; font-size: 2.5rem; background: linear-gradient(135deg, #ff9a9e, #fecfef); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 5px;">
+                Brain Clatter 🎨</h1>
+            <p style="text-align:center; color:var(--text-muted); margin-bottom: 20px;">Tap the color of the INK, not
+                what the word says.</p>
+
+            <div class="stroop-game-container"
+                style="background: var(--bg-card); padding: 30px 20px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.05); border: 1px solid var(--border); max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; position: relative; overflow: hidden;">
+
+                <!-- Main Game Screen -->
+                <div id="stroop-play-area" class="hidden"
+                    style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+                    <div class="brain-stats-header"
+                        style="width: 100%; display: flex; justify-content: space-between; margin-bottom: 15px; font-weight: 600; font-size: 1.2rem; padding: 0 15px;">
+                        <div class="brain-stat" style="color: var(--primary);">Score: <span
+                                id="stroop-score-display">0</span></div>
+                        <div class="brain-stat" style="color: #ff4757;">Time: <span id="stroop-time-display">60</span>s
+                        </div>
+                    </div>
+
+                    <!-- Progress bar for Survival mode -->
+                    <div id="stroop-timer-container"
+                        style="width: 100%; height: 8px; background: var(--border); border-radius: 4px; margin-bottom: 30px; overflow: hidden; display: none;">
+                        <div id="stroop-timer-bar"
+                            style="height: 100%; width: 100%; background: #ff4757; transition: width 0.1s linear;">
+                        </div>
+                    </div>
+
+                    <div id="stroop-word-container"
+                        style="height: 120px; display: flex; justify-content: center; align-items: center; margin-bottom: 30px; width: 100%;">
+                        <h1 id="stroop-word"
+                            style="font-size: 4rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin: 0; transition: transform 0.1s;">
+                            RED</h1>
+                    </div>
+
+                    <div class="stroop-buttons"
+                        style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 450px;">
+                        <button class="stroop-btn" data-color="#ff4757"
+                            style="background: #ff4757; color: white;">RED</button>
+                        <button class="stroop-btn" data-color="#3498db"
+                            style="background: #3498db; color: white;">BLUE</button>
+                        <button class="stroop-btn" data-color="#2ed573"
+                            style="background: #2ed573; color: white;">GREEN</button>
+                        <button class="stroop-btn" data-color="#eccc68"
+                            style="background: #eccc68; color: white;">YELLOW</button>
+                        <button class="stroop-btn hidden" data-color="#9b59b6"
+                            style="background: #9b59b6; color: white; padding: 18px 0; font-size: 1.1rem;">PURPLE</button>
+                        <button class="stroop-btn hidden" data-color="#e67e22"
+                            style="background: #e67e22; color: white; padding: 18px 0; font-size: 1.1rem;">ORANGE</button>
+                        <button class="stroop-btn hidden" data-color="#00cec9"
+                            style="background: #00cec9; color: white; padding: 18px 0; font-size: 1.1rem;">CYAN</button>
+                        <button class="stroop-btn hidden" data-color="#fd79a8"
+                            style="background: #fd79a8; color: white; padding: 18px 0; font-size: 1.1rem;">PINK</button>
+                    </div>
+                </div>
+
+                <!-- Menu / Pre-Game Screen -->
+                <div id="stroop-menu-area"
+                    style="width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 20px 0;">
+                    <h2 style="font-size: 1.8rem; margin-bottom: 15px; color: var(--text-main);">Select Mode</h2>
+
+                    <button id="btn-stroop-sprint" class="primary-btn"
+                        style="width: 100%; padding: 18px; font-size: 1.2rem; border-radius: 15px; background: linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; cursor:pointer; margin-bottom: 15px; font-weight:bold; box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3); transition: transform 0.2s;">
+                        ⏱️ 60-Sec Sprint<br>
+                        <span style="font-size:0.9rem; font-weight:normal; opacity:0.9;">High Score: <span
+                                id="stroop-hs-sprint">0</span></span>
+                    </button>
+
+                    <button id="btn-stroop-survival" class="primary-btn"
+                        style="width: 100%; padding: 18px; font-size: 1.2rem; border-radius: 15px; background: linear-gradient(135deg, #ff4757, #ff6b81); color:white; border:none; cursor:pointer; font-weight:bold; box-shadow: 0 10px 20px rgba(255, 71, 87, 0.3); transition: transform 0.2s;">
+                        💀 Survival Mode<br>
+                        <span style="font-size:0.9rem; font-weight:normal; opacity:0.9;">High Score: <span
+                                id="stroop-hs-survival">0</span></span>
+                    </button>
+                </div>
+
+                <!-- Game Over Splash -->
+                <div id="stroop-end-modal" class="hidden"
+                    style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; border-radius: 20px; backdrop-filter: blur(4px);">
+                    <h2 id="stroop-end-title" style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Time's Up!
+                        🏁</h2>
+                    <p style="color: #ccc; font-size: 1.2rem; margin-bottom: 10px;">Final Score: <strong
+                            id="stroop-final-score" style="color: var(--primary); font-size: 1.8rem;">0</strong></p>
+                    <p id="stroop-new-hs-label" class="hidden"
+                        style="color: #eccc68; font-weight: bold; margin-bottom: 20px; animation: popIn 0.5s;">NEW HIGH
+                        SCORE!</p>
+                    <button id="stroop-play-again-btn" class="primary-btn"
+                        style="padding: 15px 40px; font-size: 1.2rem; border-radius: 30px; background: linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; cursor:pointer; margin-top: 15px;">Close</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ================= SYNAPTIC TUG OF WAR VIEW ================= -->
+        <div id="tug-game-view" class="hidden">
+            <div style="max-width: 500px; margin: 0 auto 15px auto;">
+                <button id="back-to-hub-tug" class="icon-btn"
+                    style="background: none; border: none; color: var(--text-muted); font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 0;">
+                    <span>←</span> Back to Games
+                </button>
+            </div>
+
+            <h1 class="page-title"
+                style="text-align:center; font-size: 2.5rem; background: linear-gradient(135deg, #f6d365, #fda085); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 5px;">
+                Tug of War 🪢</h1>
+            <p style="text-align:center; color:var(--text-muted); margin-bottom: 20px;">Solve the math faster than your opponent.</p>
+
+            <div class="tug-game-container"
+                style="background: var(--bg-card); padding: 30px 20px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.05); border: 1px solid var(--border); max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; position: relative; overflow: hidden;">
+
+                <!-- Pre-Game Menu -->
+                <div id="tug-menu-area"
+                    style="width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 20px 0;">
+                    
+                    <!-- Avatar Selection -->
+                    <div style="display: flex; gap: 30px; margin-bottom: 25px; align-items: flex-end;">
+                        <!-- Player Select -->
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
+                            <label style="font-size: 0.9rem; color: var(--text-main); font-weight: bold;">YOU</label>
+                            <select id="tug-player-select" style="font-size: 2.5rem; background: transparent; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; padding: 5px; outline: none;">
+                                <option value="🙎‍♂️">🙎‍♂️</option>
+                                <option value="🙎‍♀️">🙎‍♀️</option>
+                                <option value="🥷">🥷</option>
+                                <option value="🧙‍♂️">🧙‍♂️</option>
+                                <option value="🦸‍♂️">🦸‍♂️</option>
+                                <option value="🦸‍♀️">🦸‍♀️</option>
+                            </select>
+                        </div>
+
+                        <div style="font-size: 1.5rem; color: #ff4757; font-weight: 900; padding-bottom: 15px;">VS</div>
+
+                        <!-- AI Select -->
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
+                            <label style="font-size: 0.9rem; color: var(--text-main); font-weight: bold;">AI</label>
+                            <select id="tug-ai-select" style="font-size: 2.5rem; background: transparent; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; padding: 5px; outline: none;">
+                                <option value="🤖">🤖</option>
+                                <option value="👽">👽</option>
+                                <option value="👹">👹</option>
+                                <option value="🤡">🤡</option>
+                                <option value="🙎‍♀️">🙎‍♀️</option>
+                                <option value="🙎‍♂️">🙎‍♂️</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button id="btn-tug-start" class="primary-btn"
+                        style="width: 100%; padding: 18px; font-size: 1.2rem; border-radius: 15px; background: linear-gradient(135deg, #f6d365, #fda085); color:white; border:none; cursor:pointer; font-weight:bold; box-shadow: 0 10px 20px rgba(253, 160, 133, 0.3); transition: transform 0.2s;">
+                        Enter Arena<br>
+                        <span style="font-size:0.9rem; font-weight:normal; opacity:0.9;">Highest Level: <span id="tug-hs-level">1</span> (Streak: <span id="tug-hs-streak">0</span>)</span>
+                    </button>
+                </div>
+
+                <!-- Main Arena -->
+                <div id="tug-play-area" class="hidden" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+                    
+                    <div class="brain-stats-header" style="width: 100%; display: flex; justify-content: space-between; margin-bottom: 20px; font-weight: 600; font-size: 1.1rem; padding: 0 15px;">
+                        <div class="brain-stat" style="color: #00cec9;">Lvl: <span id="tug-level-display">1</span></div>
+                        <div class="brain-stat" style="color: #ff4757;">Streak: <span id="tug-streak-display">0</span></div>
+                    </div>
+
+                    <!-- The Rope -->
+                    <div class="tug-arena-wrapper" style="width: 100%; height: 110px; position: relative; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; background: transparent; overflow: visible;">
+                        <!-- Woven Rope -->
+                        <div style="position: absolute; width: 100%; height: 14px; left: 0; top: 65%; transform: translateY(-50%); background: repeating-linear-gradient(45deg, #d1bfae, #d1bfae 4px, #a88e7a 4px, #a88e7a 8px); box-shadow: 0 4px 6px rgba(0,0,0,0.3); border-radius: 6px; z-index: 5;"></div>
+                        
+                        <!-- Entities -->
+                        <div style="position: absolute; left: 0; top: 0; text-align: center; z-index: 10;">
+                             <div style="font-size: 0.85rem; font-weight: 800; color: var(--text-main); margin-bottom: -5px;">YOU</div>
+                             <div id="tug-player-avatar" style="font-size: 3.5rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">🙎‍♂️</div>
+                        </div>
+
+                        <div style="position: absolute; right: 0; top: 0; text-align: center; z-index: 10;">
+                             <div style="font-size: 0.85rem; font-weight: 800; color: #ff4757; margin-bottom: -5px;">AI</div>
+                             <div id="tug-ai-avatar" style="font-size: 3.5rem; transform: scaleX(-1); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">🤖</div>
+                        </div>
+
+                        <!-- The Center Red Flag / Knot -->
+                        <div id="tug-knot" style="position: absolute; left: 50%; top: 65%; width: 14px; height: 40px; background: #ff4757; border-radius: 4px; transform: translate(-50%, -50%); box-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 20; transition: left 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);"></div>
+                    </div>
+
+                    <!-- HUD Equation -->
+                    <div id="tug-equation-container" style="height: 100px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px;">
+                        <h1 id="tug-equation" style="font-size: 3.5rem; font-weight: 900; letter-spacing: 2px; margin: 0; color: var(--text-main);">14 + 8</h1>
+                    </div>
+                    
+                    <!-- Player Answer Tracker -->
+                    <div style="height: 40px; margin-bottom: 20px; display: flex; align-items: center; background: var(--bg-input); padding: 5px 20px; border-radius: 10px; border: 1px solid var(--border);">
+                        <span id="tug-answer-input" style="font-size: 1.8rem; font-weight: 700; color: #00cec9; letter-spacing: 2px;"></span>
+                        <span id="tug-answer-cursor" style="font-size: 1.8rem; font-weight: 300; color: #00cec9; animation: blink 1s step-end infinite; margin-left: 5px;">|</span>
+                    </div>
+
+                    <!-- Custom Numpad -->
+                    <div class="tug-numpad" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; max-width: 300px;">
+                        <button class="tug-num-btn">1</button>
+                        <button class="tug-num-btn">2</button>
+                        <button class="tug-num-btn">3</button>
+                        <button class="tug-num-btn">4</button>
+                        <button class="tug-num-btn">5</button>
+                        <button class="tug-num-btn">6</button>
+                        <button class="tug-num-btn">7</button>
+                        <button class="tug-num-btn">8</button>
+                        <button class="tug-num-btn">9</button>
+                        <button class="tug-num-btn tug-action-btn" data-action="clear" style="background: #ff4757; color: white; font-weight: 800;">C</button>
+                        <button class="tug-num-btn">0</button>
+                        <button class="tug-num-btn tug-action-btn" data-action="submit" style="background: #2ed573; color: white; font-weight: 800;">↵</button>
+                    </div>
+                </div>
+
+                <!-- Match Over Overlay -->
+                <div id="tug-end-modal" class="hidden"
+                    style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; border-radius: 20px; backdrop-filter: blur(4px);">
+                    <h2 id="tug-end-title" style="color: #ff4757; font-size: 2.8rem; margin-bottom: 10px; text-transform: uppercase;">Defeat</h2>
+                    <p style="color: #ccc; font-size: 1.2rem; margin-bottom: 25px;">Survived to Level <strong id="tug-final-level" style="color: #f6d365; font-size: 1.5rem;">1</strong></p>
+                    <button id="tug-play-again-btn" class="primary-btn"
+                        style="padding: 15px 40px; font-size: 1.2rem; border-radius: 30px; background: linear-gradient(135deg, #f6d365, #fda085); color:white; border:none; cursor:pointer;">Rematch</button>
+                </div>
+
             </div>
         </div>
     </div>
@@ -1649,7 +2189,8 @@
                 <div class="ai-chat-header-left">
                     <button id="ai-history-btn" class="ai-header-btn" title="Chat History">☰</button>
                     <div class="ai-chat-header-info">
-                        <img src="anmol-ai-avatar.jpeg" class="ai-avatar" alt="Anmol AI" style="object-fit: cover; padding: 0; border: 2px solid rgba(255,255,255,0.8);">
+                        <img src="anmol-ai-avatar.jpeg" class="ai-avatar" alt="Anmol AI"
+                            style="object-fit: cover; padding: 0; border: 2px solid rgba(255,255,255,0.8);">
                         <div>
                             <div class="ai-chat-title">Anmol AI</div>
                             <div class="ai-chat-subtitle">Your savage productivity coach</div>
@@ -1673,17 +2214,21 @@
 
             <div class="ai-chat-messages" id="ai-chat-messages">
                 <div class="ai-message ai-bot-message">
-                    <div class="ai-msg-avatar" style="padding:0; overflow:hidden;"><img src="anmol-ai-avatar.jpeg" style="width:100%; height:100%; object-fit:cover;"></div>
+                    <div class="ai-msg-avatar" style="padding:0; overflow:hidden;"><img src="anmol-ai-avatar.jpeg"
+                            style="width:100%; height:100%; object-fit:cover;"></div>
                     <div class="ai-msg-bubble">
                         Yo! 👋🔥 I'm <strong>Anmol AI</strong> — your personal productivity roast master & hype beast.
-                        <br><br>I can see everything you're doing in this app 👀 — your tasks, your streak, your water intake, ALL of it.
-                        <br><br>Ask me anything like <em>"How am I doing today?"</em> or <em>"Roast my productivity"</em> and I'll keep it real 💯
+                        <br><br>I can see everything you're doing in this app 👀 — your tasks, your streak, your water
+                        intake, ALL of it.
+                        <br><br>Ask me anything like <em>"How am I doing today?"</em> or <em>"Roast my
+                            productivity"</em> and I'll keep it real 💯
                     </div>
                 </div>
             </div>
 
             <div class="ai-typing-indicator hidden" id="ai-typing-indicator">
-                <div class="ai-msg-avatar" style="padding:0; overflow:hidden;"><img src="anmol-ai-avatar.jpeg" style="width:100%; height:100%; object-fit:cover;"></div>
+                <div class="ai-msg-avatar" style="padding:0; overflow:hidden;"><img src="anmol-ai-avatar.jpeg"
+                        style="width:100%; height:100%; object-fit:cover;"></div>
                 <div class="ai-typing-dots">
                     <span></span><span></span><span></span>
                 </div>
@@ -1702,7 +2247,8 @@
                 </div>
             </div>
             <div class="ai-chat-input-bar">
-                <input type="file" id="ai-file-input" style="display: none;" accept="image/*,.txt,.js,.py,.html,.css,.json,.md,.csv">
+                <input type="file" id="ai-file-input" style="display: none;"
+                    accept="image/*,.txt,.js,.py,.html,.css,.json,.md,.csv">
                 <button id="ai-attach-btn" class="ai-attach-btn" title="Attach Image or small Text file (Max 2MB)">
                     📎
                 </button>

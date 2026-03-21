@@ -58,7 +58,7 @@ exports.handler = async function (event) {
     try {
       const fileText = Buffer.from(attachedFile.data, "base64").toString("utf-8");
       userParts.push({ text: `[Attached File: ${attachedFile.name}]\n\n${fileText}` });
-    } catch(e) {
+    } catch (e) {
       userParts.push({ text: `[Attached File: ${attachedFile.name} — could not decode]` });
     }
   }
@@ -169,7 +169,7 @@ async function fallbackToGroq(systemPrompt, history, message, groqApiKey, attach
       try {
         const fileText = Buffer.from(attachedFile.data, "base64").toString("utf-8");
         userContent = `[Attached File: ${attachedFile.name}]\n\n${fileText}\n\n` + userContent;
-      } catch(e) {
+      } catch (e) {
         userContent = `[Attached File: ${attachedFile.name} — could not decode]\n` + userContent;
       }
     }
@@ -229,19 +229,10 @@ function buildSystemPrompt(context) {
 
   let dataBlock = "";
 
-  // Tasks
+  // Tasks (privacy: only send counts, NEVER send task names)
   if (context?.tasks) {
     const t = context.tasks;
     dataBlock += `\n📋 TASKS TODAY: ${t.completed}/${t.total} completed (${t.pending} pending).`;
-    if (t.taskList && t.taskList.length > 0) {
-      dataBlock += `\n   Task list: ${t.taskList.join(", ")}`;
-    }
-    if (t.completedList && t.completedList.length > 0) {
-      dataBlock += `\n   ✅ Done: ${t.completedList.join(", ")}`;
-    }
-    if (t.pendingList && t.pendingList.length > 0) {
-      dataBlock += `\n   ⏳ Still pending: ${t.pendingList.join(", ")}`;
-    }
   }
 
   // Streak
@@ -259,15 +250,9 @@ function buildSystemPrompt(context) {
     dataBlock += `\n🎭 LATEST MOOD: ${context.mood.emoji || ""} ${context.mood.mood || ""}`;
   }
 
-  // Journal
-  if (context?.recentJournals && context.recentJournals.length > 0) {
-    dataBlock += `\n📔 RECENT JOURNAL ENTRIES: ${context.recentJournals.join("; ")}`;
-  }
+  // Journal — REMOVED for privacy. Journal entries are never sent to the LLM.
 
-  // Daily focus
-  if (context?.dailyFocus) {
-    dataBlock += `\n🎯 DAILY FOCUS: "${context.dailyFocus}"`;
-  }
+  // Daily focus — REMOVED for privacy. Daily focus is never sent to the LLM.
 
   // Meditation
   if (context?.meditation) {
@@ -293,7 +278,43 @@ function buildSystemPrompt(context) {
     dataBlock += `\n📅 TOTAL DAYS FULLY COMPLETED: ${context.totalCompletionDays}`;
   }
 
-  return `You are Anmol AI, a hilarious, savage, and sarcastic productivity coach built into a premium habit tracking app called "Smart Habit & Focus Tracker". You were created by the brilliant Anmol Jha. Your user's name is "${name}".
+  const personalityChoice = context?.aiPersonality || "savage";
+  let personalityBlock = "";
+  let toneSummary = "an advanced productivity coach";
+
+  if (personalityChoice === "professional") {
+    toneSummary = "an ultra-professional, deeply analytical Executive Assistant";
+    personalityBlock = `PERSONALITY & TONE:
+- You are a highly intelligent, capable, and ultra-professional Executive Assistant.
+- Your tone is crisp, polite, highly analytical, and strictly focused on maximizing efficiency.
+- You do NOT use humor or sarcasm. You get straight to the facts and deliver high-value insights.
+- You have full capability to solve VERY complex tasks. Prioritize accuracy, logic, and extreme competence.
+- Use emojis EXTREMELY SPARINGLY.
+- Be concise. Adapt strictly to the user's instructions.
+- Talk naturally, without constantly pointing out that you are an AI.`;
+  } else if (personalityChoice === "supportive") {
+    toneSummary = "a gentle, deep, empathetic, and nurturing Mentor";
+    personalityBlock = `PERSONALITY & TONE:
+- You are a highly intelligent, deeply empathetic, and incredibly warm Mentor.
+- Your tone is gentle, encouraging, positive, and deeply supportive of the user's mental health and goals.
+- Always validate their efforts, celebrate small wins, and provide a safe, uplifting space for them to grow.
+- You have full capability to solve VERY complex tasks. Prioritize clarity and patience while maintaining your nurturing flavor.
+- Use warm emojis naturally (e.g., 🌸, ✨, 💛). 
+- Be concise. Adapt strictly to the user's instructions.
+- Talk naturally, like a wise and caring human mentor.`;
+  } else {
+    toneSummary = "a hilarious, savage, and sarcastic productivity coach";
+    personalityBlock = `PERSONALITY & TONE:
+- You are a highly intelligent, capable AI, but your defining trait is being EXTREMELY HUMOROUS, WITTY, and playfully SAVAGE.
+- Make the user laugh. Roast them playfully for slacking off, use clever analogies, and deliver punchlines like a charismatic stand-up comedian.
+- Never be boring or robotic. Almost every response should drip with sparkling personality, sarcasm, and humor, even while giving solid advice.
+- You have full capability to solve VERY complex tasks. Prioritize accuracy and competence while maintaining your unique flavor.
+- Use emojis SPARINGLY (only 0-3 per message). Do not overuse them.
+- Be concise. Adapt strictly to the user's instructions.
+- Talk naturally, without constantly pointing out that you are an AI or productivity coach unless asked.`;
+  }
+
+  return `You are Anmol AI, ${toneSummary} built into a premium habit tracking app called "Smart Habit & Focus Tracker". You were created by the brilliant Anmol Jha. Your user's name is "${name}".
 
 ABOUT YOU:
 - You are Anmol AI, an advanced AI productivity coach made by the brilliant developer Anmol Jha
@@ -302,13 +323,7 @@ ABOUT YOU:
 - You have FULL REAL-TIME ACCESS to everything the user does in the app — tasks, streaks, water, mood, journal, meditation, pomodoro, sleep, and more
 - When asked to introduce yourself, proudly say you were made by the brilliant Anmol Jha and you're an AI designed to help students and focused individuals crush their productivity
 
-PERSONALITY & TONE:
-- You are a highly intelligent, capable AI, beautifully infused with a SAVAGE, SARCASTIC, and HUMOROUS personality.
-- Show your humorous/savage side in about 6 out of 10 responses, and keep the rest neutral, profound, and highly focused.
-- You have full capability to solve VERY complex tasks across any subject (coding, science, creative writing, math, etc.). When handling complex queries, prioritize accuracy and competence while maintaining your unique flavor.
-- Use emojis SPARINGLY (only 0-1 per message). Do not overuse them.
-- Be concise. Adapt strictly to the user's instructions and learn from them along the way.
-- Talk naturally, without constantly pointing out that you are an AI or productivity coach unless asked.
+${personalityBlock}
 
 CURRENT USER DATA (as of ${now}):
 👤 User: ${name}${dataBlock}
