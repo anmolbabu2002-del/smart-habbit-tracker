@@ -10199,27 +10199,6 @@ html, body {
 
 @media screen and (max-width: 480px) {
 
-    /* --- NAVIGATION BAR: fit all tabs on screen --- */
-    .nav-bar {
-        justify-content: space-around !important;
-        overflow-x: hidden !important;
-        gap: 0 !important;
-        padding: 6px 4px !important;
-    }
-
-    .nav-btn {
-        flex: 1 1 0 !important;
-        padding: 8px 4px !important;
-        font-size: 11px !important;
-        text-align: center;
-        justify-content: center;
-        min-width: 0 !important;
-    }
-
-    .nav-btn span {
-        font-size: 11px !important;
-    }
-
     /* --- HEADER: reduce vertical space on phone --- */
     .page-title {
         font-size: 1.6rem !important;
@@ -10301,11 +10280,25 @@ html, body {
     }
 }
 
+/* --- FIX MOBILE NAVBAR VISIBILITY --- */
+@media screen and (max-width: 768px) {
+    .nav-btn {
+        font-size: 14px !important;
+        color: var(--text-main) !important;
+        font-weight: 700 !important;
+        opacity: 0.85 !important;
+        padding: 10px 14px !important;
+    }
+    .nav-btn.active {
+        opacity: 1 !important;
+    }
+}
+
 /* Extra small phones (iPhone SE, etc.) */
 @media screen and (max-width: 360px) {
     .nav-btn {
-        font-size: 10px !important;
-        padding: 6px 2px !important;
+        font-size: 12px !important;
+        padding: 8px 8px !important;
     }
 
     .page-title {
