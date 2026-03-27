@@ -4,7 +4,7 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#121212">
-    <title>Smart Habit & Focus Tracker 💪</title>
+    <title>Ultradian</title>
     <link rel="icon" type="image/png" href="icon-512.png">
     <link rel="apple-touch-icon" href="icon-512.png">
     <link rel="manifest" href="manifest.json">
@@ -338,19 +338,207 @@
 </head>
 
 <body>
+    <!-- Three.js + GSAP CDN (global) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <!-- Ultradian Fullscreen Welcome / App Lock + 3D Scene -->
+    <div id="name-registration-overlay" class="hidden" style="position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 9999999; background: #f0f2f8; overflow: hidden;">
+        
+        <!-- Three.js Canvas Container -->
+        <div id="welcome-3d-canvas" style="position: absolute; inset: 0; z-index: 1;"></div>
+
+        <style>
+            #welcome-ui-overlay {
+                position: absolute; inset: 0; z-index: 10;
+                display: flex; align-items: center; justify-content: center;
+                pointer-events: none; opacity: 0;
+                transition: opacity 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            #welcome-ui-overlay.visible { opacity: 1; pointer-events: auto; }
+
+            .welcome-glass-card {
+                background: rgba(255,255,255,0.92);
+                border: 1px solid rgba(255,255,255,0.7);
+                border-radius: 28px;
+                padding: clamp(24px,4vw,45px) clamp(18px,3.5vw,35px);
+                text-align: center;
+                max-width: 480px; width: 94%; max-height: 94vh; overflow-y: auto;
+                box-shadow:
+                    0 4px 6px rgba(0,0,0,0.02),
+                    0 20px 50px rgba(79,70,229,0.1),
+                    0 50px 100px rgba(0,0,0,0.05);
+                transform: translateY(40px) scale(0.96);
+                transition: transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            #welcome-ui-overlay.visible .welcome-glass-card { transform: translateY(0) scale(1); }
+
+            .welcome-glass-card h1 {
+                font-size: clamp(1.8rem,7vw,2.8rem); font-weight: 900;
+                background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 4px; letter-spacing: -0.5px;
+            }
+            .welcome-glass-card .wg-sub {
+                color: #64748b; font-size: clamp(0.82rem,3vw,0.95rem);
+                margin-bottom: 20px; line-height: 1.5;
+            }
+
+            /* ✨ Premium Glowing Feature Cards */
+            .wg-features {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px; margin-bottom: 22px; text-align: left;
+            }
+            @media (max-width: 380px) {
+                .wg-features { grid-template-columns: 1fr; }
+            }
+
+            .wg-feat {
+                background: linear-gradient(145deg, #ffffff, #f8f9ff);
+                border: 1px solid rgba(139,92,246,0.15);
+                padding: clamp(10px,2.5vw,14px);
+                border-radius: 16px;
+                position: relative; overflow: hidden;
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+                box-shadow: 0 2px 8px rgba(79,70,229,0.06);
+            }
+            .wg-feat::before {
+                content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+                background: linear-gradient(90deg, #4f46e5, #a855f7, #ec4899);
+                opacity: 0.7;
+            }
+            .wg-feat::after {
+                content: ''; position: absolute; inset: -1px;
+                border-radius: 16px;
+                background: linear-gradient(135deg, rgba(79,70,229,0.08), rgba(168,85,247,0.08));
+                z-index: -1;
+                opacity: 0; transition: opacity 0.3s ease;
+            }
+            .wg-feat:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 8px 30px rgba(79,70,229,0.15), 0 0 20px rgba(139,92,246,0.08);
+            }
+            .wg-feat:hover::after { opacity: 1; }
+            .wg-feat h4 { color: #0f172a; margin-bottom: 2px; font-size: clamp(0.82rem,2.5vw,0.9rem); font-weight: 700; }
+            .wg-feat p { color: #64748b; font-size: clamp(0.72rem,2vw,0.78rem); margin: 0; line-height: 1.3; }
+            .wg-feat .wg-icon {
+                width: 30px; height: 30px; border-radius: 9px;
+                display: flex; align-items: center; justify-content: center;
+                font-size: 0.9rem; margin-bottom: 6px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            }
+            .wg-icon-focus { background: linear-gradient(135deg, #ede9fe, #ddd6fe); box-shadow: 0 2px 10px rgba(139,92,246,0.15); }
+            .wg-icon-streak { background: linear-gradient(135deg, #fef3c7, #fde68a); box-shadow: 0 2px 10px rgba(245,158,11,0.15); }
+            .wg-icon-eco { background: linear-gradient(135deg, #d1fae5, #a7f3d0); box-shadow: 0 2px 10px rgba(16,185,129,0.15); }
+            .wg-feat-wide { grid-column: 1 / -1; }
+
+            .welcome-glass-card .wg-label { color: #475569; margin-bottom: 10px; font-weight: 600; font-size: clamp(0.85rem,2.5vw,0.95rem); }
+
+            #overlay-name-input {
+                width: 100%; max-width: 280px; padding: 12px 16px; font-size: clamp(0.95rem,3vw,1.05rem);
+                border-radius: 14px; border: 2px solid #e2e8f0;
+                background: #f8fafc; color: #1e293b;
+                text-align: center; outline: none; font-weight: 600;
+                transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            }
+            #overlay-name-input:focus { border-color: #8b5cf6; box-shadow: 0 0 0 4px rgba(139,92,246,0.1); }
+            #overlay-name-input::placeholder { color: #94a3b8; }
+
+            #overlay-save-name-btn {
+                display: block; width: 100%; max-width: 280px;
+                margin: 16px auto 0; padding: 14px; border-radius: 14px;
+                font-size: clamp(0.95rem,3vw,1.05rem); font-weight: 700;
+                background: linear-gradient(135deg, #4f46e5, #7c3aed, #9333ea);
+                border: none; color: #fff; cursor: pointer;
+                box-shadow: 0 8px 25px rgba(79,70,229,0.3), 0 0 15px rgba(139,92,246,0.1);
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+            }
+            #overlay-save-name-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 35px rgba(79,70,229,0.4); }
+            #name-error-msg { margin-top: 6px; font-size: 0.78rem; color: #ef4444; }
+
+            /* Mobile scrollbar */
+            .welcome-glass-card::-webkit-scrollbar { width: 4px; }
+            .welcome-glass-card::-webkit-scrollbar-track { background: transparent; }
+            .welcome-glass-card::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.2); border-radius: 4px; }
+        </style>
+
+        <!-- UI overlay (premium light card, appears after 3D animation) -->
+        <div id="welcome-ui-overlay">
+            <div class="welcome-glass-card">
+                <svg viewBox="0 0 120 120" style="width:44px;height:44px;margin:0 auto 10px;filter:drop-shadow(0 6px 12px rgba(79,70,229,0.25));display:block;">
+                    <defs><linearGradient id="logoGrad2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4f46e5"/><stop offset="100%" stop-color="#9333ea"/></linearGradient></defs>
+                    <rect x="10" y="10" width="100" height="100" rx="30" fill="url(#logoGrad2)"/>
+                    <path d="M40 38v24c0 12 8 20 20 20s20-8 20-20V38" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <h1>Ultradian</h1>
+                <p class="wg-sub">A productivity app that deserves to be in your device.</p>
+                <div class="wg-features">
+                    <div class="wg-feat"><div class="wg-icon wg-icon-focus">🎯</div><h4>Hyper Focus</h4><p>Track habits & crush tasks with Pomodoro.</p></div>
+                    <div class="wg-feat"><div class="wg-icon wg-icon-streak">🏆</div><h4>Build Streaks</h4><p>Gain achievements & stay consistent.</p></div>
+                    <div class="wg-feat wg-feat-wide"><div class="wg-icon wg-icon-eco">🌍</div><h4>Productive Ecosystem</h4><p>AI assistance, daily tracking, meditation, satisfying pomodoros & much more...</p></div>
+                </div>
+                <p class="wg-label">What should we call you?</p>
+                <input type="text" id="overlay-name-input" placeholder="Enter your name (3-10 letters)" minlength="3" maxlength="10" autocomplete="off">
+                <div id="name-error-msg" class="name-error-msg">Name must be 3-10 characters long</div>
+                <button id="overlay-save-name-btn">Enter Ultradian →</button>
+            </div>
+        </div>
+
+        <!-- 3D Scene Scripts -->
+        <script src="welcome-3d.js"></script>
+    </div>
+
+    <!-- 3D Castle Builder -->
+    <script src="castle-3d.js"></script>
+
     <!-- Navigation Bar -->
     <nav class="nav-bar">
-        <button class="nav-btn" data-page="dashboard-page">🏠 Dashboard</button>
-        <button class="nav-btn active" data-page="main">📋 Tasks</button>
-        <button class="nav-btn" data-page="streak-page">🔥 Streak</button>
-        <button class="nav-btn" data-page="journal-page">📔 Journal</button>
-        <button class="nav-btn" data-page="water-page">💧 Water</button>
-        <button class="nav-btn" data-page="pomodoro-page">🍅 Pomodoro</button>
-        <button class="nav-btn" data-page="meditation-page">🧘 Meditation</button>
-        <button class="nav-btn" data-page="brain-games-page">🧠Mind Games</button>
-        <button class="nav-btn" data-page="mood-page">🎭 Mood</button>
-        <button class="nav-btn" data-page="sleep-page">😴 Sleep</button>
-        <button class="nav-btn" data-page="settings-page">⚙️ Settings</button>
+        <button class="nav-btn" data-page="dashboard-page" style="--theme: #8b5cf6;">
+            <span class="nav-icon"><svg width="22px" height="22px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span>
+            <span class="nav-label">Dashboard</span>
+        </button>
+        <button class="nav-btn active" data-page="main" style="--theme: #3b82f6;">
+            <span class="nav-icon"><svg width="22px" height="22px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg></span>
+            <span class="nav-label">Tasks</span>
+        </button>
+        <button class="nav-btn" data-page="streak-page" style="--theme: #ef4444;">
+            <span class="nav-icon"><svg width="22px" height="22px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c-2.28 0-3-4.5-3-4.5s2.5 1 4 4.5A4.5 4.5 0 0 1 12 21a5 5 0 0 1-3.5-8.5z"></path></svg></span>
+            <span class="nav-label">Streak</span>
+        </button>
+        <button class="nav-btn" data-page="journal-page" style="--theme: #10b981;">
+            <span class="nav-icon"><svg width="22px" height="22px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></span>
+            <span class="nav-label">Journal</span>
+        </button>
+        <button class="nav-btn" data-page="water-page" style="--theme: #0ea5e9;">
+            <span class="nav-icon"><svg width="22px" height="22px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg></span>
+            <span class="nav-label">Water</span>
+        </button>
+        <button class="nav-btn" data-page="pomodoro-page" style="--theme: #f43f5e;">
+            <span class="nav-icon"><svg width="22px" height="22px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14" r="8"></circle><polyline points="12 10 12 14 14 16"></polyline><line x1="12" y1="2" x2="12" y2="4"></line><line x1="9" y1="2" x2="15" y2="2"></line></svg></span>
+            <span class="nav-label">Pomodoro</span>
+        </button>
+        <button class="nav-btn" data-page="meditation-page" style="--theme: #14b8a6;">
+            <span class="nav-icon"><svg width="22px" height="22px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22C12 22 12 12 18 12 24 12 24 6 24 6 24 6 18 6 12 12 6 6 0 6 0 6 0 6 0 12 6 12 12 12 12 22z"></path></svg></span>
+            <span class="nav-label">Meditate</span>
+        </button>
+        <button class="nav-btn" data-page="brain-games-page" style="--theme: #d946ef;">
+            <span class="nav-icon"><svg width="22px" height="22px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2" ry="2"></rect><line x1="6" y1="12" x2="10" y2="12"></line><line x1="8" y1="10" x2="8" y2="14"></line><line x1="15" y1="13" x2="15.01" y2="13"></line><line x1="18" y1="11" x2="18.01" y2="11"></line></svg></span>
+            <span class="nav-label">Games</span>
+        </button>
+        <button class="nav-btn" data-page="mood-page" style="--theme: #f59e0b;">
+            <span class="nav-icon"><svg width="22px" height="22px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg></span>
+            <span class="nav-label">Mood</span>
+        </button>
+        <button class="nav-btn" data-page="sleep-page" style="--theme: #6366f1;">
+            <span class="nav-icon"><svg width="22px" height="22px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
+            <span class="nav-label">Sleep</span>
+        </button>
+        <button class="nav-btn" data-page="settings-page" style="--theme: #64748b;">
+            <span class="nav-icon"><svg width="22px" height="22px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span>
+            <span class="nav-label">Settings</span>
+        </button>
     </nav>
     <!-- Dashboard Page -->
     <div id="dashboard-page" class="page">
@@ -462,8 +650,8 @@
                         Morning</span>&nbsp;<span class="greeting-emoji" style="display: inline-block;">🌅</span>
                 </h1>
             </div>
-            <h2 id="heading" style="margin-top: 5px; font-size: 1.2rem; color: var(--text-muted); font-weight: normal;">
-                Smart Habit & Focus Tracker 💪</h2>
+            <h2 id="heading" style="margin-top: 5px; font-size: 1rem; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; background: linear-gradient(90deg, #667eea, #a878fa); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; opacity: 0.9;">
+                ULTRADIAN</h2>
             <div class="header-action-btns">
                 <button id="anmol-ai-header-btn" class="become-productive-inline"><span class="btn-icon">🤖</span> Anmol
                     AI</button>
@@ -472,20 +660,7 @@
             </div>
         </div>
 
-        <!-- Name Registration Overlay -->
-        <div id="name-registration-overlay" class="hidden">
-            <div class="name-registration-modal">
-                <div class="name-registration-icon">👋</div>
-                <h2>Welcome!</h2>
-                <p>Let's customize your experience. What should we call you?</p>
-                <div class="name-input-group">
-                    <input type="text" id="overlay-name-input" placeholder="Enter your name (3-10 letters)"
-                        minlength="3" maxlength="10" autocomplete="off">
-                    <div id="name-error-msg" class="name-error-msg">Name must be 3-10 characters long</div>
-                </div>
-                <button id="overlay-save-name-btn" class="name-save-btn">Get Started ✨</button>
-            </div>
-        </div>
+
 
         <p id="instruction-text">✨ Double-click any task to edit it</p>
 
@@ -1872,30 +2047,160 @@
             </p>
 
             <div class="games-grid"
-                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; max-width: 600px; margin: 0 auto; padding: 0 20px;">
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; max-width: 900px; margin: 0 auto; padding: 0 20px;">
                 <!-- Memory Matrix Card -->
                 <div class="game-card" id="card-memory-matrix"
-                    style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 30px 20px; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
-                    <div style="font-size: 3.5rem; margin-bottom: 15px;">🧠</div>
-                    <h3 style="color: var(--text-main); margin-bottom: 10px; font-size: 1.3rem;">Memory Matrix</h3>
-                    <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.4;">Train your spatial
+                    style="background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); border: 1px solid #34d399; border-radius: 20px; padding: 30px 20px; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 10px 30px rgba(52,211,153,0.2), inset 0 0 20px rgba(52,211,153,0.1);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 50px; height: 50px; margin: 0 auto; margin-bottom: 15px; filter: drop-shadow(0 0 10px #34d399); color: #34d399; display: block;">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="3" y1="9" x2="21" y2="9"></line>
+                      <line x1="3" y1="15" x2="21" y2="15"></line>
+                      <line x1="9" y1="3" x2="9" y2="21"></line>
+                      <line x1="15" y1="3" x2="15" y2="21"></line>
+                    </svg>
+                    <h3 style="color: #34d399; margin-bottom: 10px; font-size: 1.3rem; text-shadow: 0 0 10px rgba(52,211,153,0.5);">Memory Matrix</h3>
+                    <p style="color: rgba(167,243,208,0.7); font-size: 0.95rem; line-height: 1.4;">Train your spatial
                         working memory by recalling grid patterns.</p>
                 </div>
                 <!-- Brain Clatter Card -->
                 <div class="game-card" id="card-stroop"
-                    style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 30px 20px; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
-                    <div style="font-size: 3.5rem; margin-bottom: 15px;">🎨</div>
-                    <h3 style="color: var(--text-main); margin-bottom: 10px; font-size: 1.3rem;">Brain Clatter</h3>
-                    <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.4;">Override your impulses.
+                    style="background: linear-gradient(135deg, #4c1d95 0%, #701a75 100%); border: 1px solid #f472b6; border-radius: 20px; padding: 30px 20px; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 10px 30px rgba(244,114,182,0.2), inset 0 0 20px rgba(244,114,182,0.1);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 50px; height: 50px; margin: 0 auto; margin-bottom: 15px; filter: drop-shadow(0 0 10px #f472b6); color: #f472b6; display: block;">
+                      <polyline points="16 3 21 3 21 8"></polyline>
+                      <line x1="4" y1="20" x2="21" y2="3"></line>
+                      <polyline points="21 16 21 21 16 21"></polyline>
+                      <line x1="15" y1="15" x2="21" y2="21"></line>
+                      <line x1="4" y1="4" x2="9" y2="9"></line>
+                    </svg>
+                    <h3 style="color: #f472b6; margin-bottom: 10px; font-size: 1.3rem; text-shadow: 0 0 10px rgba(244,114,182,0.5);">Brain Clatter</h3>
+                    <p style="color: rgba(251,207,232,0.7); font-size: 0.95rem; line-height: 1.4;">Override your impulses.
                         Tap the color of the ink, not the word.</p>
                 </div>
                 <!-- Tug of War Card -->
                 <div class="game-card" id="card-tug"
-                    style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 30px 20px; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
-                    <div style="font-size: 3.5rem; margin-bottom: 15px;">🪢</div>
-                    <h3 style="color: var(--text-main); margin-bottom: 10px; font-size: 1.3rem;">Tug of War</h3>
-                    <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.4;">1v1 Math Battle. Pull the
+                    style="background: linear-gradient(135deg, #7f1d1d 0%, #9a3412 100%); border: 1px solid #fb923c; border-radius: 20px; padding: 30px 20px; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 10px 30px rgba(251,146,60,0.2), inset 0 0 20px rgba(251,146,60,0.1);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 50px; height: 50px; margin: 0 auto; margin-bottom: 15px; filter: drop-shadow(0 0 10px #fb923c); color: #fb923c; display: block;">
+                      <path d="M14.5 9.5L9.5 14.5M2 2l5 5m10 10l5 5m-9-4l-4-4"></path>
+                      <circle cx="7" cy="7" r="3"></circle>
+                      <circle cx="17" cy="17" r="3"></circle>
+                    </svg>
+                    <h3 style="color: #fb923c; margin-bottom: 10px; font-size: 1.3rem; text-shadow: 0 0 10px rgba(251,146,60,0.5);">Tug of War</h3>
+                    <p style="color: rgba(254,215,170,0.7); font-size: 0.95rem; line-height: 1.4;">1v1 Math Battle. Pull the
                         rope to your side.</p>
+                </div>
+
+                <!-- Math Missile Card -->
+                <div class="game-card" id="card-math-missile"
+                    style="background: linear-gradient(135deg, #1a0a3a 0%, #2a5a8a 100%); border: 1px solid #0ff; border-radius: 20px; padding: 30px 20px; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 10px 30px rgba(0,255,255,0.2), inset 0 0 20px rgba(0,255,255,0.1);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 50px; height: 50px; margin: 0 auto; margin-bottom: 15px; filter: drop-shadow(0 0 10px #0ff); color: #0ff; display: block;">
+                      <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path>
+                      <path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path>
+                      <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path>
+                      <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"></path>
+                    </svg>
+                    <h3 style="color: #0ff; margin-bottom: 10px; font-size: 1.3rem; text-shadow: 0 0 10px rgba(0,255,255,0.5);">Math Missile</h3>
+                    <p style="color: rgba(200,220,255,0.7); font-size: 0.95rem; line-height: 1.4;">Defend the city from falling equations! Type fast to survive.</p>
+                </div>
+                <!-- Pattern Prophet Card -->
+                <div class="game-card" id="card-pattern-prophet"
+                    style="background: linear-gradient(135deg, #2d1b69 0%, #6c3483 50%, #f39c12 100%); border: 1px solid rgba(243,156,18,0.5); border-radius: 20px; padding: 30px 20px; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 10px 30px rgba(243,156,18,0.2), inset 0 0 30px rgba(243,156,18,0.05);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 50px; height: 50px; margin: 0 auto; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(243,156,18,0.7)); color: #f39c12; display: block;">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <h3 style="color: #f39c12; margin-bottom: 10px; font-size: 1.3rem; text-shadow: 0 0 10px rgba(243,156,18,0.5);">Pattern Prophet</h3>
+                    <p style="color: rgba(255,240,200,0.7); font-size: 0.95rem; line-height: 1.4;">Predict what comes next. How deep can your brain see?</p>
+                </div>
+                <!-- Omniscient Card -->
+                <div class="game-card" id="card-omniscient"
+                    style="background: linear-gradient(135deg, #09090b 0%, #1e1b4b 100%); border: 1px solid #8b5cf6; border-radius: 20px; padding: 30px 20px; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 10px 30px rgba(139,92,246,0.2), inset 0 0 20px rgba(139,92,246,0.1);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 50px; height: 50px; margin: 0 auto; margin-bottom: 15px; filter: drop-shadow(0 0 10px #8b5cf6); color: #8b5cf6; display: block;">
+                      <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                      <polyline points="2 17 12 22 22 17"></polyline>
+                      <polyline points="2 12 12 17 22 12"></polyline>
+                    </svg>
+                    <h3 style="color: #c4b5fd; margin-bottom: 10px; font-size: 1.3rem; text-shadow: 0 0 10px rgba(139,92,246,0.5);">Omniscient</h3>
+                    <p style="color: rgba(196,181,253,0.7); font-size: 0.95rem; line-height: 1.4;">AI powered quiz game.</p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ================= OMNISCIENT GAME VIEW (V2) ================= -->
+        <div id="omniscient-game-view" class="hidden" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 50; background: #050510; overflow: hidden;">
+            <div id="omn-canvas-container" style="position: absolute; top:0; left:0; width:100%; height:100%;"></div>
+            
+            <div class="omn-ui-layer">
+                <!-- Top Bar -->
+                <div class="omn-header">
+                    <button id="back-to-hub-omniscient" class="icon-btn" style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 1rem; cursor: pointer; padding: 10px 16px; border-radius: 12px; backdrop-filter: blur(6px); z-index: 60;">← Back</button>
+                    <div class="omn-stats">
+                        <div class="omn-stat-box">🏆 <span id="omn-level">1</span></div>
+                        <div class="omn-stat-box">💎 <span id="omn-score">0</span></div>
+                        <div class="omn-stat-box" style="color: #ff4757;"><span id="omn-lives">❤️❤️❤️</span></div>
+                    </div>
+                </div>
+
+                <!-- Streak Display (hidden until streak >= 2) -->
+                <div id="omn-streak" style="display: none; text-align: center; font-size: 1.8rem; font-weight: 900; color: #fbbf24; text-shadow: 0 0 20px rgba(251,191,36,0.6); animation: omnPulse 0.6s ease infinite alternate;">🔥 2x</div>
+
+                <!-- Question + Answers Area -->
+                <div class="omn-question-container">
+                    <!-- Category Badge + Question Counter -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span id="omn-category-badge" class="omn-category-badge" style="display: none;">🌐 General</span>
+                        <span id="omn-q-counter" style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; letter-spacing: 1px;">Q1</span>
+                    </div>
+
+                    <!-- Timer Bar -->
+                    <div class="omn-timer-track">
+                        <div id="omn-timer-bar" class="omn-timer-fill"></div>
+                    </div>
+
+                    <h2 id="omn-question-text" class="omn-glass-panel" style="transition: opacity 0.3s ease, transform 0.3s ease;">Loading question...</h2>
+                    
+                    <div class="omn-answers-grid">
+                        <button class="omn-answer-btn omn-glass-panel" data-index="0"><span class="omn-letter">A</span> <span class="omn-answer-text">—</span></button>
+                        <button class="omn-answer-btn omn-glass-panel" data-index="1"><span class="omn-letter">B</span> <span class="omn-answer-text">—</span></button>
+                        <button class="omn-answer-btn omn-glass-panel" data-index="2"><span class="omn-letter">C</span> <span class="omn-answer-text">—</span></button>
+                        <button class="omn-answer-btn omn-glass-panel" data-index="3"><span class="omn-letter">D</span> <span class="omn-answer-text">—</span></button>
+                    </div>
+
+                    <!-- Lifeline Bar (3 powerups) -->
+                    <div class="omn-lifeline-bar">
+                        <button id="omn-fifty-btn" class="omn-lifeline-btn" title="Remove 2 wrong answers">
+                            <span class="omn-lifeline-icon">✂️</span>
+                            <span class="omn-lifeline-label">50/50</span>
+                        </button>
+                        <button id="omn-time-btn" class="omn-lifeline-btn" title="Add 10 extra seconds">
+                            <span class="omn-lifeline-icon">⏰</span>
+                            <span class="omn-lifeline-label">+10s</span>
+                        </button>
+                        <button id="omn-skip-btn" class="omn-lifeline-btn" title="Skip this question (no penalty)">
+                            <span class="omn-lifeline-icon">⏭️</span>
+                            <span class="omn-lifeline-label">Skip</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Game Over Modal -->
+                <div id="omn-gameover-overlay" class="omn-glass-panel hidden" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; padding: 40px 50px; min-width: 340px; z-index: 100; border-color: rgba(255,71,87,0.4);">
+                    <h1 style="color: #ff4757; margin-bottom: 15px; font-size: 2.8rem; text-shadow: 0 0 20px rgba(255,71,87,0.5);">💀 GAME OVER</h1>
+                    <div style="display: flex; justify-content: center; gap: 30px; margin-bottom: 25px;">
+                        <div>
+                            <div style="font-size: 0.8rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px;">Score</div>
+                            <div id="omn-go-score" style="font-size: 2.5rem; font-weight: 900; color: #0ff;">0</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px;">Level</div>
+                            <div id="omn-go-level" style="font-size: 2.5rem; font-weight: 900; color: #eccc68;">1</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px;">Best Streak</div>
+                            <div id="omn-go-streak" style="font-size: 2.5rem; font-weight: 900; color: #fbbf24;">0</div>
+                        </div>
+                    </div>
+                    <button id="omn-play-again" style="padding: 16px 50px; font-size: 1.2rem; background: linear-gradient(135deg, #8b5cf6, #3b82f6); border: none; border-radius: 30px; color: white; cursor: pointer; font-weight: 800; box-shadow: 0 8px 25px rgba(139,92,246,0.5); letter-spacing: 0.5px; transition: transform 0.2s;">🔄 TRY AGAIN</button>
                 </div>
             </div>
         </div>
@@ -2219,12 +2524,199 @@
 
             </div>
         </div>
+
+        <!-- ================= MATH MISSILE VIEW ================= -->
+        <div id="math-missile-view" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; background: #000;">
+            <!-- Back Button -->
+            <button id="back-to-hub-math-missile" style="position: absolute; top: 15px; left: 15px; z-index: 1000; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.3); color: #fff; font-size: 1rem; font-weight: bold; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 8px 18px; backdrop-filter: blur(5px);">
+                <span>←</span> Exit
+            </button>
+            
+            <!-- Full-screen container for Three.js canvas -->
+            <div id="math-missile-container" style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #87CEEB;">
+
+                <!-- HUD -->
+                <div id="mm-hud" style="display: none; position: absolute; top: 15px; right: 20px; z-index: 100; pointer-events: none; text-align: right;">
+                    <div style="background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); padding: 6px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15);">
+                        <div style="color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 0.5rem; opacity: 0.7; margin-bottom: -2px;">SCORE</div>
+                        <div id="mm-score" style="color: #fff; font-size: 1.2rem; font-weight: 900; text-shadow: 0 1px 5px rgba(0,0,0,0.5);">0</div>
+                        <div id="mm-health" style="font-size: 0.8rem; letter-spacing: 1px; margin-top: 2px;">❤️❤️❤️❤️❤️</div>
+                        <div id="mm-combo" style="color: #ffd700; font-size: 0.6rem; font-weight: 700; margin-top: 2px; display: none;">COMBO x1</div>
+                        <div style="margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 4px;">
+                            <div style="color: rgba(255,255,255,0.5); font-family: 'JetBrains Mono', monospace; font-size: 0.45rem;">BEST</div>
+                            <div id="mm-highscore" style="color: #ffd700; font-size: 0.7rem; font-weight: 900;">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Typed Input Display — positioned above numpad on mobile -->
+                <div id="mm-input-display" style="display: none; position: absolute; bottom: 250px; left: 50%; transform: translateX(-50%); z-index: 100; pointer-events: none;">
+                    <div style="background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); padding: 10px 25px; border-radius: 16px; border: 2px solid rgba(0,255,100,0.5); box-shadow: 0 0 20px rgba(0,255,100,0.3);">
+                        <span id="mm-typed-text" style="font-size: 2rem; color: #0f0; font-weight: 900; letter-spacing: 5px; font-family: 'JetBrains Mono', monospace;"></span><span style="font-size: 2rem; color: rgba(0,255,100,0.4); animation: blink 1s step-end infinite;">|</span>
+                    </div>
+                </div>
+
+                <!-- Hidden keyboard input -->
+                <input type="text" id="mm-hidden-input" autocomplete="off" inputmode="numeric" style="position: absolute; opacity: 0; left: -9999px;">
+
+                <!-- Mobile Numpad — large touch-friendly buttons -->
+                <div id="mm-numpad" style="display: none; position: absolute; bottom: 0; left: 0; right: 0; z-index: 300; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 8px; background: rgba(0,0,0,0.35); backdrop-filter: blur(8px);">
+                    <button class="mm-num-btn" data-val="1" style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">1</button>
+                    <button class="mm-num-btn" data-val="2" style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">2</button>
+                    <button class="mm-num-btn" data-val="3" style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">3</button>
+                    <button class="mm-num-btn" data-val="4" style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">4</button>
+                    <button class="mm-num-btn" data-val="5" style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">5</button>
+                    <button class="mm-num-btn" data-val="6" style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">6</button>
+                    <button class="mm-num-btn" data-val="7" style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">7</button>
+                    <button class="mm-num-btn" data-val="8" style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">8</button>
+                    <button class="mm-num-btn" data-val="9" style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">9</button>
+                    <button class="mm-num-btn" data-val="0" style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">0</button>
+                    <button class="mm-num-btn" data-val="C" style="padding: 18px 0; font-size: 1.2rem; font-weight: 900; background: rgba(255,60,60,0.4); color: #fff; border: none; border-radius: 14px; cursor: pointer; grid-column: span 2; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">⌫ CLR</button>
+                </div>
+
+
+                <!-- Start Overlay -->
+                <div id="mm-start-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; backdrop-filter: blur(6px);">
+                    <div style="font-size: 6rem; margin-bottom: 15px; animation: float 3s ease-in-out infinite;">🚀</div>
+                    <h2 style="color: #fff; font-size: clamp(2rem, 6vw, 4rem); margin-bottom: 8px; text-shadow: 0 4px 20px rgba(0,0,0,0.5); text-transform: uppercase; letter-spacing: 5px; font-weight: 900;">Math Missile</h2>
+                    <p style="color: rgba(255,255,255,0.8); font-size: clamp(0.9rem, 2.5vw, 1.2rem); line-height: 1.6; margin-bottom: 35px; max-width: 500px; padding: 0 20px;">
+                        Rockets are raining down! Type the answer to each equation to shoot them out of the sky before they hit the ground.
+                    </p>
+                    <button id="mm-start-btn" style="padding: 18px 60px; font-size: 1.5rem; border-radius: 50px; background: linear-gradient(135deg, #ff6b35, #f7c948); border: none; color: #fff; cursor: pointer; font-weight: 900; box-shadow: 0 8px 30px rgba(255,107,53,0.5); text-transform: uppercase; letter-spacing: 3px; transition: all 0.2s ease;">🚀 DEFEND</button>
+                    <div style="margin-top: 20px; font-size: 0.95rem; color: rgba(255,255,255,0.5);">Type numbers on keyboard • Space/Enter to clear</div>
+                </div>
+
+                <!-- Game Over Overlay -->
+                <div id="mm-gameover-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(180, 0, 0, 0.4); z-index: 200; display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; backdrop-filter: blur(10px);">
+                    <div style="font-size: 5rem; margin-bottom: 10px;">💥</div>
+                    <h2 style="color: #fff; font-size: clamp(2rem, 6vw, 3.5rem); margin-bottom: 10px; text-shadow: 0 4px 20px rgba(255,0,0,0.6); font-weight: 900; letter-spacing: 3px;">GAME OVER</h2>
+                    <p style="color: rgba(255,255,255,0.7); font-size: 1.1rem; margin-bottom: 25px;">The missiles broke through!</p>
+                    <div style="background: rgba(0,0,0,0.5); padding: 20px 50px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15); margin-bottom: 30px;">
+                        <div style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px;">Missiles Destroyed</div>
+                        <strong id="mm-final-score" style="color: #fff; font-size: 3.5rem; font-weight: 900;">0</strong>
+                        <div id="mm-new-record" style="display: none; color: #ffd700; font-size: 1.1rem; font-weight: 900; margin-top: 8px; animation: pulse 0.6s ease-in-out infinite alternate;">🏆 NEW HIGH SCORE!</div>
+                    </div>
+                    <div id="mm-go-highscore" style="color: rgba(255,255,255,0.5); font-size: 1rem; margin-bottom: 20px;">Best: <span id="mm-go-best">0</span></div>
+                    <button id="mm-retry-btn" style="padding: 18px 50px; font-size: 1.3rem; border-radius: 50px; background: linear-gradient(135deg, #ff4757, #ff6b81); border: none; color: #fff; cursor: pointer; font-weight: 900; box-shadow: 0 8px 30px rgba(255,71,87,0.5); letter-spacing: 2px; transition: all 0.2s ease;">🔄 TRY AGAIN</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= PATTERN PROPHET VIEW (V2 3D) ================= -->
+        <div id="pattern-prophet-view" class="hidden">
+            <div style="max-width: 600px; margin: 0 auto; padding: 10px 15px;">
+                <!-- Back Button -->
+                <button id="back-to-hub-pattern"
+                    style="background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2); color: #fff; font-size: 1rem; font-weight: 800; border-radius: 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 10px 20px; margin-bottom: 20px; box-shadow: 0 4px 0 rgba(0,0,0,0.2); text-transform: uppercase;">
+                    <span>◀</span> Hub
+                </button>
+
+                <!-- Game Container with 3D Bevel & Glow -->
+                <div id="pp-game-container" class="pp-main-container">
+                    
+                    <!-- Dynamic Background Glow -->
+                    <div id="pp-bg-glow" class="pp-bg-layer"></div>
+                    <!-- Particle Layer -->
+                    <div id="pp-particles" class="pp-particle-layer"></div>
+
+                    <!-- HUD Header -->
+                    <div class="pp-hud-header">
+                        <div class="pp-hud-stat">
+                            <span class="pp-stat-label">LVL</span>
+                            <span id="pp-level" class="pp-stat-val">1</span>
+                        </div>
+                        <div class="pp-hud-stat pp-score-plate">
+                            <span class="pp-stat-label">SCORE</span>
+                            <span id="pp-score" class="pp-stat-val pp-score-val">0</span>
+                        </div>
+                        <div class="pp-hud-stat">
+                            <span class="pp-stat-label">STREAK</span>
+                            <span id="pp-streak" class="pp-stat-val pp-streak-val">0</span>
+                        </div>
+                        <div class="pp-hud-stat">
+                            <span class="pp-stat-label">LIVES</span>
+                            <span id="pp-lives" class="pp-lives-val"></span>
+                        </div>
+                    </div>
+
+                    <!-- Records Bar -->
+                    <div class="pp-records-bar">
+                        <span class="pp-record-item">🏆 Best: <span id="pp-highscore">0</span></span>
+                        <div id="pp-difficulty" class="pp-difficulty-badge pp-diff-1">Beginner</div>
+                        <span class="pp-record-item">📈 Peak Lvl: <span id="pp-highlevel">1</span></span>
+                    </div>
+
+                    <!-- Timer Bar (3D) -->
+                    <div class="pp-timer-track">
+                        <div id="pp-timer-fill" class="pp-timer-fill"></div>
+                    </div>
+
+                    <!-- XP Tracker (3D) -->
+                    <div class="pp-xp-track">
+                        <div id="pp-xp-fill" class="pp-xp-fill"></div>
+                    </div>
+                    <div id="pp-xp-text" class="pp-xp-text">0 / 100 XP</div>
+
+                    <!-- Pattern Label -->
+                    <div id="pp-pattern-label" class="pp-pattern-label"></div>
+
+                    <!-- Sequence Area -->
+                    <div id="pp-sequence-area" class="pp-sequence-area"></div>
+
+                    <!-- Combo Text -->
+                    <div id="pp-combo-text" class="pp-combo-text"></div>
+
+                    <!-- Choices Area -->
+                    <div id="pp-choices-area" class="pp-choices-area"></div>
+
+                    <!-- Start Menu Overlay -->
+                    <div id="pp-menu-overlay" class="pp-overlay">
+                        <div class="pp-overlay-logo">🔮</div>
+                        <h2 class="pp-overlay-title">Pattern Prophet</h2>
+                        <p class="pp-overlay-desc">Study the sequence. Predict the next piece.<br>How deep can your brain see?</p>
+                        <button id="pp-start-btn" class="pp-btn-primary">START PREDICTING</button>
+                    </div>
+
+                    <!-- Game Over Overlay -->
+                    <div id="pp-gameover-overlay" class="pp-overlay" style="display: none; background: rgba(20, 0, 0, 0.85);">
+                        <div class="pp-overlay-logo" style="animation: none;">💀</div>
+                        <h2 class="pp-overlay-title" style="color: #ff4757; text-shadow: 0 4px 15px rgba(255,71,87,0.5);">GAME OVER</h2>
+                        
+                        <div class="pp-go-stats-box">
+                            <div class="pp-go-stat-row">
+                                <span class="pp-go-label">Final Score</span>
+                                <span id="pp-go-score" class="pp-go-val pp-go-score-val">0</span>
+                                <div id="pp-go-newrecord" class="pp-new-record-tag" style="display: none;">🏆 NEW RECORD!</div>
+                            </div>
+                            <div class="pp-go-grid">
+                                <div>
+                                    <span class="pp-go-label">Level Reached</span>
+                                    <span id="pp-go-level" class="pp-go-val">1</span>
+                                </div>
+                                <div>
+                                    <span class="pp-go-label">Best Streak</span>
+                                    <span id="pp-go-streak" class="pp-go-val">0</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="font-size: 0.85rem; color: rgba(255,255,255,0.4); margin-bottom: 25px;">
+                            All-Time Best Streak: <strong id="pp-go-best-streak-ever" style="color: #f39c12;">0</strong>
+                        </div>
+                        
+                        <button id="pp-play-again" class="pp-btn-primary" style="background: linear-gradient(135deg, #ff4757, #ff6b81); box-shadow: 0 8px 0 #c0392b, 0 15px 25px rgba(255,71,87,0.4);">
+                            TRY AGAIN
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script src="quotes.js"></script>
     <script src="tips.js"></script>
     <script src="script.js"></script>
-
 
     <!-- ==================== ANMOL AI CHATBOT PAGE ==================== -->
     <div id="anmol-ai-page" class="page">
@@ -2305,6 +2797,12 @@
     </div>
 
     <!-- Floating AI Button Removed -->
+
+    <!-- Three.js Library Math Missile -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="math-missile.js"></script>
+    <script src="pattern-prophet.js"></script>
+    <script src="omniscient.js"></script>
 
 </body>
 

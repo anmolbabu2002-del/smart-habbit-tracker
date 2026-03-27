@@ -1743,25 +1743,26 @@ function updateCastleVisual() {
   const stageIdx = getCastleStageIndex(count);
   const stage = CASTLE_STAGES[stageIdx];
 
-  // Update sky
-  sky.className = 'castle-sky ' + stage.sky;
-
-  // Generate stars for night stages
-  if ((stage.sky === 'stage-night' || stage.sky === 'stage-magic') && starsContainer && starsContainer.children.length === 0) {
-    for (let i = 0; i < 25; i++) {
-      const star = document.createElement('div');
-      star.className = 'castle-star';
-      star.style.left = Math.random() * 100 + '%';
-      star.style.top = Math.random() * 80 + '%';
-      star.style.animationDelay = Math.random() * 2 + 's';
-      star.style.width = (2 + Math.random() * 2) + 'px';
-      star.style.height = star.style.width;
-      starsContainer.appendChild(star);
+  // Use 3D castle if available
+  if (typeof window.updateCastle3D === "function") {
+    window.updateCastle3D(stageIdx);
+  } else {
+    // Fallback: old CSS art
+    sky.className = "castle-sky " + stage.sky;
+    if ((stage.sky === "stage-night" || stage.sky === "stage-magic") && starsContainer && starsContainer.children.length === 0) {
+      for (let i = 0; i < 25; i++) {
+        const star = document.createElement("div");
+        star.className = "castle-star";
+        star.style.left = Math.random() * 100 + "%";
+        star.style.top = Math.random() * 80 + "%";
+        star.style.animationDelay = Math.random() * 2 + "s";
+        star.style.width = (2 + Math.random() * 2) + "px";
+        star.style.height = star.style.width;
+        starsContainer.appendChild(star);
+      }
     }
+    scene.innerHTML = getCastleHTML(stageIdx);
   }
-
-  // Render castle
-  scene.innerHTML = getCastleHTML(stageIdx);
 
   // Update labels
   if (stageLabel) stageLabel.textContent = stage.name;
@@ -6628,3 +6629,5 @@ function endTugGame() {
 document.addEventListener("DOMContentLoaded", initTugOfWar);
 
 // End of file
+
+
