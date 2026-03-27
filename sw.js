@@ -1,10 +1,10 @@
-const CACHE_NAME = 'ultradian-v4';
+const CACHE_NAME = 'ultradian-v5';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/styles.css',
-  '/styles.css?v=2.3',
-  '/script.js',
+  '/styles.css?v=3.0',
+  '/script.js?v=3.0',
+  '/castle-3d.js?v=3.0',
   '/quotes.js',
   '/tips.js',
   '/manifest.json',
