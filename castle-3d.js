@@ -40,9 +40,9 @@
     mobileMode = W < 500;
 
     scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(mobileMode ? 60 : 45, W / H, 0.1, 100);
-    camera.position.set(0, mobileMode ? 4 : 3, mobileMode ? 12 : 8);
-    camera.lookAt(0, 1.5, 0);
+    camera = new THREE.PerspectiveCamera(mobileMode ? 55 : 45, W / H, 0.1, 100);
+    camera.position.set(0, mobileMode ? 3.5 : 3, mobileMode ? 7.5 : 8);
+    camera.lookAt(0, mobileMode ? 1.0 : 1.5, 0);
 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(W, H);
@@ -51,7 +51,9 @@
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
-    renderer.domElement.style.cssText = 'position:absolute;top:0;left:0;z-index:5;border-radius:22px;';
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    // Make sure canvas stretches cleanly within the container limits
+    renderer.domElement.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:5;border-radius:22px;';
     container.appendChild(renderer.domElement);
 
     // Lighting
@@ -93,18 +95,35 @@
     }
     loop();
 
-    window.addEventListener('resize', function () {
-      if (!container) return;
-      var w = container.clientWidth, h = container.clientHeight;
-      if (w > 0 && h > 0) {
-        mobileMode = w < 500;
-        camera.aspect = w / h;
-        camera.fov = mobileMode ? 60 : 45;
-        camera.updateProjectionMatrix();
-        renderer.setSize(w, h);
-        if (currentStage >= 0) adjustCameraForStage(currentStage);
-      }
-    });
+    window.refreshCastleCanvasSize = function() {
+      if (!container || !camera || !renderer) return;
+      var w = container.clientWidth;
+      var h = container.clientHeight;
+      
+      // Fallback if container is hidden (display: none)
+      if (w === 0) w = window.innerWidth > 0 ? Math.min(window.innerWidth - 30, 400) : 400;
+      if (h === 0) h = mobileMode ? 280 : 320;
+
+      mobileMode = window.innerWidth < 500 || w < 500;
+      
+      camera.aspect = w / h;
+      camera.fov = mobileMode ? 55 : 45;
+      camera.updateProjectionMatrix();
+      
+      renderer.setSize(w, h, false);
+      renderer.domElement.style.width = '100%';
+      renderer.domElement.style.height = '100%';
+      
+      if (currentStage >= 0) adjustCameraForStage(currentStage);
+    };
+
+    // Use ResizeObserver instead of window resize so it fixes itself perfectly
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(function() { window.refreshCastleCanvasSize(); });
+      ro.observe(container);
+    } else {
+      window.addEventListener('resize', window.refreshCastleCanvasSize);
+    }
   }
 
   // ═══ FLUFFY 3D CLOUDS ═══
@@ -702,24 +721,35 @@
   // Dynamic camera per stage so taller castles stay visible on mobile
   function adjustCameraForStage(idx) {
     if (!camera) return;
-    // Stage-specific camera offsets: [camY, camZ, lookY]
-    var presets = [
-      [3,   8,  1.0],  // 0 Foundation
-      [3,   8,  1.0],  // 1 Walls
-      [3,   8.5,1.2],  // 2 Cottage
-      [3.2, 9,  1.5],  // 3 Tower
-      [3.5, 9.5,1.8],  // 4 Castle
-      [3.8, 10, 2.0],  // 5 Grand Castle
-      [4.0, 10.5,2.2], // 6 Kingdom
-      [4.5, 11, 2.5]   // 7 Sky Castle
-    ];
-    var p = presets[Math.min(idx, 7)];
     if (mobileMode) {
-      // Pull far back on mobile so entire castle + decorations are visible
-      camera.position.set(0, p[0] + 1.5, p[1] + 4);
-      camera.lookAt(0, p[2] + 0.5, 0);
-      castleGroup.scale.setScalar(0.7);
+      // MOBILE: view that closely mimics desktop diorama style, but scaled slightly for narrow screens
+      var mobilePresets = [
+        [3.0, 7.5, 1.0],   // 0 Foundation
+        [3.2, 7.8, 1.0],   // 1 Walls
+        [3.3, 8.2, 1.2],   // 2 Cottage
+        [3.5, 8.5, 1.5],   // 3 Tower
+        [3.8, 9.0, 1.8],   // 4 Castle
+        [4.0, 9.5, 2.0],   // 5 Grand Castle
+        [4.2, 10.0, 2.2],  // 6 Kingdom
+        [4.5, 10.5, 2.5]   // 7 Sky Castle
+      ];
+      var mp = mobilePresets[Math.min(idx, 7)];
+      camera.position.set(0, mp[0], mp[1]);
+      camera.lookAt(0, mp[2], 0);
+      castleGroup.scale.setScalar(0.95);
     } else {
+      // DESKTOP presets
+      var presets = [
+        [3,   8,  1.0],  // 0 Foundation
+        [3,   8,  1.0],  // 1 Walls
+        [3,   8.5,1.2],  // 2 Cottage
+        [3.2, 9,  1.5],  // 3 Tower
+        [3.5, 9.5,1.8],  // 4 Castle
+        [3.8, 10, 2.0],  // 5 Grand Castle
+        [4.0, 10.5,2.2], // 6 Kingdom
+        [4.5, 11, 2.5]   // 7 Sky Castle
+      ];
+      var p = presets[Math.min(idx, 7)];
       camera.position.set(0, p[0], p[1]);
       camera.lookAt(0, p[2], 0);
       castleGroup.scale.setScalar(1);
@@ -740,10 +770,14 @@
     castleGroup.add(newCastle);
     castleGroup.position.y = 0;
 
+    currentStage = stageIdx; // Set state FIRST so refreshCanvasSize works properly
+    
+    // Explicitly snap canvas layout before showing
+    if (typeof refreshCanvasSize === 'function') refreshCanvasSize();
+    
     adjustCameraForStage(idx);
     animateBuildIn(newCastle);
     updateSky(idx);
-    currentStage = stageIdx;
     return true;
   };
 

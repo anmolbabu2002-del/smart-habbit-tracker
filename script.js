@@ -15,6 +15,202 @@ let meditationRunning = false;
 let breathingEnabled = false;     // toggle state
 let unlockedMilestones = [];      // Persist unlocked achievements
 let currentFocusTaskCheckbox = null; // Store reference to currently focused task
+let currentFocusHabitIndex = null; // Store reference to currently focused habit
+
+// ==================== VITALITY SCORE SYSTEM ====================
+const VITALITY_FACTOR_POOL = [
+  { id: "tasks",      emoji: "📝", label: "Tasks",      desc: "Complete your daily tasks" },
+  { id: "water",      emoji: "💧", label: "Water",      desc: "Hit your daily water goal" },
+  { id: "meditation", emoji: "🪷", label: "Meditation", desc: "Complete a meditation session" },
+  { id: "reading",    emoji: "📚", label: "Reading",    desc: "Read at least one page" },
+  { id: "sleep",      emoji: "😴", label: "Sleep",      desc: "Log your sleep" },
+  { id: "habits",     emoji: "🔄", label: "Habits",     desc: "Complete your daily habits" },
+  { id: "journal",    emoji: "📔", label: "Journal",    desc: "Write a journal entry" },
+  { id: "mood",       emoji: "🎭", label: "Mood",       desc: "Log your mood today" }
+];
+
+const DEFAULT_VITALITY_FACTORS = ["tasks", "water", "meditation", "sleep", "reading"];
+
+function loadVitalityConfig() {
+  const raw = appStorage.getItem("vitalityConfig");
+  if (raw) {
+    try {
+      const cfg = JSON.parse(raw);
+      if (Array.isArray(cfg.factors) && cfg.factors.length >= 3 && cfg.factors.length <= 5) {
+        return cfg;
+      }
+    } catch (e) {}
+  }
+  // Default config
+  return { factors: [...DEFAULT_VITALITY_FACTORS], lastResetDate: new Date().toDateString() };
+}
+
+function saveVitalityConfig(cfg) {
+  appStorage.setItem("vitalityConfig", JSON.stringify(cfg));
+}
+
+function getVitalityFactorScore(factorId) {
+  const todayStr = new Date().toDateString();
+  switch (factorId) {
+    case "tasks": {
+      const taskItems = document.querySelectorAll("#task li");
+      const totalTasks = taskItems.length;
+      const completedTasks = document.querySelectorAll("#task li input[type='checkbox']:checked").length;
+      return totalTasks > 0 ? (completedTasks / totalTasks) : 0;
+    }
+    case "water": {
+      const wConsumed = typeof waterConsumed !== "undefined" ? waterConsumed : 0;
+      const wGoal = typeof waterGoal !== "undefined" && waterGoal > 0 ? waterGoal : 2000;
+      return Math.min(wConsumed / wGoal, 1);
+    }
+    case "meditation": {
+      const medDate = appStorage.getItem("meditationCompletedDate");
+      return (medDate === todayStr) ? 1 : 0;
+    }
+    case "reading": {
+      const readDate = appStorage.getItem("lastPageReadDate");
+      return (readDate === todayStr) ? 1 : 0;
+    }
+    case "sleep": {
+      if (typeof sleepLogs !== "undefined" && sleepLogs.length > 0) {
+        const recent = sleepLogs[0];
+        const recentDateStr = new Date(recent.date).toDateString();
+        const yesterdayStr = new Date(Date.now() - 86400000).toDateString();
+        if (recentDateStr === todayStr || recentDateStr === yesterdayStr) return 1;
+      }
+      return 0;
+    }
+    case "habits": {
+      const loadedHabits = JSON.parse(appStorage.getItem("userHabits") || "[]");
+      const hbTotal = loadedHabits.length;
+      const hbCompleted = loadedHabits.filter(h => h.completedToday).length;
+      return hbTotal > 0 ? (hbCompleted / hbTotal) : 0;
+    }
+    case "journal": {
+      const journalData = appStorage.getItem("journalEntries");
+      if (journalData) {
+        try {
+          const entries = JSON.parse(journalData);
+          const todayEntry = entries.find(e => new Date(e.date).toDateString() === todayStr);
+          return todayEntry ? 1 : 0;
+        } catch (e) {}
+      }
+      return 0;
+    }
+    case "mood": {
+      if (typeof moodHistory !== "undefined" && moodHistory.length > 0) {
+        const latest = moodHistory[moodHistory.length - 1];
+        const latestDate = new Date(latest.date || latest.timestamp).toDateString();
+        return (latestDate === todayStr) ? 1 : 0;
+      }
+      return 0;
+    }
+    default: return 0;
+  }
+}
+
+function getVitalityScore() {
+  const cfg = loadVitalityConfig();
+  const n = cfg.factors.length;
+  if (n === 0) return 0;
+  const weightPer = 100 / n;
+  let total = 0;
+  cfg.factors.forEach(fId => {
+    total += getVitalityFactorScore(fId) * weightPer;
+  });
+  return Math.round(total);
+}
+
+function tryVitalityStreak() {
+  const todayStr = new Date().toDateString();
+  // Already incremented today?
+  const lastComp = appStorage.getItem("lastCompletionTime");
+  if (lastComp) {
+    const lastDate = new Date(parseInt(lastComp, 10)).toDateString();
+    if (lastDate === todayStr) return;
+  }
+
+  const score = getVitalityScore();
+  if (score >= 80) {
+    // ✅ INCREMENT STREAK
+    appStorage.setItem("lastCompletionTime", Date.now().toString());
+    appStorage.removeItem("lastStreakPenaltyTime");
+    addCompletionDate();
+
+    count += 1;
+    updateStreakDisplay();
+    saveState();
+    renderDashboard();
+
+    showNotification(`🔥 Vitality ${score}%! Streak extended to ${count} days!`);
+
+    // Update vitality UI
+    updateVitalityUI();
+
+    setTimeout(() => {
+      showStreakPage();
+    }, 1500);
+  }
+
+  // Always refresh the vitality display
+  updateVitalityUI();
+}
+
+function updateVitalityUI() {
+  const score = getVitalityScore();
+  const cfg = loadVitalityConfig();
+
+  // Dashboard ring
+  const vScoreText = document.getElementById("vitality-score-pct");
+  const vRingFill = document.getElementById("vitality-ring-fill");
+  if (vScoreText) vScoreText.textContent = `${score}%`;
+  if (vRingFill) {
+    const offset = 314 - (score / 100) * 314;
+    vRingFill.style.strokeDashoffset = offset;
+  }
+
+  // Update dynamic breakdown
+  const breakdownGrid = document.getElementById("vitality-breakdown-dynamic");
+  if (breakdownGrid) {
+    breakdownGrid.innerHTML = "";
+    const n = cfg.factors.length;
+    const weightPer = Math.round(100 / n);
+    cfg.factors.forEach(fId => {
+      const pool = VITALITY_FACTOR_POOL.find(p => p.id === fId);
+      if (!pool) return;
+      const rawScore = getVitalityFactorScore(fId);
+      const pct = Math.round(rawScore * 100);
+      const item = document.createElement("div");
+      item.className = "vitality-item" + (pct >= 100 ? " vitality-complete" : "");
+      item.innerHTML = `
+        <div class="vitality-icon">${pool.emoji}</div>
+        <div class="vitality-details">
+          <span class="v-label">${pool.label}</span>
+          <span class="v-value">${pct}%</span>
+        </div>
+        <div class="v-weight">${weightPer}%</div>
+      `;
+      breakdownGrid.appendChild(item);
+    });
+  }
+
+  // Home streak card mini vitality bar
+  const miniBar = document.getElementById("bloom-vitality-mini-fill");
+  if (miniBar) miniBar.style.width = `${Math.min(score, 100)}%`;
+  const miniLabel = document.getElementById("bloom-vitality-mini-label");
+  if (miniLabel) miniLabel.textContent = `${score}%`;
+
+  // Threshold glow
+  const vSection = document.querySelector(".vitality-dashboard-section");
+  if (vSection) vSection.classList.toggle("vitality-threshold-reached", score >= 80);
+
+  // Streak page vitality indicator
+  const streakVitality = document.getElementById("streak-vitality-score");
+  if (streakVitality) streakVitality.textContent = `${score}%`;
+}
+
+// Legacy compatibility shim
+function updateMeditationStatusUI() { updateVitalityUI(); }
 
 const breathingModes = {
   "478": [
@@ -103,7 +299,7 @@ function preloadMeditationAudio() {
 }
 
 // Trigger preload on first touch/click anywhere on the page
-(function() {
+(function () {
   function onFirstInteraction() {
     preloadMeditationAudio();
     document.removeEventListener("touchstart", onFirstInteraction);
@@ -304,6 +500,12 @@ function endMeditationSession(completed) {
   updateMedCountdown();
 
   if (completed) {
+    // Record meditation completion date for daily streak
+    appStorage.setItem("meditationCompletedDate", new Date().toDateString());
+    if (typeof tryVitalityStreak === "function") tryVitalityStreak();
+    if (typeof updateMeditationStatusUI === "function") updateMeditationStatusUI();
+    if (typeof updateBloomWidgets === "function") updateBloomWidgets();
+
     setTimeout(showPostMeditationCheckIn, 1500);
     const un = getUserName();
     const nameStr = un ? ` ${un}` : "";
@@ -313,7 +515,7 @@ function endMeditationSession(completed) {
 
 
 function getReminderPreferences() {
-  const raw = localStorage.getItem("reminderPreferences");
+  const raw = appStorage.getItem("reminderPreferences");
   if (!raw) {
     return { taskReminders: false, waterReminders: false };
   }
@@ -329,7 +531,7 @@ function getReminderPreferences() {
 }
 
 function setReminderPreferences(prefs) {
-  localStorage.setItem(
+  appStorage.setItem(
     "reminderPreferences",
     JSON.stringify({
       taskReminders: !!prefs.taskReminders,
@@ -340,7 +542,7 @@ function setReminderPreferences(prefs) {
 
 function runNotificationSetupIfNeeded() {
   if (!("Notification" in window)) return;
-  if (localStorage.getItem("notificationSetupDone") === "1") return;
+  if (appStorage.getItem("notificationSetupDone") === "1") return;
 
   const overlay = document.createElement("div");
   overlay.className = "notification-setup-overlay";
@@ -383,7 +585,7 @@ function runNotificationSetupIfNeeded() {
 
   const finalize = (prefs) => {
     setReminderPreferences(prefs);
-    localStorage.setItem("notificationSetupDone", "1");
+    appStorage.setItem("notificationSetupDone", "1");
     overlay.remove();
   };
 
@@ -422,7 +624,7 @@ function runNotificationSetupIfNeeded() {
 
 // --- Personalization ---
 function getUserName() {
-  return localStorage.getItem("userName") || "";
+  return appStorage.getItem("userName") || "";
 }
 
 function updatePersonalizedInterface() {
@@ -464,7 +666,7 @@ function updateGreeting() {
     emoji = "🌞";
   }
 
-  const storedName = localStorage.getItem("userName");
+  const storedName = appStorage.getItem("userName");
 
   const textSpan = greetingEl.querySelector(".greeting-text");
   const emojiSpan = greetingEl.querySelector(".greeting-emoji");
@@ -489,7 +691,7 @@ function updateGreeting() {
             // Valid name
             nameInput.classList.remove("invalid");
             errorMsg.classList.remove("visible");
-            localStorage.setItem("userName", nameStr);
+            appStorage.setItem("userName", nameStr);
             updateGreeting(); // Refresh instantly
             updatePersonalizedInterface();
           } else {
@@ -517,7 +719,7 @@ function updateGreeting() {
 }
 
 // Auto-update greeting every minute
-setInterval(updateGreeting, 60000);
+setInterval(function () { updateGreeting(); if (typeof updateHeroTimeOfDay === 'function') updateHeroTimeOfDay(); }, 60000);
 
 function resetBreathingVisual() {
   const circle = document.getElementById("breathing-circle");
@@ -551,31 +753,15 @@ function startBreathingAnimation() {
     startBtn.classList.add("hidden-during-session");
     startBtn.style.display = "none";
   }
-
-  // Start meditation timer
-  const timerInput = document.getElementById("meditation-timer");
-  const minutes = parseInt((timerInput instanceof HTMLInputElement ? timerInput.value : "5"), 10) || 5;
-  const seconds = minutes * 60;
-  let remainingSeconds = seconds;
-
-  if (meditationTimer) clearInterval(meditationTimer);
-
-  window.dupModTimer = setInterval(() => {
-    remainingSeconds--;
-    if (remainingSeconds <= 0) {
-      stopBreathingAnimation();
-      clearInterval(window.dupModTimer);
-      // alert removed
-    }
-  }, 1000);
+  // Timer is handled by startMeditationSessionImpl — no duplicate timer here
 }
 
 function stopBreathingAnimation() {
   breathingActive = false;
   if (breathingTimeout) clearTimeout(breathingTimeout);
   breathingTimeout = null;
-  if (meditationTimer) clearInterval(meditationTimer);
-  meditationTimer = null;
+  // Clean up any legacy duplicate timer
+  if (window.dupModTimer) { clearInterval(window.dupModTimer); window.dupModTimer = null; }
   resetBreathingVisual();
 
   // Restore button states
@@ -627,6 +813,10 @@ function showPage(pageId) {
   if (pageId === 'streak-page') renderStreakPage();
   if (pageId === 'journal-page') loadJournalEntries();
   if (pageId === 'sleep-page') updateSleepStats();
+  if (pageId === 'library-page') {
+    if (typeof renderReadingHistory === 'function') renderReadingHistory();
+    if (typeof renderMyBooks === 'function') renderMyBooks();
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -634,7 +824,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initSleepTracker();
 
   // Custom Theme Studio initialization
-  const savedTheme = localStorage.getItem("appTheme");
+  const savedTheme = appStorage.getItem("appTheme");
   if (savedTheme === "custom") {
     loadCustomTheme();
     applyCtsStateToDom();
@@ -651,9 +841,35 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.addEventListener('click', function (event) {
       event.preventDefault();
       const pageId = this.getAttribute('data-page');
-      showPage(pageId);
+      if (pageId) showPage(pageId);
     });
   });
+
+  // More drawer toggle
+  const moreBtn = document.getElementById('more-nav-btn');
+  const drawerOverlay = document.getElementById('more-drawer-overlay');
+  if (moreBtn && drawerOverlay) {
+    moreBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      drawerOverlay.classList.toggle('visible');
+    });
+    drawerOverlay.addEventListener('click', function (e) {
+      if (e.target === drawerOverlay) {
+        drawerOverlay.classList.remove('visible');
+      }
+    });
+    document.querySelectorAll('.more-drawer-item').forEach(function (item) {
+      item.addEventListener('click', function () {
+        const pageId = this.getAttribute('data-page');
+        if (pageId) {
+          showPage(pageId);
+          drawerOverlay.classList.remove('visible');
+        }
+      });
+    });
+  }
+
 
   // Dashboard Focus Logic
   const saveFocusBtn = document.getElementById("save-focus-btn");
@@ -912,14 +1128,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!inputEl) return;
 
     const todayStr = new Date().toDateString();
-    const storedDate = localStorage.getItem("placeholderDate");
-    let index = parseInt(localStorage.getItem("placeholderIndex") || "0", 10);
+    const storedDate = appStorage.getItem("placeholderDate");
+    let index = parseInt(appStorage.getItem("placeholderIndex") || "0", 10);
 
     if (storedDate !== todayStr) {
       // It's a new day, pick a new random sentence
       index = Math.floor(Math.random() * taskPlaceholders.length);
-      localStorage.setItem("placeholderDate", todayStr);
-      localStorage.setItem("placeholderIndex", index.toString());
+      appStorage.setItem("placeholderDate", todayStr);
+      appStorage.setItem("placeholderIndex", index.toString());
     }
 
     inputEl.setAttribute("placeholder", taskPlaceholders[index]);
@@ -1019,7 +1235,7 @@ let count = 0;
 function checkDailyStreak() {
   if (count <= 0) return; // Nothing to lose
 
-  const lastCompletion = localStorage.getItem("lastCompletionTime");
+  const lastCompletion = appStorage.getItem("lastCompletionTime");
   if (!lastCompletion) return; // Never completed — nothing to lose
 
   const lastTime = parseInt(lastCompletion, 10);
@@ -1037,7 +1253,7 @@ function checkDailyStreak() {
   }
 
   // Check we haven't already penalized for this gap
-  const lastPenalty = localStorage.getItem("lastStreakPenaltyTime");
+  const lastPenalty = appStorage.getItem("lastStreakPenaltyTime");
   if (lastPenalty) {
     const lastPenaltyTime = parseInt(lastPenalty, 10);
     if (lastPenaltyTime > lastTime) return;
@@ -1046,6 +1262,18 @@ function checkDailyStreak() {
   // Missed a day — Duolingo style: streak resets to 0 💀
   const lostCount = count;
   count = 0;
+
+  // Hard Reset: Re-lock all milestones
+  unlockedMilestones = [];
+  if (typeof updateOrbUI === 'function') updateOrbUI();
+
+  // Wipe completion dates history
+  completionDates = [];
+  if (typeof renderStreakCalendar === 'function') renderStreakCalendar();
+
+  // Reset 3D Castle to foundation
+  if (typeof resetCastleToFoundation === 'function') resetCastleToFoundation();
+
   saveState();
   updateStreakDisplay();
   if (document.getElementById("streak-page")?.classList.contains("active")) {
@@ -1053,8 +1281,11 @@ function checkDailyStreak() {
   }
   showStreakLossAnimation(lostCount);
 
-  // Mark penalty as applied
-  localStorage.setItem("lastStreakPenaltyTime", Date.now().toString());
+  // Mark penalty as applied, clear tracking
+  appStorage.setItem("lastStreakPenaltyTime", Date.now().toString());
+  appStorage.removeItem("lastCompletionTime");
+  appStorage.removeItem("tasksCompletedDate");
+  appStorage.removeItem("meditationCompletedDate");
 }
 
 function showStreakLossAnimation(lostCount) {
@@ -1177,7 +1408,82 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('priority-modal-overlay')?.addEventListener('click', function (e) {
     if (e.target === this) closePriorityModal();
   });
+
+  // ==================== VITALITY CONFIG PANEL ====================
+  initVitalityConfigUI();
+
+  // Streak Settings Collapsible Panel
+  const streakSettingsBtn = document.getElementById("streakSettingsBtn");
+  const streakSettingsPanel = document.getElementById("streak-settings-panel");
+  if (streakSettingsBtn && streakSettingsPanel) {
+    streakSettingsBtn.addEventListener("click", () => {
+      streakSettingsPanel.classList.toggle("hidden");
+      if (!streakSettingsPanel.classList.contains("hidden")) {
+        renderVitalityConfigCards();
+      }
+    });
+  }
 });
+
+function initVitalityConfigUI() {
+  renderVitalityConfigCards();
+}
+
+function renderVitalityConfigCards() {
+  const grid = document.getElementById("vitality-config-grid");
+  if (!grid) return;
+
+  const cfg = loadVitalityConfig();
+  grid.innerHTML = "";
+
+  VITALITY_FACTOR_POOL.forEach(factor => {
+    const isActive = cfg.factors.includes(factor.id);
+    const card = document.createElement("div");
+    card.className = `vitality-factor-card ${isActive ? "active" : ""}`;
+    card.innerHTML = `
+      <div class="vf-icon">${factor.emoji}</div>
+      <div class="vf-info">
+        <span class="vf-label">${factor.label}</span>
+        <span class="vf-desc">${factor.desc}</span>
+      </div>
+      <div class="vf-toggle-indicator">${isActive ? "✓" : ""}</div>
+    `;
+
+    card.addEventListener("click", () => {
+      const currentCfg = loadVitalityConfig();
+      const idx = currentCfg.factors.indexOf(factor.id);
+      if (idx > -1) {
+        // Removing
+        if (currentCfg.factors.length <= 3) {
+          showNotification("⚠️ Minimum 3 factors required!");
+          card.classList.add("vf-shake");
+          setTimeout(() => card.classList.remove("vf-shake"), 500);
+          return;
+        }
+        currentCfg.factors.splice(idx, 1);
+      } else {
+        // Adding
+        if (currentCfg.factors.length >= 5) {
+          showNotification("⚠️ Maximum 5 factors allowed!");
+          card.classList.add("vf-shake");
+          setTimeout(() => card.classList.remove("vf-shake"), 500);
+          return;
+        }
+        currentCfg.factors.push(factor.id);
+      }
+      saveVitalityConfig(currentCfg);
+      renderVitalityConfigCards();
+      updateVitalityUI();
+      if (typeof updateBloomWidgets === "function") updateBloomWidgets();
+    });
+
+    grid.appendChild(card);
+  });
+
+  // Update counter
+  const counter = document.getElementById("vitality-factor-counter");
+  if (counter) counter.textContent = `${cfg.factors.length}/5 selected (min 3)`;
+}
 
 // ==================== TASK CREATION WITH EMOJI AND COLOR ====================
 function createTaskItem(textValue, completed, taskColor, taskEmoji, taskPriority) {
@@ -1185,6 +1491,7 @@ function createTaskItem(textValue, completed, taskColor, taskEmoji, taskPriority
   li.className = "task-item";
 
   const text = document.createElement("span");
+  text.className = "task-text";
 
   // Get emoji and color
   const emoji = taskEmoji || getEmojiForTask(textValue);
@@ -1200,28 +1507,9 @@ function createTaskItem(textValue, completed, taskColor, taskEmoji, taskPriority
   const emojiBadge = document.createElement("span");
   emojiBadge.className = "task-emoji";
   emojiBadge.textContent = emoji;
-  emojiBadge.style.cssText = `
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 50px;
-    height: 50px;
-    border-radius: 16px;
-    background: linear-gradient(145deg, rgba(255,255,255,0.6), rgba(255,255,255,0.3));
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1.5px solid rgba(255, 255, 255, 0.7);
-    margin-right: 12px;
-    font-size: 28px;
-    flex-shrink: 0;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.8);
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-  `;
 
   text.textContent = textValue;
-  text.style.backgroundColor = color;
-  text.style.color = "white";
+  text.style.cssText = "flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;";
 
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";
@@ -1415,7 +1703,6 @@ let streak = document.getElementById("streak");
 
 function allchecked() {
   /** @type {NodeListOf<HTMLInputElement>} */
-  // Only select completion checkboxes, not selection checkboxes
   let checkboxes = document.querySelectorAll("#task input[type='checkbox']:not(.task-select-cb)");
   updateEmptyState();
   if (checkboxes.length === 0) {
@@ -1426,9 +1713,11 @@ function allchecked() {
 
   if (check) {
     donebtn.style.display = "block";
-    // If already completed today, show disabled "Completed!" state
-    if (!canCompleteToday()) {
-      donebtn.textContent = "✅ Completed!";
+    const tasksDoneDate = appStorage.getItem("tasksCompletedDate");
+    const todayStr = new Date().toDateString();
+
+    if (tasksDoneDate === todayStr) {
+      donebtn.textContent = "✅ All Tasks Completed!";
       donebtn.disabled = true;
       donebtn.classList.add("alldone-completed");
     } else {
@@ -1439,6 +1728,9 @@ function allchecked() {
   } else {
     donebtn.style.display = "none";
   }
+
+  // Always update vitality
+  if (typeof updateVitalityUI === "function") updateVitalityUI();
 }
 
 // ==================== CLOSE MENU HELPER ====================
@@ -1831,13 +2123,19 @@ document.getElementById("castle-container")?.addEventListener("click", () => {
 });
 
 function updateStreakDisplay() {
-  // Update main streak text (legacy)
-  streak.innerText = count + " days streak 🌟 ";
+  // Update main streak text (legacy — element may not exist)
+  if (streak) streak.innerText = count + " days streak 🌟 ";
 
   // Update hero display
   const streakNumber = document.getElementById("streak-number");
   if (streakNumber) {
     streakNumber.textContent = count;
+  }
+
+  // Update Bloom dashboard streak widget
+  const bloomStreak = document.getElementById("bloom-streak-count");
+  if (bloomStreak) {
+    bloomStreak.textContent = count;
   }
 
   // Update castle builder
@@ -1903,59 +2201,47 @@ function celebrateOrbLevelUp(stage) {
   }, 500);
 }
 
-allchecked();
-
 donebtn.addEventListener("click", function () {
-  if (!canCompleteToday()) {
-    return; // Already completed today — button should be disabled
-  }
-
-  localStorage.setItem("lastCompletionTime", Date.now().toString());
-  localStorage.removeItem("lastStreakPenaltyTime"); // Reset penalty window on new completion
-  addCompletionDate();
+  // Mark tasks as completed today
+  appStorage.setItem("tasksCompletedDate", new Date().toDateString());
 
   all.textContent = "🎉 Congrats! You have completed all your tasks! 🎉";
-  all.style.color = "rgba(71, 123, 227, 0.75)";
+  all.style.color = "#92400e";
   all.style.fontSize = "20px";
   all.style.fontWeight = "bold";
   all.style.marginLeft = "20px";
   all.style.marginTop = "20px";
   all.style.marginBottom = "20px";
-  all.style.backgroundColor = "rgba(221, 228, 244, 0.75)";
+  all.style.backgroundColor = "rgba(245, 158, 11, 0.12)";
   all.style.borderRadius = "10px";
   all.style.padding = "10px";
   all.classList.add("celebrate");
 
-  count += 1;
-  streak.style.transform = "scale(1.2)";
-  streak.style.transition = "transform 0.3s ease";
-  updateStreakDisplay();
-
-  setTimeout(() => {
-    streak.style.transform = "scale(1)";
-  }, 300);
+  donebtn.textContent = "✅ All Tasks Completed!";
+  donebtn.disabled = true;
+  donebtn.classList.add("alldone-completed");
 
   setTimeout(() => {
     all.textContent = "";
     all.classList.remove("celebrate");
   }, 8000);
 
-  // Switch button to disabled "Completed!" state
-  donebtn.textContent = "✅ Completed!";
-  donebtn.disabled = true;
-  donebtn.classList.add("alldone-completed");
-
   saveState();
+  renderDashboard();
 
-  setTimeout(() => {
-    showStreakPage();
-  }, 2000);
+  // Try vitality streak
+  if (typeof tryVitalityStreak === "function") tryVitalityStreak();
 });
+
+// Legacy shim
+function tryCompleteStreak() {
+  if (typeof tryVitalityStreak === "function") tryVitalityStreak();
+}
 
 
 // ==================== STREAK COOLDOWN (MIDNIGHT RESET) ====================
 function canCompleteToday() {
-  const lastCompletion = localStorage.getItem("lastCompletionTime");
+  const lastCompletion = appStorage.getItem("lastCompletionTime");
   if (!lastCompletion) return true;
   const lastTime = parseInt(lastCompletion, 10);
   const lastDate = new Date(lastTime);
@@ -1979,7 +2265,12 @@ function scheduleMidnightReset() {
     waterDrinkLog = [];
     saveWaterState();
     updateWaterDisplay();
+
+    // Reset meditation streak status indicator for new day
+    if (typeof updateMeditationStatusUI === "function") updateMeditationStatusUI();
+
     saveState();
+    renderDashboard();
 
     // Schedule next midnight reset
     scheduleMidnightReset();
@@ -1990,7 +2281,7 @@ function scheduleMidnightReset() {
 scheduleMidnightReset();
 
 function getCompletionDates() {
-  const datesStr = localStorage.getItem("completionDates");
+  const datesStr = appStorage.getItem("completionDates");
   if (!datesStr) return [];
   try {
     return JSON.parse(datesStr);
@@ -2004,7 +2295,7 @@ function addCompletionDate() {
   const today = new Date().toDateString();
   if (!dates.includes(today)) {
     dates.push(today);
-    localStorage.setItem("completionDates", JSON.stringify(dates));
+    appStorage.setItem("completionDates", JSON.stringify(dates));
   }
 }
 
@@ -2042,19 +2333,19 @@ function saveState() {
     lastSaveDate: new Date().toDateString()
   };
 
-  localStorage.setItem("habitAppState", JSON.stringify(state));
+  appStorage.setItem("habitAppState", JSON.stringify(state));
 }
 
 function loadState() {
   // Check and apply stored theme globally
-  const savedTheme = localStorage.getItem("appTheme") || "classic";
+  const savedTheme = appStorage.getItem("appTheme") || "classic";
   document.body.className = `theme-${savedTheme}`;
   document.querySelectorAll(".theme-btn").forEach(btn => {
     btn.classList.toggle("active", btn.getAttribute("data-theme") === savedTheme);
   });
 
   if (savedTheme === "custom") {
-    const savedColors = JSON.parse(localStorage.getItem("customThemeColors") || "{}");
+    const savedColors = JSON.parse(appStorage.getItem("customThemeColors") || "{}");
     if (savedColors.bg) document.documentElement.style.setProperty('--bg-base', savedColors.bg);
     if (savedColors.primary) document.documentElement.style.setProperty('--primary', savedColors.primary);
     if (savedColors.text) document.documentElement.style.setProperty('--text-main', savedColors.text);
@@ -2069,7 +2360,7 @@ function loadState() {
     }
   }
 
-  const raw = localStorage.getItem("habitAppState");
+  const raw = appStorage.getItem("habitAppState");
   if (!raw) {
     checkDailyStreak();
     updateDailyQuote();
@@ -2077,11 +2368,22 @@ function loadState() {
   }
   try {
     const state = JSON.parse(raw);
+    const todayStr = new Date().toDateString();
+    let isNewDay = false;
+    if (state.lastSaveDate && state.lastSaveDate !== todayStr) {
+      isNewDay = true;
+    }
+
+    if (isNewDay) {
+        appStorage.removeItem("dailyFocus");
+    }
+
     taskContainer.innerHTML = "";
     if (Array.isArray(state.tasks)) {
       state.tasks.forEach(function (t) {
         if (!t || typeof t.text !== "string") return;
-        createTaskItem(t.text, !!t.completed, t.color, t.emoji, t.priority || null);
+        const completeStatus = isNewDay ? false : !!t.completed;
+        createTaskItem(t.text, completeStatus, t.color, t.emoji, t.priority || null);
       });
     }
     if (typeof state.count === "number") {
@@ -2089,11 +2391,10 @@ function loadState() {
     }
 
     // --- WATER DATE CHECK LOGIC ---
-    const todayStr = new Date().toDateString();
     let waterNeedsReset = false;
 
     // Check the dedicated water save date
-    const savedWaterRaw = localStorage.getItem("waterData");
+    const savedWaterRaw = appStorage.getItem("waterData");
     if (savedWaterRaw) {
       try {
         const data = JSON.parse(savedWaterRaw);
@@ -2119,7 +2420,7 @@ function loadState() {
     if (Array.isArray(state.sleepLogs)) sleepLogs = state.sleepLogs;
     if (Array.isArray(state.unlockedMilestones)) unlockedMilestones = state.unlockedMilestones;
     if (Array.isArray(state.completionDates)) {
-      localStorage.setItem("completionDates", JSON.stringify(state.completionDates));
+      appStorage.setItem("completionDates", JSON.stringify(state.completionDates));
     }
 
     // Restore preferences
@@ -2135,10 +2436,13 @@ function loadState() {
     if (typeof state.pomodoroBreak === "number") breakDuration = state.pomodoroBreak;
     if (typeof state.timerType === "string") switchTimerType(state.timerType);
 
+
     all.textContent = "";
     all.classList.remove("celebrate");
-    streak.style.cursor = "pointer";
-    streak.addEventListener("click", showStreakPage);
+    if (streak) {
+      streak.style.cursor = "pointer";
+      streak.addEventListener("click", showStreakPage);
+    }
 
     // Sync all UI displays with the restored state
     updateStreakDisplay(); // Hero streak number + milestones + legacy text
@@ -2151,12 +2455,186 @@ function loadState() {
 
     checkDailyStreak();    // Apply any pending streak penalty
     updateDailyQuote();    // Fetch and display daily quote
+    updateBloomWidgets();  // Bloom dashboard card widgets
   } catch (e) {
     console.error("Failed to load saved state", e);
     checkDailyStreak();
     updateDailyQuote();
   }
 }
+
+// ==================== BLOOM DASHBOARD WIDGETS ====================
+function updateBloomWidgets() {
+  const todayStr = new Date().toDateString();
+
+  // 1. Tasks & Habits (40% Combined)
+  const taskItems = document.querySelectorAll("#task li");
+  const totalTasks = taskItems.length;
+  const completedTasks = document.querySelectorAll("#task li input[type='checkbox']:checked").length;
+  const pct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  
+  let completeSum = completedTasks;
+  let totalSum = totalTasks;
+  const loadedHabits = JSON.parse(appStorage.getItem("userHabits") || "[]");
+  const hbCompleted = loadedHabits.filter(h => h.completedToday).length;
+  const hbTotal = loadedHabits.length;
+  if (hbTotal > 0) {
+      completeSum += hbCompleted;
+      totalSum += hbTotal;
+  }
+  const taskScore = totalSum > 0 ? (completeSum / totalSum) * 40 : 0;
+
+  // ── Home Page Task Progress Strip ──
+  const progressLabel = document.getElementById("bloom-progress-label");
+  const progressPct = document.getElementById("bloom-progress-pct");
+  const progressFill = document.getElementById("bloom-progress-fill");
+
+  if (progressLabel) progressLabel.textContent = `Tasks: ${completedTasks}/${totalTasks}`;
+  if (progressPct) progressPct.textContent = `${pct}%`;
+  if (progressFill) progressFill.style.width = `${pct}%`;
+
+  // 2. Water (20%)
+  const wConsumed = typeof waterConsumed !== "undefined" ? waterConsumed : 0;
+  const wGoal = typeof waterGoal !== "undefined" && waterGoal > 0 ? waterGoal : 2000;
+  const waterScore = Math.min((wConsumed / wGoal) * 20, 20);
+
+  // 3. Meditation (20%)
+  const medDate = appStorage.getItem("meditationCompletedDate");
+  const medScore = (medDate === todayStr) ? 20 : 0;
+
+  // 4. Reading (10%)
+  const readDate = appStorage.getItem("lastPageReadDate");
+  const readScore = (readDate === todayStr) ? 10 : 0;
+
+  // 5. Sleep (10%)
+  let sleepScore = 0;
+  let sleepValStr = "No";
+  if (typeof sleepLogs !== "undefined" && sleepLogs.length > 0) {
+      const recent = sleepLogs[0];
+      const recentDateStr = new Date(recent.date).toDateString();
+      const yesterdayStr = new Date(Date.now() - 86400000).toDateString();
+      // Check if logged today or yesterday (since sleep is for the night)
+      if (recentDateStr === todayStr || recentDateStr === yesterdayStr) {
+          sleepScore = 10;
+          sleepValStr = `${recent.hours}h`;
+      }
+  }
+
+  // ── Dashboard Page Vitality Score (dynamic) ──
+  updateVitalityUI();
+
+  // ── Water Widget ──
+  const bloomWaterAmount = document.getElementById("bloom-water-amount");
+  const bloomWaterCups = document.getElementById("bloom-water-cups");
+  const bloomWaterWave = document.getElementById("bloom-water-wave");
+
+  if (bloomWaterAmount && typeof waterConsumed !== "undefined" && typeof waterGoal !== "undefined") {
+    bloomWaterAmount.textContent = `${waterConsumed} / ${waterGoal}`;
+  }
+  if (bloomWaterCups && typeof waterConsumed !== "undefined") {
+    const cups = Math.floor(waterConsumed / 250);
+    bloomWaterCups.textContent = `${cups} cups`;
+  }
+  if (bloomWaterWave && typeof waterConsumed !== "undefined" && typeof waterGoal !== "undefined") {
+    const waterPct = waterGoal > 0 ? Math.min(100, (waterConsumed / waterGoal) * 100) : 0;
+    bloomWaterWave.style.height = `${waterPct}%`;
+  }
+
+  // ── Meditation Widget ──
+  const bloomMedTime = document.getElementById("bloom-med-time");
+  if (bloomMedTime) {
+    if (typeof meditationSecondsLeft !== "undefined" && meditationSecondsLeft > 0) {
+      bloomMedTime.textContent = formatMedTime(meditationSecondsLeft);
+    } else if (typeof meditationDuration !== "undefined") {
+      bloomMedTime.textContent = formatMedTime(meditationDuration * 60);
+    }
+  }
+
+  // ── Mood Widget (update SVG line from recent mood data) ──
+  const moodLine = document.getElementById("bloom-mood-line");
+  if (moodLine && typeof moodHistory !== "undefined" && moodHistory.length > 0) {
+    const recent = moodHistory.slice(-7);
+    const pts = recent.map((m, i) => {
+      const x = recent.length > 1 ? (i / (recent.length - 1)) * 120 : 60;
+      const val = m.mood || m.value || 3;
+      const y = 40 - ((val / 5) * 35);
+      return `${x},${y}`;
+    }).join(" ");
+    moodLine.setAttribute("points", pts);
+  }
+
+  // ── Mood Time ──
+  const bloomMoodTime = document.getElementById("bloom-mood-time");
+  if (bloomMoodTime) {
+    const now = new Date();
+    bloomMoodTime.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // ── Journal Preview ──
+  const bloomJournalPreview = document.getElementById("bloom-journal-preview");
+  if (bloomJournalPreview) {
+    try {
+      const journalData = appStorage.getItem("journalEntries");
+      if (journalData) {
+        const entries = JSON.parse(journalData);
+        if (entries.length > 0) {
+          const latest = entries[entries.length - 1];
+          const text = latest.text || latest.content || "Today's Reflection...";
+          bloomJournalPreview.textContent = text.substring(0, 120) + (text.length > 120 ? "…" : "");
+        }
+      }
+    } catch (e) { /* silent */ }
+  }
+
+  // ── Tasks Time ──
+  const bloomTasksTime = document.getElementById("bloom-tasks-time");
+  if (bloomTasksTime) {
+    const now = new Date();
+    bloomTasksTime.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // ── Library & Sleep Card Updates ──
+  const bloomLibStat = document.getElementById("bloom-lib-stat");
+  if (bloomLibStat) {
+    try {
+      const books = JSON.parse(appStorage.getItem("epubLibrary") || "[]");
+      bloomLibStat.textContent = books.length > 0 ? `${books.length} Books` : "Read seamlessly";
+    } catch (e) { }
+  }
+
+  const bloomSleepStat = document.getElementById("bloom-sleep-stat");
+  const dashSleepVal = document.getElementById("dash-sleep-val");
+  const dashSleepBarFill = document.getElementById("dash-sleep-bar-fill");
+  
+  if (bloomSleepStat && typeof sleepLogs !== "undefined") {
+    if (sleepLogs.length > 0) {
+      const recent = sleepLogs[0];
+      bloomSleepStat.textContent = `Quality: ${recent.quality || 'Good'}`;
+      if (dashSleepVal) dashSleepVal.textContent = `${recent.hours}h`;
+      
+      if (dashSleepBarFill && typeof sleepGoalHours !== "undefined") {
+        const pct = Math.min(100, Math.round((recent.hours / sleepGoalHours) * 100));
+        dashSleepBarFill.style.width = `${pct}%`;
+      }
+    } else {
+      bloomSleepStat.textContent = "Log your sleep";
+      if (dashSleepVal) dashSleepVal.textContent = "--";
+      if (dashSleepBarFill) dashSleepBarFill.style.width = "0%";
+    }
+  }
+}
+
+// Auto-update Bloom widgets on task changes (observe task list)
+const _bloomTaskObserver = new MutationObserver(() => {
+  setTimeout(updateBloomWidgets, 100);
+});
+const _bloomTaskList = document.getElementById("task");
+if (_bloomTaskList) {
+  _bloomTaskObserver.observe(_bloomTaskList, { childList: true, subtree: true, attributes: true });
+}
+
+// Update widgets every minute for time displays
+setInterval(updateBloomWidgets, 60000);
 
 // ==================== INFINITE STREAK PAGE ====================
 function showStreakPage() {
@@ -2172,7 +2650,7 @@ function hideStreakPage() {
 document.getElementById("deleteAllStreak")?.addEventListener("click", () => {
   const confirmWipe = confirm("🚨 DANGER ZONE 🚨\n\nAre you absolutely sure you want to completely erase ALL your data? This includes your streak, tasks, journals, budgets, and settings. This cannot be undone.");
   if (confirmWipe) {
-    localStorage.clear();
+    appStorage.clear();
     alert("All data has been wiped. The app will now reload.");
     window.location.reload();
   }
@@ -2211,15 +2689,17 @@ function renderStreakPage() {
       container.appendChild(day);
     }
 
+    const vScore = typeof getVitalityScore === 'function' ? getVitalityScore() : 0;
     stats.innerHTML = `
       <h2>Your Progress</h2>
       <p><strong>Current Streak:</strong> ${count} days 🔥</p>
+      <p><strong>Today's Vitality:</strong> <span id="streak-vitality-score" style="color:${vScore >= 80 ? '#10b981' : 'var(--primary)'};font-size:1.2em;">${vScore}%</span> ${vScore >= 80 ? '✅' : '(need 80%)'}</p>
       <div class="streak-legend">
           <div class="legend-item"><span class="box completed"></span> Completed</div>
           <div class="legend-item"><span class="box"></span> Future</div>
           <div class="legend-item"><span class="box current"></span> Next Day</div>
       </div>
-      ${count >= 7 ? '<p><strong>🌟 Keep it up! You\'re building consistency! 🌟</strong></p>' : '<p>Complete all tasks daily to build your streak.</p>'}
+      ${count >= 7 ? '<p><strong>🌟 Keep it up! You\'re building consistency! 🌟</strong></p>' : '<p>Hit 80% Vitality daily to build your streak.</p>'}
     `;
   } catch (e) {
     console.error("Error rendering streak page:", e);
@@ -2305,7 +2785,7 @@ function loadJournalEntries() {
 }
 
 function getJournalEntries() {
-  const entriesStr = localStorage.getItem("journalEntries");
+  const entriesStr = appStorage.getItem("journalEntries");
   if (!entriesStr) return [];
   try {
     return JSON.parse(entriesStr);
@@ -2318,7 +2798,7 @@ function getJournalEntries() {
 
 function saveJournalEntries(entries) {
   try {
-    localStorage.setItem("journalEntries", JSON.stringify(entries));
+    appStorage.setItem("journalEntries", JSON.stringify(entries));
   } catch (e) {
     console.error("Local storage error:", e);
     if (e.name === "QuotaExceededError" || e.name === "NS_ERROR_DOM_QUOTA_REACHED") {
@@ -2473,7 +2953,10 @@ function openJournalEditor(entry = null, index = null) {
   clearDoodleCanvas();
   document.getElementById("journal-drawing-area")?.classList.remove("active");
 
+  const deleteBtn = document.getElementById("deleteJournal");
+
   if (entry) {
+    if (deleteBtn) deleteBtn.style.display = "inline-block";
     titleInput.value = entry.title || "";
     tagsInput.value = (entry.tags || []).join(" ");
     if (contentDiv) contentDiv.innerHTML = entry.content || "";
@@ -2498,6 +2981,7 @@ function openJournalEditor(entry = null, index = null) {
       }, 150);
     }
   } else {
+    if (deleteBtn) deleteBtn.style.display = "none";
     titleInput.value = "";
     tagsInput.value = "";
     if (contentDiv) {
@@ -2554,6 +3038,7 @@ function saveJournalEntry() {
   saveJournalEntries(entries);
   loadJournalEntries();
   closeJournalEditor();
+  if (typeof tryVitalityStreak === "function") tryVitalityStreak();
 }
 
 function deleteJournalEntry() {
@@ -2696,7 +3181,7 @@ function showWaterPage() {
 }
 
 function loadWaterData() {
-  const saved = localStorage.getItem("waterData");
+  const saved = appStorage.getItem("waterData");
   if (saved) {
     try {
       const data = JSON.parse(saved);
@@ -2724,7 +3209,7 @@ function loadWaterData() {
 }
 
 function saveWaterState() {
-  localStorage.setItem("waterData", JSON.stringify({
+  appStorage.setItem("waterData", JSON.stringify({
     consumed: waterConsumed,
     goal: waterGoal,
     lastTime: lastWaterTime,
@@ -2748,7 +3233,7 @@ function updateWaterDisplay() {
 
   // 7-day average
   try {
-    const history = JSON.parse(localStorage.getItem("waterHistory") || "[]");
+    const history = JSON.parse(appStorage.getItem("waterHistory") || "[]");
     const avgEl = document.getElementById("water-avg-daily");
     if (avgEl && history.length > 0) {
       const totalHist = history.reduce((sum, d) => sum + d.amount, 0);
@@ -2761,13 +3246,16 @@ function updateWaterDisplay() {
 
   recordWaterIntake();
   renderWaterChart();
+
+  // Sync Bloom dashboard water widget
+  if (typeof updateBloomWidgets === "function") updateBloomWidgets();
 }
 
 function recordWaterIntake() {
   const today = new Date().toDateString();
   let history = [];
   try {
-    history = JSON.parse(localStorage.getItem("waterHistory") || "[]");
+    history = JSON.parse(appStorage.getItem("waterHistory") || "[]");
   } catch (e) { }
 
   const todayEntry = history.find(entry => entry.date === today);
@@ -2781,7 +3269,7 @@ function recordWaterIntake() {
   if (history.length > 7) {
     history = history.slice(history.length - 7);
   }
-  localStorage.setItem("waterHistory", JSON.stringify(history));
+  appStorage.setItem("waterHistory", JSON.stringify(history));
 }
 
 function renderWaterChart() {
@@ -2790,7 +3278,7 @@ function renderWaterChart() {
 
   let history = [];
   try {
-    history = JSON.parse(localStorage.getItem("waterHistory") || "[]");
+    history = JSON.parse(appStorage.getItem("waterHistory") || "[]");
   } catch (e) { }
 
   chartEl.innerHTML = "";
@@ -2849,6 +3337,7 @@ function addWater(amount) {
   if (waterGoal > 0 && waterConsumed >= waterGoal && (waterConsumed - amount) < waterGoal) {
     handleWaterGoalCompleted();
   }
+  if (typeof tryVitalityStreak === "function") tryVitalityStreak();
 }
 
 function undoLastWater() {
@@ -3000,15 +3489,36 @@ function startPomodoro() {
   // Trigger strict focus mode if enabled
   enterStrictFocusMode();
 
-  // Update animation every 100ms for smooth visual feedback
+  // Use wall-clock time for accuracy
+  const pomodoroWallStart = Date.now();
+  const pomodoroInitialTimeLeft = pomodoroTimeLeft;
+
+  // Background fallback just to check completion when window is minimized
   pomodoroTimer = setInterval(() => {
-    pomodoroTimeLeft -= 0.1;
+    const elapsedMs = Date.now() - pomodoroWallStart;
+    const elapsedSecs = elapsedMs / 1000;
+    if (pomodoroInitialTimeLeft - elapsedSecs <= 0) {
+      clearInterval(pomodoroTimer);
+      cancelAnimationFrame(window.pomodoroRafId);
+      pomodoroTimeLeft = 0;
+      updatePomodoroDisplay();
+      completePomodoro();
+    }
+  }, 1000);
+
+  // 60FPS Smooth Animation Loop
+  function pomodoroTick() {
+    const elapsedMs = Date.now() - pomodoroWallStart;
+    const elapsedSecs = elapsedMs / 1000;
+    pomodoroTimeLeft = Math.max(0, pomodoroInitialTimeLeft - elapsedSecs);
+    
+    // Only update numbers on DOM when whole second changes (for performance)
     updatePomodoroDisplay();
 
     const elapsed = pomodoroTotalTime - pomodoroTimeLeft;
     const percentage = (elapsed / pomodoroTotalTime) * 100;
 
-    // Update animation based on current type
+    // Smooth physics visual updates
     if (currentTimerType === "ice") {
       updateIceAnimation(percentage);
     } else if (currentTimerType === "candle") {
@@ -3016,8 +3526,6 @@ function startPomodoro() {
     } else if (currentTimerType === "minimal") {
       const minimalCircle = document.getElementById("minimal-progress-circle");
       if (minimalCircle) {
-        // Circumference of r=90 is ~565.48
-        // offset 0 is full, offset 565.48 is empty
         const circumference = 565.48;
         const offset = circumference - (percentage / 100) * circumference;
         minimalCircle.style.strokeDashoffset = offset.toString();
@@ -3035,13 +3543,12 @@ function startPomodoro() {
       heading.style.opacity = "1"; heading.style.webkitMaskImage = maskStyle; heading.style.maskImage = maskStyle;
     }
 
-    if (pomodoroTimeLeft <= 0) {
-      pomodoroTimeLeft = 0;
-      completePomodoro();
+    if (pomodoroTimeLeft > 0 && pomodoroRunning) {
+      window.pomodoroRafId = requestAnimationFrame(pomodoroTick);
     }
-  }, 100); // Update every 100ms for smooth animation
+  }
 
-  updatePomodoroDisplay();
+  window.pomodoroRafId = requestAnimationFrame(pomodoroTick);
 }
 
 function pausePomodoro() {
@@ -3086,113 +3593,98 @@ function updatePomodoroDisplay() {
     `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
-// ==================== ICE MELTING ANIMATION ====================
+// ==================== GLASSMORPHIC ICE VESSEL ====================
 function updateIceAnimation(percentage) {
-  const iceCubes = document.querySelectorAll('.ice-cube');
-  const waterFill = /** @type {HTMLElement} */ (document.querySelector('.ice-water-fill'));
-
-  // Water fill flows from bottom to top (classic):
-  if (waterFill) {
-    waterFill.style.height = percentage + "%";
+  const water = document.getElementById('vessel-water');
+  if (water) {
+    water.style.height = percentage + "%";
+    // Color shift: icy blue → deep ocean as time progresses
+    const r = Math.round(56 - percentage * 0.5);
+    const g = Math.round(189 - percentage * 1.0);
+    const b = Math.round(248 - percentage * 0.5);
+    water.style.background = `linear-gradient(180deg,
+      rgba(${r}, ${g}, ${b}, 0.6) 0%,
+      rgba(${Math.max(3, r-40)}, ${Math.max(80, g-70)}, ${Math.max(164, b-40)}, 0.75) 40%,
+      rgba(3, 60, 140, 0.9) 100%)`;
   }
 
-  // Melt ice cubes as soon as water touches them (bottom up)
-  const glassHeight = 300; // px, matches .ice-glass height
-  iceCubes.forEach((cube) => {
-    const cubeEl = /** @type {HTMLElement} */ (cube);
-    // Get the top % of the cube (from style)
-    const topMatch = /top:\s*([\d.]+)%/.exec(cubeEl.style.cssText);
+  // Melt ice chunks as water rises (water fills from bottom (100% top) to top (0% top))
+  const chunks = document.querySelectorAll('.ice-chunk');
+  chunks.forEach((chunk) => {
+    const chunkEl = /** @type {HTMLElement} */ (chunk);
+    const topMatch = /top:\s*([\d.]+)%/.exec(chunkEl.style.cssText);
     let cubeTop = topMatch ? parseFloat(topMatch[1]) : 0;
-    // Water height in %
-    const waterLevel = percentage;
-    // If water has reached the cube's top, start melting
-    let localPercent = 0;
-    if (waterLevel >= (100 - cubeTop)) {
-      // How much water is above the cube
-      localPercent = Math.min(100, ((waterLevel - (100 - cubeTop)) / 10) * 100);
-    }
-    const opacity = Math.max(0, 1 - localPercent / 100);
-    const scale = 1 - (localPercent / 100) * 0.7;
-    cubeEl.style.opacity = opacity.toString();
-    cubeEl.style.transform = `scale(${scale}) rotate(${localPercent * 2}deg)`;
-    cubeEl.style.filter = `blur(${localPercent / 100 * 2}px)`;
-    if (opacity < 0.05) {
-      cubeEl.style.display = "none";
+    
+    // Water level is current percentage (0 to 100)
+    // A cube at top: 70% gets submerged when water reaches 30%
+    const submergeStart = 100 - cubeTop;
+    if (percentage > submergeStart) {
+      const meltProgress = Math.min(1, (percentage - submergeStart) / 15);
+      chunkEl.style.opacity = (1 - meltProgress).toString();
+      chunkEl.style.transform = `scale(${1 - meltProgress * 0.6})`;
     } else {
-      cubeEl.style.display = "block";
+      chunkEl.style.opacity = "1";
+      chunkEl.style.transform = "";
     }
   });
 }
 
 function resetIceAnimation() {
-  const iceCubes = document.querySelectorAll('.ice-cube');
-  const waterFill = /** @type {HTMLElement} */ (document.querySelector('.ice-water-fill'));
-
-  iceCubes.forEach(cube => {
-    const cubeEl = /** @type {HTMLElement} */ (cube);
-    cubeEl.style.opacity = "1";
-    cubeEl.style.transform = "scale(1) rotate(0deg)";
-    cubeEl.style.filter = "blur(0px)";
-    cubeEl.style.display = "block";
-  });
-
-  if (waterFill) {
-    waterFill.style.height = "0%";
+  const water = document.getElementById('vessel-water');
+  if (water) {
+    water.style.height = "0%";
+    water.style.background = "";
   }
+  const chunks = document.querySelectorAll('.ice-chunk');
+  chunks.forEach((chunk) => {
+    const chunkEl = /** @type {HTMLElement} */ (chunk);
+    chunkEl.style.opacity = "1";
+    chunkEl.style.transform = "";
+  });
 }
 
-// ==================== CANDLE BURNING ANIMATION ====================
+// ==================== CINEMATIC CANDLE ====================
 function updateCandleAnimation(percentage) {
-  const candleWax = /** @type {HTMLElement} */ (document.querySelector('.candle-wax'));
-  const flame = /** @type {HTMLElement} */ (document.querySelector('.candle-flame'));
+  const waxBody = document.getElementById('candle-wax-body');
+  const waxPool = document.getElementById('candle-wax-pool');
+  const flameWrap = document.querySelector('.candle-flame-wrap');
+  const ambientGlow = document.querySelector('.candle-ambient-glow');
 
-  // Candle burns down
-  if (candleWax) {
-    const remainingHeight = 100 - percentage;
-    candleWax.style.height = Math.max(20, remainingHeight) + "%";
-    candleWax.style.transform = `translateY(${percentage * 0.8}px)`;
+  if (waxBody) {
+    // Wax shrinks from 220px to 40px
+    const height = Math.max(40, 220 - (percentage / 100) * 180);
+    waxBody.style.height = height + 'px';
   }
 
-  // Flame flickers and gets smaller as candle burns
-  if (flame) {
-    const flameSize = Math.max(0.5, 1 - (percentage / 200));
-    flame.style.transform = `scale(${flameSize})`;
-    flame.style.opacity = Math.max(0.3, 1 - (percentage / 150)).toString();
-
-    // Add flickering effect
-    const flicker = Math.sin(Date.now() / 100) * 2;
-    flame.style.transform += ` translateX(${flicker}px)`;
+  if (waxPool) {
+    // Pool grows as candle burns
+    const poolWidth = Math.min(80, percentage * 0.8);
+    waxPool.style.width = poolWidth + 'px';
   }
 
-  // Sparks become less frequent as candle burns
-  const sparks = document.querySelectorAll('.spark');
-  sparks.forEach((spark, index) => {
-    const sparkEl = /** @type {HTMLElement} */ (spark);
-    if (percentage > index * 25) {
-      sparkEl.style.opacity = Math.max(0, 1 - (percentage / 100)).toString();
-    }
-  });
+  if (flameWrap) {
+    // Flame gets slightly smaller near end
+    const flameScale = percentage > 80 ? Math.max(0.4, 1 - (percentage - 80) / 40) : 1;
+    flameWrap.style.transform = `translateX(-50%) scale(${flameScale})`;
+  }
+
+  if (ambientGlow) {
+    // Glow dims near end
+    const glowOpacity = percentage > 85 ? Math.max(0.1, 1 - (percentage - 85) / 20) : 1;
+    ambientGlow.style.opacity = glowOpacity.toString();
+  }
 }
 
 function resetCandleAnimation() {
-  const candleWax = /** @type {HTMLElement} */ (document.querySelector('.candle-wax'));
-  const flame = /** @type {HTMLElement} */ (document.querySelector('.candle-flame'));
-  const sparks = document.querySelectorAll('.spark');
+  const waxBody = document.getElementById('candle-wax-body');
+  const waxPool = document.getElementById('candle-wax-pool');
+  const flameWrap = document.querySelector('.candle-flame-wrap');
+  const ambientGlow = document.querySelector('.candle-ambient-glow');
 
-  if (candleWax) {
-    candleWax.style.height = "100%";
-    candleWax.style.transform = "translateY(0px)";
-  }
-
-  if (flame) {
-    flame.style.transform = "scale(1) translateX(0px)";
-    flame.style.opacity = "1";
-  }
-
-  sparks.forEach(spark => {
-    const sparkEl = /** @type {HTMLElement} */ (spark);
-    sparkEl.style.opacity = "1";
-  });
+  if (waxBody) waxBody.style.height = '220px';
+  if (waxPool) waxPool.style.width = '0px';
+  if (flameWrap) flameWrap.style.transform = 'translateX(-50%) scale(1)';
+  if (ambientGlow) ambientGlow.style.opacity = '1';
 }
 
 // ==================== PLANT GROWING ANIMATION ====================
@@ -3258,8 +3750,6 @@ function completePomodoro() {
   // Auto-complete the focused task if one exists
   if (currentFocusTaskCheckbox && !currentFocusTaskCheckbox.checked) {
     currentFocusTaskCheckbox.checked = true;
-
-    // Manually trigger the 'change' event to add strikethrough, update count, and save
     const event = new Event('change');
     currentFocusTaskCheckbox.dispatchEvent(event);
 
@@ -3267,10 +3757,21 @@ function completePomodoro() {
     const nameStr = un ? `, ${un}` : "";
     showNotification(`🍅 Pomodoro completed${nameStr}! Task automatically marked as done. ✅`);
 
-    // Hide the focus banner
     const banner = document.getElementById('focus-task-banner');
-    if (banner) banner.classList.add('hidden');
+    if (banner) { banner.classList.add('hidden'); banner.classList.remove('habit-focus-active'); }
     currentFocusTaskCheckbox = null;
+  } else if (typeof currentFocusHabitIndex === 'number' && currentFocusHabitIndex !== null && currentFocusHabitIndex >= 0) {
+    // Auto-complete the focused habit
+    const hIdx = currentFocusHabitIndex;
+    if (typeof userHabits !== 'undefined' && userHabits[hIdx] && !userHabits[hIdx].completedToday) {
+      toggleHabit(hIdx, true);
+      const un = getUserName();
+      const nameStr = un ? `, ${un}` : "";
+      showNotification(`⏱ Habit "${userHabits[hIdx].text}" auto-completed${nameStr}! 🔥`);
+    }
+    const banner = document.getElementById('focus-task-banner');
+    if (banner) { banner.classList.add('hidden'); banner.classList.remove('habit-focus-active'); }
+    currentFocusHabitIndex = null;
   } else {
     const un = getUserName();
     const nameStr = un ? `Great job, ${un}!` : "Great job!";
@@ -3328,14 +3829,28 @@ function showPomodoroSuccessAnimation() {
 
 // ==================== NOTIFICATIONS ====================
 function showNotification(message) {
-  if ("Notification" in window && Notification.permission === "granted") {
-    try {
-      new Notification("Habit Tracker", {
-        body: message
-      });
-    } catch (e) {
-      console.error("Notification error", e);
+  const options = {
+    body: message,
+    icon: 'icon-192.png',
+    badge: 'icon-192.png',
+    vibrate: [200, 100, 200],
+    data: {
+      url: window.location.origin + '/index.html'
     }
+  };
+
+  // Try to use Service Worker registration for a native system-tray notification
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.ready.then(registration => {
+      registration.showNotification("Ultradian", options);
+    }).catch(e => {
+      // Fallback to basic window Notification if SW registration isn't ready
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("Ultradian", options);
+      }
+    });
+  } else if ("Notification" in window && Notification.permission === "granted") {
+    new Notification("Ultradian", options);
   }
 
   // Also show in-app notification
@@ -3364,14 +3879,2116 @@ function checkTaskReminders() {
   );
 
   if (incompleteTasks.length > 0) {
+    const name = getUserName();
+    const namePart = name ? `${name}, ` : "";
     showNotification(
-      `📋 Reminder: You have ${incompleteTasks.length} incomplete task(s). Don't forget to complete them!`
+      `📋 ${namePart}Reminder: You have ${incompleteTasks.length} incomplete task(s). Don't forget to complete them!`
     );
   }
 }
 
+const morningInspirationIdeas = [
+  "Start your day with a 5-minute deep focus session.",
+  "Log your first glass of water to keep your hydration streak alive!",
+  "What's the one 'Big Win' task you want to crush today?",
+  "Take a moment for a 4-7-8 breathing exercise to center yourself.",
+  "Your streak is looking great! Let's keep it going today.",
+  "A productive day starts with a clear plan. Check your task list!",
+  "Try a 'Quick Focus' session for that one task you've been putting off.",
+  "How about a mid-morning stretch and a water break?",
+  "Remember: Consistency is the key to building lasting habits.",
+  "Turn your phone to Zen Mode and focus on your top priority for 20 minutes.",
+  "Success is the sum of small efforts repeated daily. What's one small win?",
+  "Check your progress in the 3D Castle—every task helps it grow!",
+  "Is it time for a hydration check-in? 💧",
+  "Use the Pomodoro timer to power through your next 25 minutes.",
+  "A clear mind is a productive mind. Try the meditation page!",
+  "Challenge yourself: Can you complete 3 tasks before lunch? 🚀",
+  "Your future self will thank you for the habits you build today.",
+  "Log your current mood—how are you feeling this morning?",
+  "Small steps lead to big victories. Check off your first task!",
+  "Ready to level up? Let's tackle something challenging today.",
+  "Focus on the process, not just the result. Enjoy your work!",
+  "Deep breaths in, distractions out. You've got this! 🌟",
+  "Don't forget to use a lifeline if you feel stuck today.",
+  "Great things never came from comfort zones. Let's do this!",
+  "Your 3-day streak is just the beginning. Keep it up!",
+  "Stay hydrated, stay focused. Drink some water now! 💧",
+  "Mindfulness matters. Take 60 seconds to just breathe.",
+  "Productivity is being able to do things that you were never able to do before.",
+  "Organized life, organized mind. Is your task list ready?",
+  "Let's make today count! Pick your focus task now. 🎯"
+];
+
+/**
+ * Checks if it is 10 AM or later and sends a daily inspiration notification.
+ * Ensures the notification is only sent once per day.
+ */
+function check10AMNotifications() {
+  const now = new Date();
+  const currentHour = now.getHours();
+  const todayDate = now.toDateString();
+  const lastNotifDate = appStorage.getItem("last10AMNotifDate");
+
+  // Trigger if it's 10 AM (10:00) or later AND we haven't sent today's notification yet
+  if (currentHour >= 10 && lastNotifDate !== todayDate) {
+    const name = getUserName();
+    const namePart = name ? `${name}, ` : "";
+
+    // Pick a random idea from the 30 inspirations
+    const randomIndex = Math.floor(Math.random() * morningInspirationIdeas.length);
+    const idea = morningInspirationIdeas[randomIndex];
+
+    showNotification(`🌅 Good morning ${namePart}${idea}`);
+
+    // Mark today's notification as sent
+    appStorage.setItem("last10AMNotifDate", todayDate);
+  }
+}
+
+/**
+ * Checks if it is 5 PM or later and sends a daily summary/reminder notification.
+ * Ensures the notification is only sent once per day.
+ */
+function check5PMNotifications() {
+  const now = new Date();
+  const currentHour = now.getHours();
+  const todayDate = now.toDateString();
+  const lastNotifDate = appStorage.getItem("last5PMNotifDate");
+
+  // Trigger if it's 5 PM (17:00) or later AND we haven't sent today's notification yet
+  if (currentHour >= 17 && lastNotifDate !== todayDate) {
+    // Select all task checkboxes (excluding bulk selection checkboxes if any)
+    const checkboxes = document.querySelectorAll("#task input[type='checkbox']:not(.task-select-cb)");
+
+    // Only proceed if there are tasks to check
+    if (checkboxes.length === 0) return;
+
+    const incompleteTasks = Array.from(checkboxes).filter(
+      cb => !(/** @type {HTMLInputElement} */ (cb)).checked
+    );
+
+    const name = getUserName();
+    const namePart = name ? `${name}, ` : "";
+
+    if (incompleteTasks.length === 0) {
+      showNotification(`🎉 ${namePart}You're doing great! Let's take it to the next level.`);
+    } else {
+      showNotification(`📋 ${namePart}Task completion reminder: You have ${incompleteTasks.length} tasks left to do.`);
+    }
+
+    // Mark today's notification as sent
+    appStorage.setItem("last5PMNotifDate", todayDate);
+  }
+}
+
+/**
+ * Schedules a true background notification on the device for a specific future timestamp.
+ * This works natively on Android via PWABuilder relying on the Notification Triggers API.
+ */
+function scheduleFutureNotification(id, title, options, timestampMs) {
+  if (!('serviceWorker' in navigator) || !('showTrigger' in Notification.prototype)) return;
+
+  navigator.serviceWorker.ready.then(registration => {
+    registration.showNotification(title, {
+      ...options,
+      tag: id,
+      showTrigger: new TimestampTrigger(timestampMs)
+    }).catch(e => console.warn("Failed scheduling trigger:", e));
+  });
+}
+
+function scheduleNext10AMNotification() {
+  // Only supported on compatible Chrome environments
+  if (!('showTrigger' in Notification.prototype)) return;
+
+  const now = new Date();
+  let target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0, 0, 0);
+
+  // If it's already past 10 AM, schedule for tomorrow
+  if (now.getTime() >= target.getTime()) {
+    target.setDate(target.getDate() + 1);
+  }
+
+  const name = getUserName();
+  const namePart = name ? `${name}, ` : "";
+  const randomIndex = Math.floor(Math.random() * morningInspirationIdeas.length);
+  const idea = morningInspirationIdeas[randomIndex];
+
+  scheduleFutureNotification(
+    "morning-inspiration",
+    "Ultradian",
+    {
+      body: `🌅 Good morning ${namePart}${idea}`,
+      icon: 'icon-192.png',
+      badge: 'icon-192.png',
+      vibrate: [200, 100, 200],
+      data: { url: window.location.origin + '/index.html' }
+    },
+    target.getTime()
+  );
+}
+
+function scheduleNext5PMNotification() {
+  if (!('showTrigger' in Notification.prototype)) return;
+
+  const now = new Date();
+  let target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17, 0, 0, 0);
+
+  if (now.getTime() >= target.getTime()) {
+    target.setDate(target.getDate() + 1); // schedule for tomorrow
+  }
+
+  const name = getUserName();
+  const namePart = name ? `${name}, ` : "";
+
+  scheduleFutureNotification(
+    "evening-summary",
+    "Ultradian",
+    {
+      body: `📋 Evening check-in ${namePart}Time to update your tasks and wrap up the day!`,
+      icon: 'icon-192.png',
+      badge: 'icon-192.png',
+      vibrate: [200, 100, 200],
+      data: { url: window.location.origin + '/index.html' }
+    },
+    target.getTime()
+  );
+}
+
+// For manual user testing
+window.testScheduledNotification = function () {
+  if (!('showTrigger' in Notification.prototype)) {
+    alert("Scheduled Notification Triggers API is not supported on this device/browser.");
+    return;
+  }
+  const now = new Date();
+  const target = new Date(now.getTime() + 60000); // 1 minute from now
+  alert("Scheduling test notification for 60 seconds from now. You can completely close the app now.");
+
+  scheduleFutureNotification(
+    "test-notification",
+    "Ultradian Test",
+    {
+      body: `Testing background triggering! Your app effectively woke up the phone.`,
+      icon: 'icon-192.png',
+      badge: 'icon-192.png',
+      vibrate: [200, 100, 200],
+      data: { url: window.location.origin + '/index.html' }
+    },
+    target.getTime()
+  );
+};
+
+// ==================== LIBRARY (GUTENBERG) ====================
+let currentBookId = null;
+let currentBookTitle = '';
+let currentBookUrl = '';
+let currentBookCover = '';
+let fontScale = 1.2;
+let highlightMode = false;
+let bookHighlights = {};
+let bookType = 'text';       // 'text' | 'epub' | 'pdf'
+let pdfDoc = null;           // PDF.js document instance
+let pendingBinaryFile = null; // { arrayBuffer, type, name } for upload flow
+
+// ==================== BOOK HISTORY ====================
+function getBookHistory() {
+  try { return JSON.parse(appStorage.getItem('bookHistory') || '[]'); }
+  catch { return []; }
+}
+
+function saveBookToHistory(id, title, url, coverUrl, pageIndex, totalPages) {
+  let history = getBookHistory();
+  // Remove this book if already in history (we'll re-add at top)
+  history = history.filter(b => b.id !== id);
+  // Add at the start (most recent)
+  history.unshift({
+    id, title, url, coverUrl,
+    pageIndex, totalPages,
+    lastRead: Date.now()
+  });
+  // Keep only last 5
+  if (history.length > 5) history = history.slice(0, 5);
+  appStorage.setItem('bookHistory', JSON.stringify(history));
+}
+
+function renderRecommendations() {
+  const grid = document.getElementById("recommendations-grid");
+  if (!grid) return;
+
+  // Clear in case of re-render
+  grid.innerHTML = "";
+  const recs = [
+    { id: 2680, title: "Meditations", author: "Marcus Aurelius", coverUrl: "https://www.gutenberg.org/cache/epub/2680/pg2680.cover.medium.jpg", textUrl: "https://www.gutenberg.org/ebooks/2680.txt.utf-8", downloads: 85400 },
+    { id: 345, title: "Dracula", author: "Bram Stoker", coverUrl: "https://www.gutenberg.org/cache/epub/345/pg345.cover.medium.jpg", textUrl: "https://www.gutenberg.org/ebooks/345.txt.utf-8", downloads: 74200 },
+    { id: 84, title: "Frankenstein", author: "Mary Wollstonecraft Shelley", coverUrl: "https://www.gutenberg.org/cache/epub/84/pg84.cover.medium.jpg", textUrl: "https://www.gutenberg.org/ebooks/84.txt.utf-8", downloads: 91500 },
+    { id: 1342, title: "Pride and Prejudice", author: "Jane Austen", coverUrl: "https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg", textUrl: "https://www.gutenberg.org/ebooks/1342.txt.utf-8", downloads: 125000 },
+    { id: 2701, title: "Moby Dick; Or, The Whale", author: "Herman Melville", coverUrl: "https://www.gutenberg.org/cache/epub/2701/pg2701.cover.medium.jpg", textUrl: "https://www.gutenberg.org/ebooks/2701.txt.utf-8", downloads: 68300 }
+  ];
+
+  recs.forEach(book => {
+    const card = document.createElement("button");
+    card.className = "book-card-premium";
+    card.title = book.title;
+
+    card.innerHTML = `
+            <div class="book-cover-flat">
+                <img src="${book.coverUrl}" alt="Cover" loading="lazy">
+            </div>
+            <div class="book-info-block">
+                <div class="book-info-title">${book.title}</div>
+                <div class="book-info-author">${book.author}</div>
+            </div>
+        `;
+    card.addEventListener("click", () => openReader(book.id, book.title, book.textUrl, book.coverUrl));
+    grid.appendChild(card);
+  });
+}
+
+function renderReadingHistory() {
+  const section = document.getElementById('reading-history-section');
+  const list = document.getElementById('reading-history-list');
+  if (!section || !list) return;
+
+  const history = getBookHistory();
+  if (history.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  list.innerHTML = '';
+
+  history.forEach((book, index) => {
+    const pct = book.totalPages > 0 ? Math.round(((book.pageIndex + 1) / book.totalPages) * 100) : 0;
+    const isCustom = book.url === '__custom__';
+
+    const card = document.createElement('button');
+    card.className = 'cinematic-history-card';
+    card.title = book.title;
+
+    // Generate beautiful cover HTML depending on book type
+    let coverHtml = '';
+    if (isCustom) {
+      const emoji = book.coverUrl || '📖';
+      // Cycle through cool gradients based on index
+      const gradients = [
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
+        'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)',
+        'linear-gradient(135deg, #ff0844 0%, #ffb199 100%)',
+        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+      ];
+      const bg = gradients[index % gradients.length];
+      coverHtml = `<div class="custom-cover-gradient" style="background: ${bg};"><span>${emoji}</span></div>`;
+    } else {
+      coverHtml = `<img src="${book.coverUrl || 'icon-192.png'}" alt="Cover" onerror="this.src='icon-192.png'" loading="lazy">`;
+    }
+
+    // We use the cover as a blurred backdrop as well
+    card.innerHTML = `
+            <div class="cinematic-backdrop">
+                ${isCustom ? coverHtml : coverHtml.replace('class="', 'class="blur-bg ')}
+            </div>
+            <div class="cinematic-content">
+                <div class="cinematic-cover">
+                    ${coverHtml}
+                </div>
+                <div class="cinematic-info">
+                    <div class="cinematic-title">${book.title}</div>
+                    <div class="cinematic-meta">${pct}% Completed</div>
+                    <div class="cinematic-progress-bar">
+                        <div class="cinematic-progress-fill" style="width: ${pct}%;"></div>
+                    </div>
+                </div>
+                <div class="cinematic-play">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                </div>
+            </div>
+        `;
+
+    card.addEventListener('click', () => {
+      if (isCustom) {
+        openCustomBook(book.id, book.title, book.coverUrl);
+      } else {
+        openReader(book.id, book.title, book.url, book.coverUrl);
+      }
+    });
+
+    list.appendChild(card);
+  });
+}
+
+// ==================== FINISHED BOOKS ====================
+function getFinishedBooks() {
+  try { return JSON.parse(appStorage.getItem('finishedBooks') || '[]'); }
+  catch { return []; }
+}
+
+function addFinishedBook(id, title, url, coverUrl) {
+  let finished = getFinishedBooks();
+  // Don't add duplicates
+  if (finished.some(b => String(b.id) === String(id))) return;
+  finished.push({
+    id, title, url, coverUrl,
+    finishedAt: Date.now()
+  });
+  appStorage.setItem('finishedBooks', JSON.stringify(finished));
+}
+
+function removeFinishedBooks(idsToRemove) {
+  let finished = getFinishedBooks();
+  finished = finished.filter(b => !idsToRemove.includes(String(b.id)));
+  appStorage.setItem('finishedBooks', JSON.stringify(finished));
+}
+
+function renderFinishedBooks() {
+  const section = document.getElementById('finished-books-section');
+  const list = document.getElementById('finished-books-list');
+  if (!section || !list) return;
+
+  const finished = getFinishedBooks();
+  if (finished.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  list.innerHTML = '';
+
+  finished.forEach((book, index) => {
+    const isCustom = book.url === '__custom__';
+    const card = document.createElement('button');
+    card.className = 'cinematic-history-card finished-book-card';
+    card.title = book.title;
+
+    let coverHtml = '';
+    if (isCustom) {
+      const emoji = book.coverUrl || '📖';
+      const gradients = [
+        'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)',
+      ];
+      const bg = gradients[index % gradients.length];
+      coverHtml = `<div class="custom-cover-gradient" style="background: ${bg};"><span>${emoji}</span></div>`;
+    } else {
+      coverHtml = `<img src="${book.coverUrl || 'icon-192.png'}" alt="Cover" onerror="this.src='icon-192.png'" loading="lazy">`;
+    }
+
+    const finDate = new Date(book.finishedAt).toLocaleDateString();
+    card.innerHTML = `
+      <div class="cinematic-backdrop">
+        ${isCustom ? coverHtml : coverHtml.replace('class="', 'class="blur-bg ')}
+      </div>
+      <div class="cinematic-content">
+        <div class="cinematic-cover">
+          ${coverHtml}
+          <div class="finished-trophy">🏆</div>
+        </div>
+        <div class="cinematic-info">
+          <div class="cinematic-title">${book.title}</div>
+          <div class="cinematic-meta" style="color: #f6a623;">✅ Finished ${finDate}</div>
+          <div class="cinematic-progress-bar">
+            <div class="cinematic-progress-fill" style="width: 100%; background: linear-gradient(90deg, #f6d365, #fda085);"></div>
+          </div>
+        </div>
+        <div class="cinematic-play">
+          <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        </div>
+      </div>
+    `;
+
+    card.addEventListener('click', () => {
+      if (isCustom) {
+        openCustomBook(book.id, book.title, book.coverUrl);
+      } else {
+        openReader(book.id, book.title, book.url, book.coverUrl);
+      }
+    });
+
+    list.appendChild(card);
+  });
+}
+
+// ==================== HIGHLIGHTS ====================
+function getBookHighlights(bookId) {
+  try {
+    const all = JSON.parse(appStorage.getItem('bookHighlights') || '{}');
+    return all[bookId] || {};
+  } catch { return {}; }
+}
+
+function saveHighlight(bookId, pageIndex, highlightText, offset = -1) {
+  if (!highlightText || !highlightText.trim()) return;
+  try {
+    const all = JSON.parse(appStorage.getItem('bookHighlights') || '{}');
+    if (!all[bookId]) all[bookId] = {};
+    if (!all[bookId][pageIndex]) all[bookId][pageIndex] = [];
+    
+    // Avoid exact duplicates at the exact same location
+    const exists = all[bookId][pageIndex].some(h => h.text === highlightText && (h.offset === offset || offset === -1));
+    if (!exists) {
+      all[bookId][pageIndex].push({ text: highlightText, offset, ts: Date.now() });
+    }
+    appStorage.setItem('bookHighlights', JSON.stringify(all));
+    bookHighlights = all[bookId];
+  } catch (e) { console.warn('Highlight save error:', e); }
+}
+
+function removeHighlight(bookId, pageIndex, highlightText, offset = -1) {
+  try {
+    const all = JSON.parse(appStorage.getItem('bookHighlights') || '{}');
+    if (all[bookId] && all[bookId][pageIndex]) {
+      all[bookId][pageIndex] = all[bookId][pageIndex].filter(h => {
+        if (offset !== -1 && h.offset !== undefined) {
+           return !(h.text === highlightText && String(h.offset) === String(offset));
+        }
+        return h.text !== highlightText;
+      });
+      if (all[bookId][pageIndex].length === 0) delete all[bookId][pageIndex];
+      appStorage.setItem('bookHighlights', JSON.stringify(all));
+      bookHighlights = all[bookId] || {};
+    }
+  } catch (e) { console.warn('Highlight remove error:', e); }
+}
+
+function applyHighlightsToPage(pageIndex) {
+  const pageEl = document.getElementById('reader-text');
+  if (!pageEl || !currentBookId) return;
+
+  const highlights = bookHighlights[pageIndex];
+  if (!highlights || highlights.length === 0) return;
+
+  if (bookType === 'pdf') return; // PDF uses canvas, skip DOM highlights
+
+  // For EPUB & Text: use TreeWalker to mark text in the existing HTML/DOM without destroying structure
+  // Sort backwards by offset so DOM mutations don't alter earlier indices
+  const sorted = [...highlights].sort((a, b) => b.text.length - a.text.length); 
+  sorted.forEach(h => markTextInElement(pageEl, h.text, h.offset));
+
+  // Add click handlers to remove highlights
+  pageEl.querySelectorAll('.book-highlight').forEach(span => {
+    span.addEventListener('click', (e) => {
+      if (!highlightMode) return;
+      e.stopPropagation();
+      const text = decodeURIComponent(span.getAttribute('data-hl-text'));
+      const offsetData = span.getAttribute('data-hl-offset');
+      const parsedOffset = offsetData !== null ? parseInt(offsetData, 10) : -1;
+      removeHighlight(currentBookId, bookPageIndex, text, parsedOffset);
+      showBookPage(bookPageIndex, 'none');
+    });
+  });
+}
+
+// Mark text inside a DOM tree without destroying HTML structure (for EPUB highlights)
+// Uses extractContents + wrapper to support large cross-node selections
+function markTextInElement(root, searchText, targetOffset = -1) {
+  if (!searchText) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+  const textNodes = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+  let fullText = '';
+  const segments = [];
+  for (const node of textNodes) {
+    segments.push({ node, offset: fullText.length, length: node.textContent.length });
+    fullText += node.textContent;
+  }
+
+  let matchIdx = -1;
+  let searchIdx = 0;
+  let bestDiff = Infinity;
+  
+  while ((searchIdx = fullText.indexOf(searchText, searchIdx)) !== -1) {
+    if (targetOffset === -1 || targetOffset === undefined) {
+      matchIdx = searchIdx; 
+      break; 
+    }
+    const diff = Math.abs(searchIdx - targetOffset);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      matchIdx = searchIdx;
+    }
+    searchIdx += searchText.length;
+  }
+
+  if (matchIdx === -1) return;
+
+  let startNode, startOff, endNode, endOff;
+  for (const seg of segments) {
+    if (!startNode && matchIdx < seg.offset + seg.length) {
+      startNode = seg.node; startOff = matchIdx - seg.offset;
+    }
+    if (matchIdx + searchText.length <= seg.offset + seg.length) {
+      endNode = seg.node; endOff = matchIdx + searchText.length - seg.offset;
+      break;
+    }
+  }
+  if (!startNode || !endNode) return;
+
+  try {
+    const range = document.createRange();
+    range.setStart(startNode, startOff);
+    range.setEnd(endNode, endOff);
+
+    const span = document.createElement('span');
+    span.className = 'book-highlight';
+    span.dataset.hlText = encodeURIComponent(searchText);
+    if (targetOffset !== -1 && targetOffset !== undefined) {
+      span.dataset.hlOffset = targetOffset;
+    }
+    const fragment = range.extractContents();
+    span.appendChild(fragment);
+    range.insertNode(span);
+  } catch (e) {
+    console.warn('Highlight apply failed (cross-node):', e);
+  }
+}
+
+function handleTextSelection() {
+  if (!highlightMode || !currentBookId) return;
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed) return;
+
+  const selectedText = selection.toString().trim();
+  if (selectedText.length < 2) return;
+
+  // Check that the selection is inside the reader
+  const pageEl = document.getElementById('reader-text');
+  if (!pageEl) return;
+  const anchorNode = selection.anchorNode;
+  if (!pageEl.contains(anchorNode)) return;
+
+  // Calculate precise global text offset to prevent duplicate cross-highlighting
+  let offset = -1;
+  try {
+    const range = selection.getRangeAt(0);
+    const preSelectionRange = range.cloneRange();
+    preSelectionRange.selectNodeContents(pageEl);
+    preSelectionRange.setEnd(range.startContainer, range.startOffset);
+    offset = preSelectionRange.toString().length;
+  } catch (e) {
+    console.warn("Offset fallback used", e);
+  }
+
+  saveHighlight(currentBookId, bookPageIndex, selectedText, offset);
+  selection.removeAllRanges();
+
+  // Re-render page with precisely tracked highlight applied
+  showBookPage(bookPageIndex, 'none');
+}
+
+// ==================== TRANSLATION ====================
+let activeTranslationLang = null;
+const translatedPagesCache = {};
+
+async function fetchTranslation(text, targetLang) {
+  if (!text || !text.trim()) return text;
+  try {
+    const isHinglish = targetLang === 'hinglish';
+    const tl = isHinglish ? 'hi' : targetLang;
+    const dtParam = isHinglish ? '&dt=t&dt=rm' : '&dt=t';
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${tl}${dtParam}&q=${encodeURIComponent(text)}`;
+    const res = await fetch(url);
+    const json = await res.json();
+
+    if (isHinglish && json[0]) {
+      const parts = json[0];
+      const lastPart = parts[parts.length - 1];
+      // Google Translate appends the romanized (transliterated) text as a final item in the array where the 0th and 1st elements are null.
+      if (lastPart && lastPart[0] === null && typeof lastPart[2] === 'string') {
+        return lastPart[2]; // Return the transliteration
+      } else if (lastPart && lastPart[0] === null && typeof lastPart[3] === 'string') {
+        return lastPart[3]; // Sometimes it's at index 3 depending on the response format
+      }
+      // Fallback to hindi text if transliteration fails
+      return parts.slice(0, parts.length - (lastPart[0] === null ? 1 : 0)).map(x => x[0]).join('');
+    }
+
+    return json[0].map(x => x[0]).join('');
+  } catch (e) {
+    console.error("Translation API error:", e);
+    return null;
+  }
+}
+
+async function applyTranslationToCurrentPage() {
+  if (!activeTranslationLang || !currentBookId) return;
+
+  const pageEl = document.getElementById('reader-text');
+  if (!pageEl) return;
+
+  if (bookType === 'pdf') {
+    // Extract text from PDF text layer for translation
+    const textLayerSpans = pageEl.querySelectorAll('.pdf-text-layer span');
+    let pdfText = '';
+    textLayerSpans.forEach(span => { pdfText += span.textContent + ' '; });
+    pdfText = pdfText.trim();
+    
+    if (!pdfText || pdfText.length < 3) {
+      const status = document.getElementById('translate-status');
+      if (status) status.textContent = "No extractable text found on this PDF page.";
+      return;
+    }
+
+    const cacheKey = `${currentBookId}_${bookPageIndex}_${activeTranslationLang}`;
+    if (translatedPagesCache[cacheKey]) {
+      // Hide original PDF components
+      const canvas = pageEl.querySelector('canvas');
+      const textLayer = pageEl.querySelector('.pdf-text-layer');
+      if (canvas) canvas.style.display = 'none';
+      if (textLayer) textLayer.style.display = 'none';
+
+      let replacement = pageEl.querySelector('.pdf-translate-replacement');
+      if (!replacement) {
+        replacement = document.createElement('div');
+        replacement.className = 'pdf-translate-replacement';
+        replacement.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; box-sizing:border-box; overflow-y:auto; padding:24px 22px 50px 22px; font-size:1.15rem; line-height:1.82; text-align:justify; color:var(--text-main, #2b2318); font-family:"Playfair Display", Georgia, serif; white-space:pre-wrap; word-wrap:break-word;';
+        pageEl.appendChild(replacement);
+      }
+      replacement.textContent = translatedPagesCache[cacheKey];
+      return;
+    }
+
+    const statusEl = document.getElementById('translate-status');
+    if (statusEl) statusEl.textContent = "Translating PDF page...";
+    pageEl.style.opacity = '0.5';
+
+    // Translate using the same chunking logic as text books
+    let translatedText = '';
+    const MAX_CHUNK = 1200;
+    if (pdfText.length <= MAX_CHUNK) {
+      const t = await fetchTranslation(pdfText, activeTranslationLang);
+      if (t) translatedText = t;
+    } else {
+      const sentences = pdfText.match(/[^.!?]*[.!?]+[\s]*/g) || [pdfText];
+      let currentChunk = '';
+      for (const sentence of sentences) {
+        if ((currentChunk + sentence).length > MAX_CHUNK && currentChunk.length > 0) {
+          const t = await fetchTranslation(currentChunk, activeTranslationLang);
+          if (t) translatedText += t + ' ';
+          currentChunk = sentence;
+        } else {
+          currentChunk += sentence;
+        }
+      }
+      if (currentChunk.trim()) {
+        const t = await fetchTranslation(currentChunk, activeTranslationLang);
+        if (t) translatedText += t;
+      }
+    }
+
+    pageEl.style.opacity = '1';
+    if (statusEl) statusEl.textContent = "";
+
+    if (translatedText) {
+      translatedPagesCache[cacheKey] = translatedText;
+      
+      // Hide original PDF components
+      const canvas = pageEl.querySelector('canvas');
+      const textLayer = pageEl.querySelector('.pdf-text-layer');
+      if (canvas) canvas.style.display = 'none';
+      if (textLayer) textLayer.style.display = 'none';
+
+      // Insert replacing translated text
+      let replacement = pageEl.querySelector('.pdf-translate-replacement');
+      if (!replacement) {
+        replacement = document.createElement('div');
+        replacement.className = 'pdf-translate-replacement';
+        replacement.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; box-sizing:border-box; overflow-y:auto; padding:24px 22px 50px 22px; font-size:1.15rem; line-height:1.82; text-align:justify; color:var(--text-main, #2b2318); font-family:"Playfair Display", Georgia, serif; white-space:pre-wrap; word-wrap:break-word;';
+        pageEl.appendChild(replacement);
+      }
+      replacement.textContent = translatedText;
+    } else {
+      if (statusEl) statusEl.textContent = "Translation failed (API error).";
+    }
+    return;
+  }
+
+  const cacheKey = `${currentBookId}_${bookPageIndex}_${activeTranslationLang}`;
+  if (translatedPagesCache[cacheKey]) {
+    if (bookType === 'epub') {
+      pageEl.innerHTML = translatedPagesCache[cacheKey];
+    } else {
+      pageEl.textContent = translatedPagesCache[cacheKey];
+    }
+    return;
+  }
+
+  // Save scroll pos and add loading state
+  const originalOpacity = pageEl.style.opacity;
+  pageEl.style.opacity = '0.5';
+  const statusEl = document.getElementById('translate-status');
+  if (statusEl) statusEl.textContent = "Translating page...";
+
+  // Extract raw text for translation
+  const textToTranslate = pageEl.innerText || pageEl.textContent;
+  let translatedText = '';
+  const MAX_CHUNK = 1200; // Safe limit for GET request length
+
+  if (textToTranslate.length <= MAX_CHUNK) {
+    const t = await fetchTranslation(textToTranslate, activeTranslationLang);
+    if (t) translatedText = t;
+  } else {
+    const sentences = textToTranslate.match(/[^.!?]*[.!?]+[\s]*/g) || [textToTranslate];
+    let currentChunk = '';
+    for (const sentence of sentences) {
+      if ((currentChunk + sentence).length > MAX_CHUNK && currentChunk.length > 0) {
+        const t = await fetchTranslation(currentChunk, activeTranslationLang);
+        if (t) translatedText += t + ' ';
+        currentChunk = sentence;
+      } else {
+        currentChunk += sentence;
+      }
+    }
+    if (currentChunk.trim()) {
+      const t = await fetchTranslation(currentChunk, activeTranslationLang);
+      if (t) translatedText += t;
+    }
+  }
+
+  pageEl.style.opacity = originalOpacity;
+  if (statusEl) statusEl.textContent = "";
+
+  if (translatedText) {
+    translatedPagesCache[cacheKey] = translatedText;
+    if (bookType === 'epub') {
+      pageEl.innerHTML = translatedText.replace(/\n /g, '<br/>');
+    } else {
+      pageEl.textContent = translatedText;
+    }
+  } else {
+    if (statusEl) statusEl.textContent = "Translation failed (API error).";
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  // ======== TRANSLATE MODAL EVENTS ========
+  const translateBtn = document.getElementById("reader-translate-btn");
+  const translateModal = document.getElementById("translate-modal");
+  const translateCloseBtn = document.getElementById("translate-modal-close");
+  const translateDoBtn = document.getElementById("translate-do-btn");
+  const translateRevertBtn = document.getElementById("translate-revert-btn");
+  const translateLangSelect = document.getElementById("translate-lang-select");
+
+  translateBtn?.addEventListener("click", () => {
+    translateModal?.classList.remove("hidden");
+  });
+
+  translateCloseBtn?.addEventListener("click", () => {
+    translateModal?.classList.add("hidden");
+  });
+
+  translateModal?.addEventListener("click", (e) => {
+    if (e.target === translateModal) translateModal.classList.add("hidden");
+  });
+
+  translateDoBtn?.addEventListener("click", async () => {
+    activeTranslationLang = translateLangSelect.value;
+    translateBtn.classList.add('translate-active');
+    translateRevertBtn.disabled = false;
+
+    // Stop ongoing TTS immediately before translating
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+    const statusEl = document.getElementById('translate-status');
+    if (statusEl) statusEl.textContent = "Translating...";
+
+    await applyTranslationToCurrentPage();
+
+    if (statusEl) statusEl.textContent = "Translation applied.";
+
+    // Resume TTS reading the NEW translated text if it was active
+    if (window._ttsAutoReadAfterTurn && typeof window._ttsAutoReadAfterTurn === 'function') {
+      // A small delay to ensure DOM is updated completely
+      setTimeout(window._ttsAutoReadAfterTurn, 200);
+    }
+
+    setTimeout(() => { translateModal?.classList.add("hidden"); }, 800);
+  });
+
+  translateRevertBtn?.addEventListener("click", () => {
+    activeTranslationLang = null;
+    translateBtn.classList.remove('translate-active');
+    translateRevertBtn.disabled = true;
+    const statusEl = document.getElementById('translate-status');
+    if (statusEl) statusEl.textContent = "Reverted to original.";
+
+    // Stop any ongoing TTS
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+    // Reload current page to original content
+    showBookPage(bookPageIndex, 'none');
+
+    setTimeout(() => { translateModal?.classList.add("hidden"); }, 800);
+  });
+});
+
+// ==================== CUSTOM BOOKS (USER-ADDED) ====================
+const customBookEmojis = ['📕', '📗', '📘', '📙', '📓', '📔', '📒', '✏️', '🖊️', '📝', '🗒️', '📑', '🌸', '🌙', '⭐', '🎭', '🦋', '🌿'];
+
+function getCustomBooks() {
+  try { return JSON.parse(appStorage.getItem('customBooks') || '[]'); }
+  catch { return []; }
+}
+
+function saveCustomBook(title, text) {
+  const books = getCustomBooks();
+  const id = 'custom_' + Date.now();
+  const emoji = customBookEmojis[Math.floor(Math.random() * customBookEmojis.length)];
+  const book = {
+    id,
+    title: title.trim(),
+    emoji,
+    fileType: 'text',
+    charCount: text.length,
+    addedAt: Date.now()
+  };
+  books.push(book);
+  appStorage.setItem('customBooks', JSON.stringify(books));
+  appStorage.setItem(`customBookText_${id}`, text);
+  return book;
+}
+
+async function saveCustomBookBinary(title, fileType, arrayBuffer) {
+  const books = getCustomBooks();
+  const id = 'custom_' + Date.now();
+  const emoji = fileType === 'pdf' ? '📄' : '📚';
+  const book = {
+    id,
+    title: title.trim(),
+    emoji,
+    fileType,
+    charCount: arrayBuffer.byteLength,
+    addedAt: Date.now()
+  };
+  books.push(book);
+  appStorage.setItem('customBooks', JSON.stringify(books));
+  await appStorage.setBinaryItem(`customBookBinary_${id}`, arrayBuffer);
+  return book;
+}
+
+function deleteCustomBook(id) {
+  let books = getCustomBooks();
+  books = books.filter(b => b.id !== id);
+  appStorage.setItem('customBooks', JSON.stringify(books));
+  appStorage.removeItem(`customBookText_${id}`);
+  appStorage.removeBinaryItem(`customBookBinary_${id}`);
+  appStorage.removeItem(`bookmark_${id}`);
+  try {
+    const allHL = JSON.parse(appStorage.getItem('bookHighlights') || '{}');
+    if (allHL[id]) {
+      delete allHL[id];
+      appStorage.setItem('bookHighlights', JSON.stringify(allHL));
+    }
+  } catch (e) { }
+  try {
+    let history = getBookHistory();
+    history = history.filter(b => b.id !== id);
+    appStorage.setItem('bookHistory', JSON.stringify(history));
+  } catch (e) { }
+}
+
+// ==================== EPUB PARSER ====================
+async function parseEpubFile(arrayBuffer) {
+  const zip = await JSZip.loadAsync(arrayBuffer);
+  const parser = new DOMParser();
+
+  // 1. Find OPF path from container.xml
+  const containerFile = zip.file('META-INF/container.xml');
+  if (!containerFile) throw new Error('Invalid EPUB: no container.xml');
+  const containerXml = await containerFile.async('text');
+  const containerDoc = parser.parseFromString(containerXml, 'application/xml');
+  const rootfilePath = containerDoc.querySelector('rootfile')?.getAttribute('full-path');
+  if (!rootfilePath) throw new Error('Invalid EPUB: no rootfile');
+
+  // 2. Parse OPF manifest + spine
+  const opfFile = zip.file(rootfilePath);
+  if (!opfFile) throw new Error('Invalid EPUB: OPF not found');
+  const opfText = await opfFile.async('text');
+  const opfDoc = parser.parseFromString(opfText, 'application/xml');
+  const opfDir = rootfilePath.includes('/') ? rootfilePath.substring(0, rootfilePath.lastIndexOf('/') + 1) : '';
+
+  const manifest = {};
+  opfDoc.querySelectorAll('item').forEach(item => {
+    manifest[item.getAttribute('id')] = {
+      href: item.getAttribute('href'),
+      mediaType: item.getAttribute('media-type') || ''
+    };
+  });
+
+  const spineRefs = [];
+  opfDoc.querySelectorAll('itemref').forEach(ref => {
+    const idref = ref.getAttribute('idref');
+    if (manifest[idref]) spineRefs.push(manifest[idref]);
+  });
+
+  // 3. Extract HTML from each spine item
+  const chapters = [];
+  for (const item of spineRefs) {
+    if (!item.mediaType.includes('html') && !item.mediaType.includes('xml')) continue;
+    const filePath = opfDir + item.href;
+    const file = zip.file(filePath);
+    if (!file) continue;
+    const html = await file.async('text');
+    let doc;
+    try { doc = parser.parseFromString(html, 'application/xhtml+xml'); }
+    catch { doc = parser.parseFromString(html, 'text/html'); }
+    const body = doc.body || doc.querySelector('body');
+    if (!body || !body.innerHTML.trim()) continue;
+
+    // Resolve relative image src to blob URLs
+    const itemDir = item.href.includes('/') ? item.href.substring(0, item.href.lastIndexOf('/') + 1) : '';
+    const imgs = body.querySelectorAll('img');
+    for (const img of imgs) {
+      const src = img.getAttribute('src');
+      if (src && !src.startsWith('data:') && !src.startsWith('http')) {
+        const imgPath = opfDir + itemDir + src;
+        const imgFile = zip.file(imgPath) || zip.file(decodeURIComponent(imgPath));
+        if (imgFile) {
+          const blob = await imgFile.async('blob');
+          img.setAttribute('src', URL.createObjectURL(blob));
+        }
+      }
+    }
+    // Also handle SVG images
+    const svgImgs = body.querySelectorAll('image');
+    for (const img of svgImgs) {
+      const href = img.getAttribute('xlink:href') || img.getAttribute('href');
+      if (href && !href.startsWith('data:') && !href.startsWith('http')) {
+        const imgPath = opfDir + itemDir + href;
+        const imgFile = zip.file(imgPath);
+        if (imgFile) {
+          const blob = await imgFile.async('blob');
+          const url = URL.createObjectURL(blob);
+          img.setAttribute('xlink:href', url);
+          img.setAttribute('href', url);
+        }
+      }
+    }
+    chapters.push(body.innerHTML);
+  }
+  if (chapters.length === 0) throw new Error('No readable content found in EPUB.');
+  return chapters;
+}
+
+// ==================== HTML SUB-PAGINATOR (for EPUB) ====================
+async function splitHtmlIntoPages(chaptersHtml) {
+  const container = document.getElementById('reader-content-container');
+  const pageEl = document.getElementById('reader-text');
+  if (!container || !pageEl) return;
+
+  const measurer = pageEl.cloneNode(false);
+  measurer.id = '';
+  measurer.className = 'book-page-display epub-mode';
+  measurer.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;left:0;top:0;opacity:0;overflow:visible;height:auto;max-height:none;transform:none;white-space:normal;';
+  const tempCS = getComputedStyle(pageEl);
+  const padL = parseFloat(tempCS.paddingLeft) || 22;
+  const padR = parseFloat(tempCS.paddingRight) || 22;
+  const mWidth = (pageEl.offsetWidth || container.clientWidth || 360) - padL - padR;
+  measurer.style.width = mWidth + 'px';
+  measurer.style.padding = '0';
+  measurer.style.fontSize = tempCS.fontSize;
+  measurer.style.lineHeight = tempCS.lineHeight || '1.82';
+  measurer.style.fontFamily = tempCS.fontFamily;
+  measurer.style.boxSizing = 'border-box';
+  container.appendChild(measurer);
+
+  const cs = getComputedStyle(pageEl);
+  const padT = parseFloat(cs.paddingTop) || 24;
+  const padB = parseFloat(cs.paddingBottom) || 50;
+  const avail = container.clientHeight - padT - padB;
+  if (avail <= 0 || mWidth <= 0) {
+    container.removeChild(measurer);
+    bookPages = chaptersHtml.length > 0 ? chaptersHtml : ['No content found.'];
+    return;
+  }
+
+  bookPages = [];
+  for (const chapterHtml of chaptersHtml) {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = chapterHtml;
+    const nodes = Array.from(tempDiv.childNodes);
+    if (nodes.length === 0) continue;
+
+    measurer.innerHTML = '';
+    let currentNodes = [];
+
+    for (let i = 0; i < nodes.length; i++) {
+      const clone = nodes[i].cloneNode(true);
+      measurer.appendChild(clone);
+      currentNodes.push(clone);
+
+      if (measurer.scrollHeight > avail) {
+        if (currentNodes.length > 1) {
+          measurer.removeChild(clone);
+          currentNodes.pop();
+          bookPages.push(measurer.innerHTML);
+          measurer.innerHTML = '';
+          currentNodes = [];
+          const nc = nodes[i].cloneNode(true);
+          measurer.appendChild(nc);
+          currentNodes.push(nc);
+          if (measurer.scrollHeight > avail) {
+            bookPages.push(measurer.innerHTML);
+            measurer.innerHTML = '';
+            currentNodes = [];
+          }
+        } else {
+          bookPages.push(measurer.innerHTML);
+          measurer.innerHTML = '';
+          currentNodes = [];
+        }
+      }
+      if (i % 50 === 0 && i > 0) await new Promise(r => setTimeout(r, 0));
+    }
+    if (measurer.innerHTML.trim()) {
+      bookPages.push(measurer.innerHTML);
+    }
+    measurer.innerHTML = '';
+  }
+  container.removeChild(measurer);
+  if (bookPages.length === 0) bookPages = ['This book appears to be empty.'];
+}
+
+// ==================== PDF RENDERER ====================
+async function renderPdfPage(pageIndex, container) {
+  if (!pdfDoc) return;
+  const page = await pdfDoc.getPage(pageIndex + 1);
+  container.innerHTML = '';
+
+  // Scale to FILL the container width for maximum readability on mobile
+  const containerWidth = container.clientWidth - 8; // small padding
+  const unscaled = page.getViewport({ scale: 1 });
+  const scale = containerWidth / unscaled.width; // fill width, allow vertical scroll
+  const viewport = page.getViewport({ scale });
+
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = `position:relative;margin:0 auto;width:${viewport.width}px;height:${viewport.height}px;flex-shrink:0;`;
+
+  // Use devicePixelRatio for crisp rendering on high-DPI mobile screens
+  const dpr = window.devicePixelRatio || 1;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.floor(viewport.width * dpr);
+  canvas.height = Math.floor(viewport.height * dpr);
+  canvas.style.width = viewport.width + 'px';
+  canvas.style.height = viewport.height + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  wrapper.appendChild(canvas);
+
+  // Text layer for selection/highlighting/TTS — coordinates must use the scaled viewport
+  try {
+    const textContent = await page.getTextContent();
+    const textDiv = document.createElement('div');
+    textDiv.className = 'pdf-text-layer';
+    textDiv.style.cssText = `position:absolute;left:0;top:0;width:${viewport.width}px;height:${viewport.height}px;overflow:hidden;`;
+    for (const item of textContent.items) {
+      if (!item.str) continue;
+      const tx = item.transform;
+      // Font size scaled by the viewport scale
+      const fontSize = Math.sqrt(tx[2] * tx[2] + tx[3] * tx[3]) * scale;
+      // Position scaled by viewport scale
+      const left = tx[4] * scale;
+      const top = viewport.height - (tx[5] * scale) - fontSize;
+      const span = document.createElement('span');
+      span.textContent = item.str;
+      span.style.cssText = `position:absolute;left:${left}px;top:${top}px;font-size:${fontSize}px;font-family:sans-serif;color:transparent;white-space:pre;`;
+      if (item.width) span.style.width = (item.width * scale) + 'px';
+      textDiv.appendChild(span);
+    }
+    wrapper.appendChild(textDiv);
+  } catch (e) { console.warn('PDF text layer failed:', e); }
+
+  container.appendChild(wrapper);
+}
+
+function renderMyBooks() {
+  const grid = document.getElementById('my-books-grid');
+  if (!grid) return;
+
+  grid.innerHTML = '';
+  const books = getCustomBooks();
+
+  // Render each custom book card
+  books.forEach((book, index) => {
+    const card = document.createElement('button');
+    card.className = 'book-card-premium';
+    card.title = book.title;
+
+    // Size/type label
+    const ft = book.fileType || 'text';
+    let sizeLabel;
+    if (ft === 'epub' || ft === 'pdf') {
+      const sizeMB = (book.charCount / 1024 / 1024).toFixed(1);
+      sizeLabel = `${ft.toUpperCase()} • ${sizeMB} MB`;
+    } else {
+      const wordCount = Math.round(book.charCount / 5);
+      sizeLabel = wordCount > 1000 ? `${(wordCount / 1000).toFixed(1)}k words` : `${wordCount} words`;
+    }
+
+    // Gradient cover for custom books
+    const emoji = book.emoji || '📕';
+    const gradients = [
+      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
+      'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)',
+      'linear-gradient(135deg, #ff0844 0%, #ffb199 100%)',
+      'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+    ];
+    const bg = gradients[index % gradients.length];
+
+    card.innerHTML = `
+            <div class="book-cover-flat" style="position:relative;">
+                <button class="custom-book-delete" data-id="${book.id}" title="Delete this book" 
+                        style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.4); color:white; border:none; border-radius:50%; width:24px; height:24px; font-size:14px; cursor:pointer; z-index:10; backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center;">&times;</button>
+                <div class="custom-cover-gradient" style="background: ${bg}; width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size: 3rem;">
+                    <span>${emoji}</span>
+                </div>
+            </div>
+            <div class="book-info-block" style="padding-top:0;">
+                <div class="book-info-title" title="${book.title}">${book.title}</div>
+                <div class="custom-book-size" style="font-size: 0.75rem; color: var(--text-muted); font-weight:600; margin-top:2px;">${sizeLabel}</div>
+            </div>
+        `;
+
+    // Open in reader on click
+    card.addEventListener('click', (e) => {
+      if (e.target.classList.contains('custom-book-delete')) return;
+      openCustomBook(book.id, book.title, book.emoji);
+    });
+
+    // Delete button
+    card.querySelector('.custom-book-delete').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm(`Delete "${book.title}"? This cannot be undone.`)) {
+        deleteCustomBook(book.id);
+        renderMyBooks();
+        renderReadingHistory();
+      }
+    });
+
+    grid.appendChild(card);
+  });
+
+  // Always add the "Add Book" trigger card at the end
+  const addCard = document.createElement('div');
+  addCard.className = 'custom-book-card add-book-trigger';
+  addCard.innerHTML = `<div class="add-icon">＋</div><div>Add Book</div>`;
+  addCard.addEventListener('click', () => {
+    document.getElementById('add-book-overlay')?.classList.remove('hidden');
+    document.getElementById('custom-book-title')?.focus();
+  });
+  grid.appendChild(addCard);
+}
+
+/**
+ * Opens a custom (user-added) book in the reader.
+ * No network fetch — loads text directly from appStorage.
+ */
+async function openCustomBook(id, title, emoji) {
+  document.getElementById("reader-modal").classList.remove("hidden");
+  document.getElementById("reader-book-title").textContent = title;
+  document.getElementById("reader-loading").style.display = "flex";
+  document.getElementById("reader-text").textContent = "";
+  document.getElementById("reader-text").className = 'book-page-display';
+  const percentEl = document.getElementById("reader-percent");
+  if (percentEl) percentEl.textContent = "PAGE 1";
+
+  currentBookId = id;
+  currentBookTitle = title;
+  currentBookUrl = '__custom__';
+  currentBookCover = '';
+  bookPages = [];
+  bookPageIndex = 0;
+  highlightMode = false;
+  pdfDoc = null;
+  document.getElementById('reader-modal')?.classList.remove('highlight-mode-active');
+  bookHighlights = getBookHighlights(id);
+
+  // Determine file type from metadata
+  const books = getCustomBooks();
+  const bookMeta = books.find(b => b.id === id);
+  const fileType = bookMeta?.fileType || 'text';
+  bookType = fileType;
+
+  try {
+    if (fileType === 'epub') {
+      const arrayBuffer = await appStorage.getBinaryItem(`customBookBinary_${id}`);
+      if (!arrayBuffer) throw new Error('EPUB data not found in storage.');
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const chapters = await parseEpubFile(arrayBuffer);
+      await splitHtmlIntoPages(chapters);
+
+    } else if (fileType === 'pdf') {
+      const arrayBuffer = await appStorage.getBinaryItem(`customBookBinary_${id}`);
+      if (!arrayBuffer) throw new Error('PDF data not found in storage.');
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      pdfDoc = await loadingTask.promise;
+      bookPages = Array.from({ length: pdfDoc.numPages }, (_, i) => i);
+
+    } else {
+      const text = appStorage.getItem(`customBookText_${id}`);
+      if (!text) throw new Error('Book text not found.');
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      await splitTextIntoPages(text);
+    }
+
+    document.getElementById("reader-loading").style.display = "none";
+    const savedPage = appStorage.getItem(`bookmark_${id}`);
+    if (savedPage) {
+      bookPageIndex = Math.min(parseInt(savedPage) || 0, bookPages.length - 1);
+    }
+    await showBookPage(bookPageIndex, 'none');
+    saveBookToHistory(id, title, '__custom__', emoji, bookPageIndex, bookPages.length);
+
+    const hint = document.getElementById("reader-swipe-hint");
+    if (hint && !appStorage.getItem("reader_hint_shown")) {
+      hint.style.display = "block";
+      appStorage.setItem("reader_hint_shown", "1");
+      setTimeout(() => { hint.style.display = "none"; }, 3500);
+    }
+  } catch (err) {
+    console.error('Book open error:', err);
+    document.getElementById("reader-loading").style.display = "none";
+    document.getElementById("reader-text").textContent = "Failed to open book: " + err.message;
+  }
+}
+async function searchLibrary() {
+  const inputEl = document.getElementById("library-search-input");
+  if (!inputEl) return;
+  const query = inputEl.value.trim();
+  const resultsContainer = document.getElementById("library-results");
+  const statusEl = document.getElementById("library-status");
+
+  if (!query) {
+    statusEl.innerHTML = "";
+    statusEl.style.display = "none";
+    return;
+  }
+
+  statusEl.innerHTML = "";
+  statusEl.style.display = "none";
+  // Inject skeleton loader
+  const skeletonHTML = Array(8).fill('').map(() => `
+        <div class="book-card-premium skeleton-card" style="pointer-events:none; box-shadow:none;">
+            <div class="book-cover-flat"></div>
+            <div class="book-info-block" style="padding-top:10px;">
+                <div class="skeleton-text"></div>
+                <div class="skeleton-text short"></div>
+            </div>
+        </div>
+    `).join('');
+  resultsContainer.innerHTML = skeletonHTML;
+
+  try {
+    const res = await fetch(`https://gutendex.com/books/?search=${encodeURIComponent(query)}`);
+    const data = await res.json();
+
+    resultsContainer.innerHTML = "";
+
+    if (data.results.length === 0) {
+      statusEl.innerHTML = "No books found. Try another classic like 'Dracula'.";
+      statusEl.style.display = "block";
+      return;
+    }
+
+    statusEl.innerHTML = `Found ${data.count} classic results.`;
+    statusEl.style.display = "block";
+
+    data.results.forEach(book => {
+      // Extract text URL (prioritize plain text utf-8)
+      let textUrl = "";
+      if (book.formats["text/plain; charset=utf-8"]) {
+        textUrl = book.formats["text/plain; charset=utf-8"];
+      } else if (book.formats["text/plain"]) {
+        textUrl = book.formats["text/plain"];
+      } else if (book.formats["text/html"]) {
+        textUrl = book.formats["text/html"];
+      }
+
+      if (!textUrl) return; // Skip if no readable format
+
+      const authorName = book.authors[0] ? book.authors[0].name : "Unknown";
+      const coverUrl = book.formats["image/jpeg"] || "icon-192.png";
+
+      const card = document.createElement("button");
+      card.className = "book-card-premium";
+      card.title = book.title;
+
+      card.innerHTML = `
+                <div class="book-cover-flat">
+                    <img src="${coverUrl}" alt="Cover" loading="lazy">
+                </div>
+                <div class="book-info-block">
+                    <div class="book-info-title">${book.title}</div>
+                    <div class="book-info-author">${authorName}</div>
+                    <div style="font-size:0.75rem; color:#8b5cf6; padding-top:6px; font-weight:600;">⬇ ${book.download_count.toLocaleString()}</div>
+                </div>
+             `;
+
+      card.addEventListener("click", () => openReader(book.id, book.title, textUrl, coverUrl));
+      resultsContainer.appendChild(card);
+    });
+
+  } catch (err) {
+    resultsContainer.innerHTML = "";
+    statusEl.innerHTML = "Failed to connect to the library. Are you online?";
+    statusEl.style.display = "block";
+  }
+}
+
+let bookPages = [];    // Array of text chunks (one per page)
+let bookPageIndex = 0; // Current page
+let isAnimating = false;
+
+async function openReader(id, title, url, coverUrl) {
+  document.getElementById("reader-modal").classList.remove("hidden");
+  document.getElementById("reader-book-title").textContent = title;
+
+  document.getElementById("reader-loading").style.display = "flex";
+  document.getElementById("reader-text").textContent = "";
+  const percentEl = document.getElementById("reader-percent");
+  if (percentEl) percentEl.textContent = "PAGE 1";
+
+  currentBookId = id;
+  currentBookTitle = title;
+  currentBookUrl = url;
+  currentBookCover = coverUrl || 'icon-192.png';
+  bookPages = [];
+  bookPageIndex = 0;
+  highlightMode = false;
+  bookType = 'text';
+  pdfDoc = null;
+  document.getElementById('reader-text').className = 'book-page-display';
+  document.getElementById('reader-modal')?.classList.remove('highlight-mode-active');
+
+  // Load highlights for this book
+  bookHighlights = getBookHighlights(id);
+
+  try {
+    let secureUrl = url.replace("http://", "https://");
+
+    const proxies = [
+      `https://api.allorigins.win/get?url=${encodeURIComponent(secureUrl)}`,
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(secureUrl)}`,
+      `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(secureUrl)}`,
+      `https://corsproxy.io/?${encodeURIComponent(secureUrl)}`
+    ];
+
+    let text = null;
+    for (const proxy of proxies) {
+      const controller = new AbortController();
+      // Books are large, 8s is too short for a public proxy. Give it 25 seconds.
+      const timer = setTimeout(() => controller.abort(), 25000);
+      try {
+        const res = await fetch(proxy, { signal: controller.signal });
+
+        if (res.ok) {
+          if (proxy.includes('/get?url=')) {
+            const json = await res.json();
+            text = json.contents;
+          } else {
+            text = await res.text();
+          }
+          clearTimeout(timer);
+          if (text && text.length > 500) break; // Ensure we got a real book text
+          text = null;
+        } else {
+          clearTimeout(timer);
+        }
+      } catch (e) {
+        clearTimeout(timer);
+        console.warn("Proxy failed, trying next...", proxy);
+      }
+    }
+
+    if (!text) {
+      throw new Error("All proxies failed.");
+    }
+
+    // Clean up the text
+    if (url.includes(".html")) {
+      const doc = new DOMParser().parseFromString(text, 'text/html');
+      text = doc.body.innerText || doc.body.textContent || text;
+    }
+
+    // Strip Gutenberg header/footer boilerplate
+    const startMarker = text.indexOf('*** START OF');
+    if (startMarker !== -1) {
+      const afterMarker = text.indexOf('***', startMarker + 12);
+      if (afterMarker !== -1) {
+        text = text.substring(afterMarker + 3);
+      }
+    }
+    const endMarker = text.indexOf('*** END OF');
+    if (endMarker !== -1) {
+      text = text.substring(0, endMarker);
+    }
+
+    // Clean Gutenberg hard-wrapped lines while preserving true paragraphs
+    text = text.replace(/\r\n/g, '\n')
+      .replace(/([^\n])\n([^\n])/g, '$1 $2')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    // Split text into pages that fit the screen
+    await splitTextIntoPages(text);
+
+    document.getElementById("reader-loading").style.display = "none";
+
+    // Restore bookmark from appStorage (migrate old localStorage bookmarks)
+    let savedPage = appStorage.getItem(`bookmark_${id}`);
+    if (!savedPage) {
+      // Check old localStorage bookmark and migrate
+      savedPage = localStorage.getItem(`bookmark_${id}`);
+      if (savedPage) {
+        appStorage.setItem(`bookmark_${id}`, savedPage);
+        localStorage.removeItem(`bookmark_${id}`);
+      }
+    }
+    if (savedPage) {
+      bookPageIndex = Math.min(parseInt(savedPage) || 0, bookPages.length - 1);
+    }
+
+    showBookPage(bookPageIndex, 'none');
+
+    // Save to reading history
+    saveBookToHistory(id, title, url, currentBookCover, bookPageIndex, bookPages.length);
+
+    // Show swipe hint on first open
+    const hint = document.getElementById("reader-swipe-hint");
+    if (hint && !appStorage.getItem("reader_hint_shown")) {
+      hint.style.display = "block";
+      appStorage.setItem("reader_hint_shown", "1");
+      setTimeout(() => { hint.style.display = "none"; }, 3500);
+    }
+
+  } catch (err) {
+    console.error("Book load error:", err);
+    document.getElementById("reader-loading").style.display = "none";
+    document.getElementById("reader-text").textContent = "Failed to load book. This may be caused by a network issue or the text source being temporarily unavailable.\n\nPlease check your internet connection and try again.";
+  }
+}
+
+/**
+ * Splits the full book text into page-sized chunks using real DOM
+ * measurement. Creates a hidden clone of the reader element, renders
+ * lines into it, and checks scrollHeight to know exactly when a page
+ * is full — giving pixel-accurate pagination on any screen/font.
+ */
+async function splitTextIntoPages(fullText) {
+  const container = document.getElementById("reader-content-container");
+  const pageEl = document.getElementById("reader-text");
+  if (!container || !pageEl) return;
+
+  const measurer = pageEl.cloneNode(false);
+  measurer.id = '';
+  measurer.style.position = 'absolute';
+  measurer.style.visibility = 'hidden';
+  measurer.style.pointerEvents = 'none';
+  measurer.style.left = '0';
+  measurer.style.top = '0';
+  measurer.style.bottom = 'auto';
+  measurer.style.right = 'auto';
+  const tempCS = getComputedStyle(pageEl);
+  const padLeft = parseFloat(tempCS.paddingLeft) || 22;
+  const padRight = parseFloat(tempCS.paddingRight) || 22;
+  const measuredWidth = (pageEl.offsetWidth || container.clientWidth || 360) - padLeft - padRight;
+  measurer.style.width = measuredWidth + 'px';
+  measurer.style.height = 'auto';
+  measurer.style.maxHeight = 'none';
+  measurer.style.overflow = 'visible';
+  measurer.style.transform = 'none';
+  measurer.style.opacity = '0';
+  const csBeforeMeasure = getComputedStyle(pageEl);
+  measurer.style.fontSize = csBeforeMeasure.fontSize;
+  measurer.style.lineHeight = csBeforeMeasure.lineHeight || '1.82';
+  measurer.style.padding = '0';
+  measurer.style.fontFamily = csBeforeMeasure.fontFamily;
+  measurer.style.whiteSpace = csBeforeMeasure.whiteSpace || 'pre-wrap';
+  measurer.style.wordWrap = csBeforeMeasure.wordWrap || 'break-word';
+  measurer.style.hyphens = csBeforeMeasure.hyphens || 'auto';
+  measurer.style.textAlign = csBeforeMeasure.textAlign || 'justify';
+  measurer.style.boxSizing = 'border-box';
+  container.appendChild(measurer);
+
+  const cs = getComputedStyle(pageEl);
+  const padTop = parseFloat(cs.paddingTop) || 24;
+  const padBot = parseFloat(cs.paddingBottom) || 50;
+  const availableHeight = container.clientHeight - padTop - padBot;
+
+  // Failsafe if div is completely hidden (prevents infinite loop freezing)
+  if (availableHeight <= 0 || measuredWidth <= 0) {
+    container.removeChild(measurer);
+    bookPages = [fullText];
+    return;
+  }
+
+  bookPages = [];
+
+  // Estimate chars per page to provide a fast initial bounds for binary search
+  const fontSize = parseFloat(cs.fontSize) || 16;
+  const lineHeight = parseFloat(cs.lineHeight) || (fontSize * 1.6);
+  const charsPerLineEstimate = Math.max(10, Math.floor(pageEl.offsetWidth / (fontSize * 0.55)));
+  const linesPerPageEstimate = Math.max(5, Math.floor(availableHeight / lineHeight));
+  const charsPerPageEstimate = charsPerLineEstimate * linesPerPageEstimate;
+
+  let startIndex = 0;
+  const totalLength = fullText.length;
+
+  // Ultrafast Binary Search Paginator
+  let failsafeCounter = 0;
+  while (startIndex < totalLength) {
+    if (failsafeCounter++ > 50000) {
+      console.error("Pagination loop forced to exit to prevent browser hang");
+      break;
+    }
+
+    let low = startIndex + 1;
+    let high = Math.min(startIndex + Math.floor(charsPerPageEstimate * 1.5), totalLength);
+
+    // Find upper bound that exceeds availableHeight
+    measurer.textContent = fullText.substring(startIndex, high);
+    let upperFailsafe = 0;
+    while (measurer.scrollHeight <= availableHeight && high < totalLength) {
+      if (upperFailsafe++ > 2000) break;
+      low = high;
+      high = Math.min(high + charsPerPageEstimate, totalLength);
+      measurer.textContent = fullText.substring(startIndex, high);
+    }
+
+    let bestEnd = low;
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2);
+      measurer.textContent = fullText.substring(startIndex, mid);
+      if (measurer.scrollHeight <= availableHeight) {
+        bestEnd = mid;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+
+    // Backtrack to the nearest space or newline to avoid slicing through a word
+    if (bestEnd < totalLength) {
+      const lastSpace = fullText.lastIndexOf(' ', bestEnd);
+      const lastNewline = fullText.lastIndexOf('\n', bestEnd);
+      const cutPoint = Math.max(lastSpace, lastNewline);
+
+      // Only cut if we actually found a space within this page chunk
+      if (cutPoint > startIndex) {
+        bestEnd = cutPoint;
+      }
+    }
+
+    const pageText = fullText.substring(startIndex, bestEnd).trim();
+    bookPages.push(pageText || " ");
+
+    // Skip the cutting character, avoid infinite loops on weird strings
+    startIndex = bestEnd + 1;
+    if (startIndex <= bestEnd) startIndex = bestEnd + 1;
+
+    // Yield to main thread every 15 pages to keep the UI from freezing
+    if (bookPages.length % 15 === 0) {
+      await new Promise(r => setTimeout(r, 0));
+    }
+  }
+
+  container.removeChild(measurer);
+
+  if (bookPages.length === 0) {
+    bookPages = [fullText || "This book appears to be empty."];
+  }
+}
+
+/**
+ * Displays a specific page with optional fold animation.
+ * direction: 'next', 'prev', or 'none'
+ */
+async function showBookPage(index, direction) {
+  const pageEl = document.getElementById("reader-text");
+  if (!pageEl || index < 0 || index >= bookPages.length) return;
+
+  async function renderPageContent() {
+    if (bookType === 'epub') {
+      pageEl.className = 'book-page-display epub-mode';
+      pageEl.innerHTML = bookPages[index];
+    } else if (bookType === 'pdf') {
+      pageEl.className = 'book-page-display pdf-mode';
+      await renderPdfPage(index, pageEl);
+    } else {
+      pageEl.className = 'book-page-display';
+      pageEl.textContent = bookPages[index];
+    }
+    pageEl.scrollTop = 0;
+  }
+
+  if (direction === 'none') {
+    pageEl.style.transition = 'none';
+    pageEl.style.transform = 'rotateY(0deg)';
+    pageEl.style.opacity = '1';
+    await renderPageContent();
+    updateReaderProgress();
+    await applyTranslationToCurrentPage();
+    return;
+  }
+
+  isAnimating = true;
+
+  // Phase 1: Fold the current page away
+  pageEl.style.transition = 'transform 0.25s ease-in, opacity 0.25s ease-in';
+  pageEl.style.transform = direction === 'next' ? 'rotateY(-85deg)' : 'rotateY(85deg)';
+  pageEl.style.opacity = '0';
+
+  await new Promise(r => setTimeout(r, 260));
+
+  // Phase 2: Swap content while hidden
+  await renderPageContent();
+
+  // Position the new page on the opposite side
+  pageEl.style.transition = 'none';
+  pageEl.style.transform = direction === 'next' ? 'rotateY(85deg)' : 'rotateY(-85deg)';
+  void pageEl.offsetHeight;
+
+  // Phase 3: Fold the new page in
+  pageEl.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+  pageEl.style.transform = 'rotateY(0deg)';
+  pageEl.style.opacity = '1';
+
+  updateReaderProgress();
+  setTimeout(async () => {
+    isAnimating = false;
+    await applyTranslationToCurrentPage();
+    // TTS hook: auto-read current page if TTS is active
+    if (window._ttsAutoReadAfterTurn && typeof window._ttsAutoReadAfterTurn === 'function') {
+      window._ttsAutoReadAfterTurn();
+    }
+  }, 320);
+}
+
+function goNextPage() {
+  if (isAnimating || bookPageIndex >= bookPages.length - 1) return;
+  bookPageIndex++;
+  showBookPage(bookPageIndex, 'next');
+}
+
+function goPrevPage() {
+  if (isAnimating || bookPageIndex <= 0) return;
+  bookPageIndex--;
+  showBookPage(bookPageIndex, 'prev');
+}
+
+function updateReaderProgress() {
+  const percentEl = document.getElementById("reader-percent");
+  if (!percentEl) return;
+
+  const total = bookPages.length || 1;
+  const current = bookPageIndex + 1;
+  percentEl.textContent = `PAGE ${current} OF ${total}`;
+
+  if (currentBookId) {
+    // Record that we read a page today for the vitality score!
+    appStorage.setItem("lastPageReadDate", new Date().toDateString());
+    if (typeof updateBloomWidgets === 'function') setTimeout(updateBloomWidgets, 50);
+    if (typeof tryVitalityStreak === 'function') setTimeout(tryVitalityStreak, 100);
+
+    // Save bookmark to appStorage
+    appStorage.setItem(`bookmark_${currentBookId}`, bookPageIndex.toString());
+    // Update reading history with current position
+    saveBookToHistory(currentBookId, currentBookTitle, currentBookUrl, currentBookCover, bookPageIndex, total);
+
+    // Detect book completion — user reached the last page
+    if (current === total && total > 1) {
+      const alreadyFinished = getFinishedBooks().some(b => String(b.id) === String(currentBookId));
+      if (!alreadyFinished) {
+        addFinishedBook(currentBookId, currentBookTitle, currentBookUrl, currentBookCover);
+        renderFinishedBooks();
+        if (typeof showNotification === 'function') {
+          showNotification(`🏆 Congratulations! You finished reading "${currentBookTitle}"!`);
+        }
+      }
+    }
+  }
+
+  // Apply highlights after text is set
+  applyHighlightsToPage(bookPageIndex);
+}
+
 // ==================== EVENT LISTENERS ====================
 document.addEventListener("DOMContentLoaded", function () {
+
+  // ======== LIBRARY EVENTS ========
+  document.getElementById("library-search-btn")?.addEventListener("click", searchLibrary);
+  let librarySearchTimeout;
+  document.getElementById("library-search-input")?.addEventListener("input", (e) => {
+    const val = e.target.value.trim();
+
+    const recs = document.getElementById("library-recommendations");
+    const hist = document.getElementById("reading-history-section");
+    const myBooks = document.getElementById("my-books-section");
+    const results = document.getElementById("library-results");
+    const status = document.getElementById("library-status");
+
+    if (val.length > 0) {
+      if (recs) recs.style.display = 'none';
+      if (hist) hist.style.display = 'none';
+      if (myBooks) myBooks.style.display = 'none';
+
+      // Live dynamic search while typing (debounce)
+      clearTimeout(librarySearchTimeout);
+      librarySearchTimeout = setTimeout(() => {
+        searchLibrary();
+      }, 600);
+    } else {
+      clearTimeout(librarySearchTimeout);
+      if (recs) recs.style.display = 'block';
+      if (hist && hist.querySelector('#reading-history-list').children.length > 0) hist.style.display = 'block';
+      if (myBooks) myBooks.style.display = 'block';
+      if (results) results.innerHTML = '';
+      if (status) status.innerHTML = '';
+    }
+  });
+  document.getElementById("closeLibrary")?.addEventListener("click", () => {
+    const mainBtn = document.querySelector('.nav-btn[data-page="main"]');
+    if (mainBtn) mainBtn.click();
+  });
+
+  document.getElementById("reader-close-btn")?.addEventListener("click", () => {
+    document.getElementById("reader-modal").classList.add("hidden");
+    highlightMode = false;
+    document.getElementById('reader-modal')?.classList.remove('highlight-mode-active');
+
+    // Stop translation mode on close
+    activeTranslationLang = null;
+    document.getElementById('reader-translate-btn')?.classList.remove('translate-active');
+
+    // Refresh reading history in case library page is visible behind
+    renderReadingHistory();
+  });
+
+  const readerText = document.getElementById("reader-text");
+
+  // Font size changes re-paginate the entire book
+  async function rePaginateBook() {
+    if (bookPages.length === 0 || bookType === 'pdf') return; // PDF pages are fixed
+    if (bookType === 'epub') {
+      const allHtml = [...bookPages]; // pages are already HTML chunks
+      await splitHtmlIntoPages(allHtml);
+    } else {
+      const fullText = bookPages.join('\n');
+      await splitTextIntoPages(fullText);
+    }
+    bookPageIndex = Math.min(bookPageIndex, bookPages.length - 1);
+    await showBookPage(bookPageIndex, 'none');
+  }
+
+  // Tap zones → fold page turn
+  document.getElementById("reader-prev-zone")?.addEventListener("click", () => {
+    if (typeof highlightMode !== "undefined" && highlightMode) return;
+    goPrevPage();
+  });
+  document.getElementById("reader-next-zone")?.addEventListener("click", () => {
+    if (typeof highlightMode !== "undefined" && highlightMode) return;
+    goNextPage();
+  });
+
+  // Swipe gesture support for mobile
+  let touchStartX = 0;
+  const stage = document.getElementById("reader-content-container");
+  stage?.addEventListener("touchstart", (e) => {
+    touchStartX = e.changedTouches[0].clientX;
+  }, { passive: true });
+  stage?.addEventListener("touchend", (e) => {
+    if (typeof highlightMode !== "undefined" && highlightMode) return; // Prevent swipe if highlighting
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) { // Minimum swipe distance
+      if (diff > 0) goNextPage(); else goPrevPage();
+    }
+  }, { passive: true });
+
+  // Re-paginate book when screen rotates or resizes (debounced)
+  let readerResizeTimer = null;
+  window.addEventListener("resize", () => {
+    if (bookPages.length === 0) return;
+    clearTimeout(readerResizeTimer);
+    readerResizeTimer = setTimeout(rePaginateBook, 300);
+  });
+
+  // ======== HIGHLIGHTER EVENTS ========
+  document.getElementById('reader-highlight-btn')?.addEventListener('click', () => {
+    const selection = window.getSelection();
+    // If text is actively highlighted and we tap the button, save the highlight!
+    if (highlightMode && selection && !selection.isCollapsed) {
+      handleTextSelection();
+      if (typeof showNotification === 'function') showNotification('✨ Highlight saved!');
+      return; // Do not toggle mode off
+    }
+
+    // Otherwise, toggle the mode
+    highlightMode = !highlightMode;
+    const modal = document.getElementById('reader-modal');
+    if (highlightMode) {
+      modal?.classList.add('highlight-mode-active');
+      if (typeof showNotification === 'function') showNotification('🖍️ Highlight mode ON — select text natively with handles, then tap this 🖍️ button to save!');
+    } else {
+      modal?.classList.remove('highlight-mode-active');
+    }
+  });
+
+  // (Aggressive 'mouseup' and 'touchend' auto-capture listeners removed for frictionless native mobile dragging UX)
+
+  // Render books and history on startup
+  renderRecommendations();
+  renderReadingHistory();
+  renderFinishedBooks();
+  renderMyBooks();
+
+  // ======== PREMIUM LIBRARY & MANAGE EVENTS ========
+  let currentManageTab = 'history';
+
+  // Toggle dropdown
+  document.getElementById('librarySettingsBtn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('librarySettingsMenu')?.classList.toggle('hidden');
+  });
+  document.addEventListener('click', () => {
+    document.getElementById('librarySettingsMenu')?.classList.add('hidden');
+  });
+
+  // Toggle View
+  document.getElementById('libSet-viewToggle')?.addEventListener('click', () => {
+    const grid = document.getElementById('library-results');
+    if (grid) {
+      grid.classList.toggle('list-view');
+      appStorage.setItem('libraryListView', grid.classList.contains('list-view') ? '1' : '0');
+    }
+  });
+  // Restore View
+  if (appStorage.getItem('libraryListView') === '1') {
+    document.getElementById('library-results')?.classList.add('list-view');
+  }
+
+  // Open Manage Modal
+  document.getElementById('libSet-manage')?.addEventListener('click', () => {
+    document.getElementById('manage-library-overlay')?.classList.remove('hidden');
+    renderManageLibrary();
+  });
+  // Close Manage Modal
+  document.getElementById('manage-lib-close')?.addEventListener('click', () => {
+    document.getElementById('manage-library-overlay')?.classList.add('hidden');
+  });
+
+  // Tab Switching
+  document.querySelectorAll('.manage-tab').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.querySelectorAll('.manage-tab').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      currentManageTab = e.target.getAttribute('data-tab');
+      document.getElementById('manage-selectAll').checked = false;
+      renderManageLibrary();
+    });
+  });
+
+  // Select All Checkbox
+  document.getElementById('manage-selectAll')?.addEventListener('change', (e) => {
+    const isChecked = e.target.checked;
+    document.querySelectorAll('.manage-checkbox').forEach(cb => cb.checked = isChecked);
+  });
+
+  // Delete Selected
+  document.getElementById('manage-delete-btn')?.addEventListener('click', () => {
+    processManageLibraryDeletes();
+  });
+
+  function renderManageLibrary() {
+    const container = document.getElementById('manage-list-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    let items = [];
+    if (currentManageTab === 'history') {
+      const history = getBookHistory();
+      items = history.map(b => ({
+        id: b.id, title: b.title, sub: `Page ${b.pageIndex + 1} of ${b.totalPages}`,
+        img: b.url === '__custom__' ? null : `url('${b.coverUrl || 'icon-192.png'}')`,
+        emoji: b.url === '__custom__' ? (b.coverUrl || '📕') : null
+      }));
+    } else if (currentManageTab === 'highlights') {
+      try {
+        const allHL = JSON.parse(appStorage.getItem('bookHighlights') || '{}');
+        for (const [bookId, pages] of Object.entries(allHL)) {
+          let totalHls = 0;
+          for (const pg of Object.values(pages)) totalHls += pg.length;
+          if (totalHls > 0) items.push({ id: bookId, title: "Book ID: " + bookId, sub: `${totalHls} active highlights`, emoji: '🖍️' });
+        }
+      } catch (e) { }
+    } else if (currentManageTab === 'custom') {
+      const custom = getCustomBooks();
+      items = custom.map(b => ({
+        id: b.id, title: b.title, sub: `${Math.round(b.charCount / 5)} total words`, emoji: b.emoji || '📕'
+      }));
+    } else if (currentManageTab === 'finished') {
+      const finished = getFinishedBooks();
+      items = finished.map(b => ({
+        id: b.id, title: b.title, 
+        sub: `Finished ${new Date(b.finishedAt).toLocaleDateString()}`,
+        img: b.url === '__custom__' ? null : `url('${b.coverUrl || 'icon-192.png'}')`,
+        emoji: b.url === '__custom__' ? (b.coverUrl || '🏆') : null
+      }));
+    }
+
+    if (items.length === 0) {
+      container.innerHTML = `<div style="padding:30px; text-align:center; color:var(--text-muted);">No items found in this section.</div>`;
+      return;
+    }
+
+    items.forEach(it => {
+      const lbl = document.createElement('label');
+      lbl.className = 'manage-item';
+      const visual = it.emoji ? `<div class="manage-item-img">${it.emoji}</div>`
+        : `<div class="manage-item-img" style="background-image:${it.img}; background-size:cover; background-position:center;"></div>`;
+
+      lbl.innerHTML = `
+              <input type="checkbox" class="manage-checkbox" value="${it.id}">
+              ${visual}
+              <div class="manage-item-info">
+                  <div class="manage-item-title">${it.title}</div>
+                  <div class="manage-item-sub">${it.sub}</div>
+              </div>
+          `;
+      // Update "Select All" state if manually unchecking items
+      lbl.querySelector('.manage-checkbox').addEventListener('change', () => {
+        const allCbs = document.querySelectorAll('.manage-checkbox');
+        const checkedCbs = document.querySelectorAll('.manage-checkbox:checked');
+        document.getElementById('manage-selectAll').checked = (allCbs.length > 0 && allCbs.length === checkedCbs.length);
+      });
+      container.appendChild(lbl);
+    });
+  }
+
+  function processManageLibraryDeletes() {
+    const checkboxes = document.querySelectorAll('.manage-checkbox:checked');
+    if (checkboxes.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${checkboxes.length} item(s)?`)) return;
+
+    const idsToDelete = Array.from(checkboxes).map(cb => cb.value);
+
+    if (currentManageTab === 'history') {
+      let history = getBookHistory();
+      history = history.filter(b => !idsToDelete.includes(String(b.id)));
+      appStorage.setItem('bookHistory', JSON.stringify(history));
+    } else if (currentManageTab === 'highlights') {
+      try {
+        const allHL = JSON.parse(appStorage.getItem('bookHighlights') || '{}');
+        idsToDelete.forEach(id => delete allHL[id]);
+        appStorage.setItem('bookHighlights', JSON.stringify(allHL));
+        bookHighlights = getBookHighlights(currentBookId);
+      } catch (e) { }
+    } else if (currentManageTab === 'custom') {
+      idsToDelete.forEach(id => deleteCustomBook(id));
+    } else if (currentManageTab === 'finished') {
+      removeFinishedBooks(idsToDelete);
+    }
+
+    document.getElementById('manage-selectAll').checked = false;
+    renderManageLibrary();
+    renderReadingHistory();
+    renderFinishedBooks();
+    renderMyBooks();
+  }
+
+  // ======== CUSTOM BOOK EVENTS ========
+  document.getElementById('add-book-close-btn')?.addEventListener('click', () => {
+    document.getElementById('add-book-overlay')?.classList.add('hidden');
+  });
+  document.getElementById('custom-book-cancel')?.addEventListener('click', () => {
+    document.getElementById('add-book-overlay')?.classList.add('hidden');
+  });
+
+  document.getElementById('custom-book-file')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    document.getElementById('custom-book-filename').textContent = file.name;
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    const textarea = document.getElementById('custom-book-text');
+    const badge = document.getElementById('binary-file-badge');
+
+    // Auto-fill title from filename
+    if (!document.getElementById('custom-book-title').value) {
+      const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+      document.getElementById('custom-book-title').value = nameWithoutExt;
+    }
+
+    if (ext === 'epub' || ext === 'pdf') {
+      // Binary file — read as ArrayBuffer
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        pendingBinaryFile = { arrayBuffer: ev.target.result, type: ext, name: file.name };
+        // Hide textarea, show badge
+        if (textarea) textarea.style.display = 'none';
+        if (badge) {
+          badge.style.display = 'block';
+          document.getElementById('binary-file-icon').textContent = ext === 'pdf' ? '📄' : '📚';
+          document.getElementById('binary-file-name').textContent = file.name;
+          const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+          document.getElementById('binary-file-size').textContent = `${ext.toUpperCase()} • ${sizeMB} MB`;
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      // Text file — current behavior
+      pendingBinaryFile = null;
+      if (textarea) textarea.style.display = '';
+      if (badge) badge.style.display = 'none';
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        document.getElementById('custom-book-text').value = ev.target.result;
+      };
+      reader.readAsText(file);
+    }
+  });
+
+  document.getElementById('custom-book-save')?.addEventListener('click', async () => {
+    const title = document.getElementById('custom-book-title').value.trim();
+
+    if (!title) {
+      alert('Please enter a book title.');
+      return;
+    }
+
+    if (pendingBinaryFile) {
+      // Save EPUB/PDF binary
+      await saveCustomBookBinary(title, pendingBinaryFile.type, pendingBinaryFile.arrayBuffer);
+      pendingBinaryFile = null;
+    } else {
+      const text = document.getElementById('custom-book-text').value.trim();
+      if (!text) {
+        alert('Please provide the book text.');
+        return;
+      }
+      saveCustomBook(title, text);
+    }
+
+    document.getElementById('add-book-overlay').classList.add('hidden');
+
+    // Clear inputs
+    document.getElementById('custom-book-title').value = '';
+    document.getElementById('custom-book-text').value = '';
+    document.getElementById('custom-book-text').style.display = '';
+    document.getElementById('custom-book-filename').textContent = '';
+    document.getElementById('custom-book-file').value = '';
+    const badge = document.getElementById('binary-file-badge');
+    if (badge) badge.style.display = 'none';
+
+    renderMyBooks();
+    if (typeof showNotification === 'function') showNotification('Book added successfully!');
+  });
 
   // Journal
   document.getElementById("newJournal").addEventListener("click", () => openJournalEditor());
@@ -3506,6 +6123,21 @@ document.addEventListener("DOMContentLoaded", function () {
   setInterval(checkWaterNotifications, 3 * 60 * 60 * 1000);
   setInterval(checkTaskReminders, 3 * 60 * 60 * 1000);
 
+  // Daily checks for notifications (runs every minute to catch the precise time)
+  check10AMNotifications();
+  check5PMNotifications();
+
+  // Schedule true background triggers for when the app is fully closed (Android only)
+  scheduleNext10AMNotification();
+  scheduleNext5PMNotification();
+
+  setInterval(() => {
+    check10AMNotifications();
+    check5PMNotifications();
+    scheduleNext10AMNotification(); // Refresh scheduled targets
+    scheduleNext5PMNotification();
+  }, 60000);
+
   // Check daily streak on load
   checkDailyStreak();
 });
@@ -3516,7 +6148,7 @@ function openFocusModal() {
   const select = /** @type {HTMLSelectElement} */ (document.getElementById("modal-focus-select"));
   if (!overlay || !select) return;
 
-  const savedFocus = localStorage.getItem("dailyFocus");
+  const savedFocus = appStorage.getItem("dailyFocus");
   select.innerHTML = '<option value="">Select a task...</option>';
 
   const items = Array.from(taskContainer.querySelectorAll("li"));
@@ -3547,7 +6179,7 @@ function closeFocusModal() {
 function applyFocusModal() {
   const select = /** @type {HTMLSelectElement} */ (document.getElementById("modal-focus-select"));
   if (select && select.value) {
-    localStorage.setItem("dailyFocus", select.value);
+    appStorage.setItem("dailyFocus", select.value);
     saveState();
     updateDailyFocusHighlights();
     showNotification("🎯 Focus task highlighted!");
@@ -3560,7 +6192,7 @@ function applyFocusModal() {
 }
 
 function clearFocusModal() {
-  localStorage.removeItem("dailyFocus");
+  appStorage.removeItem("dailyFocus");
   saveState();
   updateDailyFocusHighlights();
   showNotification("🎯 Focus cleared.");
@@ -3629,13 +6261,13 @@ function resetEverything() {
   if (!confirm("Are you sure you want to reset everything? This will delete all tasks, streaks, and data!")) {
     return;
   }
-  localStorage.clear();
+  appStorage.clear();
   count = 0;
   waterConsumed = 0;
   waterGoal = 2000;
   taskContainer.innerHTML = "";
   all.textContent = "";
-  streak.innerText = "";
+  if (streak) streak.innerText = "";
   taskInput.value = "";
   allchecked();
   updateWaterDisplay();
@@ -3649,7 +6281,7 @@ function resetEverything() {
 // ==================== NEW FEATURES LOGIC ====================
 
 // --- 1. MOOD TRACKER ---
-let moodHistory = JSON.parse(localStorage.getItem("moodHistory") || "[]");
+window.moodHistory = JSON.parse(appStorage.getItem("moodHistory") || "[]");
 
 function saveMood(moodStr) {
   const noteInput = /** @type {HTMLInputElement} */ (document.getElementById("mood-note"));
@@ -3693,7 +6325,7 @@ function saveMood(moodStr) {
 
   moodHistory.unshift(entry);
   if (moodHistory.length > 100) moodHistory.pop();
-  localStorage.setItem("moodHistory", JSON.stringify(moodHistory));
+  appStorage.setItem("moodHistory", JSON.stringify(moodHistory));
 
   if (noteInput) noteInput.value = "";
   document.querySelectorAll(".mood-btn").forEach(b => b.classList.remove("active"));
@@ -3704,6 +6336,7 @@ function saveMood(moodStr) {
   renderMoodHeatmap();
   generateMoodInsights();
   saveState();
+  if (typeof tryVitalityStreak === "function") tryVitalityStreak();
 
   const heading = document.getElementById("mood-heading");
   if (heading) {
@@ -3874,8 +6507,8 @@ function generateMoodInsights() {
 }
 
 // --- 2. SLEEP TRACKER ---
-let sleepLogs = JSON.parse(localStorage.getItem("sleepLogs") || "[]");
-let sleepGoalHours = parseFloat(localStorage.getItem("sleepGoalHours") || "8");
+let sleepLogs = JSON.parse(appStorage.getItem("sleepLogs") || "[]");
+let sleepGoalHours = parseFloat(appStorage.getItem("sleepGoalHours") || "8");
 
 function renderSleepFactors() {
   const factorBtns = document.querySelectorAll('.sleep-factor-btn');
@@ -3900,7 +6533,7 @@ function initSleepTracker() {
     const newGoal = prompt("What's your daily sleep goal in hours?", sleepGoalHours);
     if (newGoal && !isNaN(parseFloat(newGoal))) {
       sleepGoalHours = parseFloat(newGoal);
-      localStorage.setItem("sleepGoalHours", sleepGoalHours);
+      appStorage.setItem("sleepGoalHours", sleepGoalHours);
       updateSleepStats();
     }
   });
@@ -3959,9 +6592,11 @@ function saveSleepEntry() {
 
   sleepLogs.unshift(entry);
   if (sleepLogs.length > 30) sleepLogs.pop();
-  localStorage.setItem("sleepLogs", JSON.stringify(sleepLogs));
+  appStorage.setItem("sleepLogs", JSON.stringify(sleepLogs));
   updateSleepStats();
   saveState();
+  if (typeof updateBloomWidgets === "function") updateBloomWidgets();
+  if (typeof tryVitalityStreak === "function") tryVitalityStreak();
 
   // Reset UI
   document.querySelectorAll('.sleep-factor-btn').forEach(btn => btn.classList.remove('active'));
@@ -4103,7 +6738,7 @@ function renderSleepChart(logs) {
 // --- 4. THEME CUSTOMIZATION ---
 function applyTheme(theme) {
   document.body.className = theme === "classic" ? "" : `theme-${theme}`;
-  localStorage.setItem("appTheme", theme);
+  appStorage.setItem("appTheme", theme);
 
   // Update active button state
   document.querySelectorAll(".theme-btn").forEach(btn => {
@@ -4139,13 +6774,13 @@ document.addEventListener("DOMContentLoaded", function () {
   const additionalNav = {
     'mood-page': renderMoodHistory,
     'sleep-page': updateSleepStats,
-    'settings-page': () => applyTheme(localStorage.getItem("appTheme") || "classic")
+    'settings-page': () => applyTheme(appStorage.getItem("appTheme") || "classic")
   };
 
   // Initialize New Features
   renderMoodHistory();
   updateSleepStats();
-  applyTheme(localStorage.getItem("appTheme") || "classic");
+  applyTheme(appStorage.getItem("appTheme") || "classic");
 
   // Mood buttons
   let selectedMood = null;
@@ -4657,9 +7292,9 @@ async function updateDailyQuote() {
   if (!quoteTextEl || !quoteAuthorEl) return;
 
   const today = new Date().toDateString();
-  const storedDate = localStorage.getItem("quoteLastFetchedDate");
-  const storedQuoteText = localStorage.getItem("dailyQuoteText");
-  const storedQuoteAuthor = localStorage.getItem("dailyQuoteAuthor");
+  const storedDate = appStorage.getItem("quoteLastFetchedDate");
+  const storedQuoteText = appStorage.getItem("dailyQuoteText");
+  const storedQuoteAuthor = appStorage.getItem("dailyQuoteAuthor");
 
   // If we already fetched a quote today, just display it
   if (storedDate === today && storedQuoteText && storedQuoteText !== "undefined") {
@@ -4696,20 +7331,20 @@ async function updateDailyQuote() {
       quoteTextEl.textContent = `"${data.quote}"`;
       quoteAuthorEl.textContent = `- ${data.author || "Unknown"}`;
 
-      localStorage.setItem("quoteLastFetchedDate", today);
-      localStorage.setItem("dailyQuoteText", data.quote);
-      localStorage.setItem("dailyQuoteAuthor", data.author);
+      appStorage.setItem("quoteLastFetchedDate", today);
+      appStorage.setItem("dailyQuoteText", data.quote);
+      appStorage.setItem("dailyQuoteAuthor", data.author);
     }
   } catch (error) {
     console.warn("Failed to fetch quote from web. Using fallback.", error);
 
     // Save the fallback so it doesn't try to fetch again on every tab reload today
-    localStorage.setItem("quoteLastFetchedDate", today);
+    appStorage.setItem("quoteLastFetchedDate", today);
     // Remove the formatting we applied above to store cleanly
     const cleanText = quoteTextEl.textContent.replace(/^"|"$/g, '');
     const cleanAuthor = quoteAuthorEl.textContent.replace(/^- /, '');
-    localStorage.setItem("dailyQuoteText", cleanText);
-    localStorage.setItem("dailyQuoteAuthor", cleanAuthor);
+    appStorage.setItem("dailyQuoteText", cleanText);
+    appStorage.setItem("dailyQuoteAuthor", cleanAuthor);
   }
 }
 
@@ -4731,12 +7366,8 @@ function renderDashboard() {
   const dashTasks = document.getElementById("dash-tasks");
   if (dashTasks) dashTasks.textContent = `${completedTasks}/${totalTasks}`;
 
-  // Update Progress Circle
-  const percentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-  const circle = document.getElementById("dash-progress-circle");
-  const text = document.getElementById("dash-progress-text");
-  if (circle) circle.setAttribute("stroke-dasharray", `${percentage}, 100`);
-  if (text) text.textContent = `${percentage}%`;
+  // Update Daily Vitality & Home Progress logic
+  if (typeof updateBloomWidgets === "function") updateBloomWidgets();
 
   // Update Water
   const dashWater = document.getElementById("dash-water");
@@ -4764,7 +7395,7 @@ function renderDashboard() {
   const focusDisplayDiv = document.getElementById("daily-focus-display");
   const focusTextEl = document.getElementById("daily-focus-text");
   const focusEmojiEl = document.getElementById("daily-focus-emoji");
-  const savedFocus = localStorage.getItem("dailyFocus");
+  const savedFocus = appStorage.getItem("dailyFocus");
 
   let focusTaskExists = false;
   let focusTaskEmoji = "🎯";
@@ -4811,7 +7442,7 @@ function renderDashboard() {
 function saveDailyFocus() {
   const select = /** @type {HTMLSelectElement} */ (document.getElementById("daily-focus-select"));
   if (select && select.value) {
-    localStorage.setItem("dailyFocus", select.value);
+    appStorage.setItem("dailyFocus", select.value);
     saveState();
     showNotification("🎯 Daily focus updated!");
     renderDashboard();
@@ -4819,14 +7450,14 @@ function saveDailyFocus() {
 }
 
 function clearDailyFocus() {
-  localStorage.removeItem("dailyFocus");
+  appStorage.removeItem("dailyFocus");
   saveState();
   showNotification("🎯 Daily focus cleared.");
   renderDashboard();
 }
 
 function updateDailyFocusHighlights() {
-  const savedFocus = localStorage.getItem("dailyFocus");
+  const savedFocus = appStorage.getItem("dailyFocus");
   const items = Array.from(taskContainer.querySelectorAll("li"));
 
   items.forEach(li => {
@@ -4843,7 +7474,7 @@ function updateDailyFocusHighlights() {
 }
 
 // --- 7. WATER HISTORY LOGIC ---
-let waterHistory = JSON.parse(localStorage.getItem("waterHistory") || "[]");
+let waterHistory = JSON.parse(appStorage.getItem("waterHistory") || "[]");
 
 function recordWaterIntake() {
   const today = new Date().toDateString();
@@ -4854,7 +7485,7 @@ function recordWaterIntake() {
   }
   entry.amount = waterConsumed;
   if (waterHistory.length > 7) waterHistory.shift();
-  localStorage.setItem("waterHistory", JSON.stringify(waterHistory));
+  appStorage.setItem("waterHistory", JSON.stringify(waterHistory));
   renderWaterChart();
 }
 
@@ -4887,7 +7518,7 @@ function renderWaterChart() {
 
 // --- 10. BACKUP & RESTORE ---
 function exportData() {
-  const data = JSON.stringify(localStorage);
+  const data = JSON.stringify(appStorage);
   const blob = new Blob([data], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -4906,9 +7537,9 @@ function importData(event) {
   reader.onload = function (e) {
     try {
       const data = JSON.parse(e.target.result);
-      localStorage.clear();
+      appStorage.clear();
       for (const key in data) {
-        localStorage.setItem(key, data[key]);
+        appStorage.setItem(key, data[key]);
       }
       showNotification("📥 Data restored! Reloading...");
       setTimeout(() => location.reload(), 1500);
@@ -5040,7 +7671,7 @@ document.querySelectorAll('.cts-style-pick[data-cardstyle]').forEach(btn => {
 
 // Load Custom Theme
 function loadCustomTheme() {
-  const saved = localStorage.getItem("customThemeStudio");
+  const saved = appStorage.getItem("customThemeStudio");
   if (saved) {
     Object.assign(ctsState, JSON.parse(saved));
   }
@@ -5050,7 +7681,7 @@ function loadCustomTheme() {
 document.querySelectorAll(".theme-btn").forEach(btn => {
   btn.addEventListener("click", function () {
     const theme = this.getAttribute("data-theme");
-    localStorage.setItem("appTheme", theme);
+    appStorage.setItem("appTheme", theme);
     document.querySelectorAll(".theme-btn").forEach(b => b.classList.remove("active"));
     this.classList.add("active");
 
@@ -5077,7 +7708,7 @@ document.querySelectorAll(".theme-btn").forEach(btn => {
 
 // Save Custom Theme
 document.getElementById("save-custom-theme-btn")?.addEventListener("click", function () {
-  localStorage.setItem("customThemeStudio", JSON.stringify(ctsState));
+  appStorage.setItem("customThemeStudio", JSON.stringify(ctsState));
   showNotification("💾 Studio Theme Saved Successfully!");
 });
 
@@ -5091,7 +7722,7 @@ document.getElementById("reset-custom-theme-btn")?.addEventListener("click", fun
   ctsState.cardStyle = 'shadow';
   applyCtsStateToUI();
   applyCtsStateToDom();
-  localStorage.removeItem("customThemeStudio");
+  appStorage.removeItem("customThemeStudio");
   showNotification("🔄 Studio Theme Reset to Default!");
 });
 
@@ -5240,23 +7871,52 @@ expandableImages.forEach(img => {
   });
 });
 
-// Original Initialize call was here, but we've wrapped most things in DOMContentLoaded
-loadState();
-
+// Initialize storage (restores from IndexedDB if localStorage was wiped), then load state
+let _appInitPromise = appStorage.init().then(async () => {
+  await loadAIChatsFromForage(); // Safely load the AI chat history cache NOW
+  loadState();
+}).catch(async () => {
+  await loadAIChatsFromForage(); 
+  loadState(); // Fallback: load from whatever localStorage has
+});
 
 // ==================== ANMOL AI CHATBOT ====================
 let aiConversationHistory = [];
 let currentAIChatId = null;
 
-// --- Chat History Management (localStorage) ---
+// --- Chat History Management (IndexedDB) ---
+let _aiChatSessionsCache = [];
+
+// This function must be called exactly once ON STARTUP, strictly AFTER appStorage.init() configures localForage!!
+async function loadAIChatsFromForage() {
+  if (typeof localforage !== 'undefined') {
+    try {
+      const stored = await localforage.getItem("aiChatSessions");
+      if (stored && Array.isArray(stored)) {
+        _aiChatSessionsCache = stored;
+      } else {
+        // Fallback: load legacy from localStorage just in case it wasn't migrated
+        try {
+          const oldStorage = JSON.parse(appStorage.getItem("aiChatSessions") || "[]");
+          if (Array.isArray(oldStorage) && oldStorage.length > 0) {
+            _aiChatSessionsCache = oldStorage;
+            await localforage.setItem("aiChatSessions", oldStorage);
+          }
+        } catch(e) {}
+      }
+    } catch(e) {}
+  }
+}
+
 function getAIChatSessions() {
-  try {
-    return JSON.parse(localStorage.getItem("aiChatSessions") || "[]");
-  } catch (e) { return []; }
+  return _aiChatSessionsCache;
 }
 
 function saveAIChatSessions(sessions) {
-  localStorage.setItem("aiChatSessions", JSON.stringify(sessions));
+  _aiChatSessionsCache = sessions;
+  if (typeof localforage !== 'undefined') {
+    localforage.setItem("aiChatSessions", sessions).catch(e => console.warn(e));
+  }
 }
 
 function createNewAIChat() {
@@ -5290,10 +7950,11 @@ function loadAIChat(chatId) {
     <div class="ai-message ai-bot-message">
       <div class="ai-msg-avatar" style="padding:0; overflow:hidden;"><img src="anmol-ai-avatar.jpeg" style="width:100%; height:100%; object-fit:cover;"></div>
       <div class="ai-msg-bubble">
-        Yo! 👋🔥 I'm <strong>Anmol AI</strong> — your personal productivity roast master, hype beast, and highly capable AI assistant, made by the brilliant <strong>Anmol Jha</strong>.
-        <br><br>My unique superpower? I have <strong>full access to your app stats</strong> 👀. I can see your tasks, streak, water, and mood. I'm here to track your progress, praise your wins, and give you brutally honest advice to skyrocket your productivity! 🚀
-        <br><br>I can solve complex tasks, any subject, or even chat in <strong>native Nepali or Ninglish</strong> if you ask me to (just tell me!). 🇳🇵
-        <br><br>Ask me anything like <em>"How am I doing today?"</em>, <em>"Roast my productivity"</em>, or <em>"Solve this subject problem"</em> — and I'll keep it real 💯
+        Namaste! 🇳🇵👋🔥 I'm <strong>Anmol AI</strong>, an advanced assistant built by the brilliant <strong>Anmol Jha</strong>. 
+        <br><br>My core purpose is to <strong>enhance your productivity</strong> and <strong>faithfully follow your exact instructions</strong>. 
+        <br><br>What makes me special? I have <strong>full real-time access to your dashboard!</strong> 👀 I know these things about you: your <strong>Daily Habits</strong>, your <strong>Vitality Score</strong>, your <strong>Sleep Logs</strong>, and your current <strong>Mood</strong>. I use these stats to give you deeply personalized coaching and recommend specific app features! 🚀
+        <br><br>I also specialize in the <strong>Nepali Language</strong> 🇳🇵 (and Ninglish!) — just tell me if you prefer to chat in it!
+        <br><br>Ask me to <em>"Review my habits today"</em>, <em>"Analyze my vitality"</em>, or just let me help you crush your tasks! 💯
       </div>
     </div>
   `;
@@ -5370,73 +8031,30 @@ function renderAIChatSidebar() {
   });
 }
 
-// --- Enhanced Context Gathering ---
+// --- Privacy-First Context Gathering ---
 function gatherAppContext() {
   const userName = getUserName() || "friend";
 
-  // Gather tasks
-  const items = Array.from(taskContainer.querySelectorAll("li"));
-  const totalTasks = items.length;
-  const completedItems = items.filter(li => {
-    const cb = li.querySelector("input[type='checkbox']:not(.task-select-cb)");
-    return cb && cb.checked;
-  });
-  const completedTasks = completedItems.length;
-  const pendingItems = items.filter(li => {
-    const cb = li.querySelector("input[type='checkbox']:not(.task-select-cb)");
-    return cb && !cb.checked;
-  });
+  // Habits (Numbers only)
+  let hbTasks = 0;
+  let hbCompleted = 0;
+  try {
+    const loadedHabits = JSON.parse(appStorage.getItem("userHabits") || "[]");
+    hbTasks = loadedHabits.length;
+    hbCompleted = loadedHabits.filter(h => h.completedToday).length;
+  } catch (e) {}
 
-  const allTaskNames = items.map(li => {
-    const span = li.querySelector("span:not(.task-emoji):not(.task-tag):not(.task-priority-badge)");
-    return span ? span.textContent : "";
-  }).filter(Boolean);
-
-  const completedNames = completedItems.map(li => {
-    const span = li.querySelector("span:not(.task-emoji):not(.task-tag):not(.task-priority-badge)");
-    return span ? span.textContent : "";
-  }).filter(Boolean);
-
-  const pendingNames = pendingItems.map(li => {
-    const span = li.querySelector("span:not(.task-emoji):not(.task-tag):not(.task-priority-badge)");
-    return span ? span.textContent : "";
-  }).filter(Boolean);
-
-  // Water
-  const waterData = {
-    consumed: waterConsumed || 0,
-    goal: waterGoal || 2000
-  };
+  // Vitality Score
+  let vitalityScore = 0;
+  if (typeof getVitalityScore === "function") {
+    vitalityScore = getVitalityScore();
+  }
 
   // Mood
   let latestMood = null;
   if (typeof moodHistory !== 'undefined' && moodHistory.length > 0) {
     latestMood = moodHistory[0];
   }
-
-  // Journal
-  let recentJournals = [];
-  try {
-    const entries = JSON.parse(localStorage.getItem("journalEntries") || "[]");
-    recentJournals = entries.slice(-3).map(e => e.title || "Untitled").reverse();
-  } catch (e) { }
-
-  // Daily focus
-  const dailyFocus = localStorage.getItem("dailyFocus") || null;
-
-  // Meditation
-  const meditationData = {
-    duration: typeof meditationDuration !== 'undefined' ? meditationDuration : 5,
-    breathingMode: typeof currentBreathingMode !== 'undefined' ? currentBreathingMode : "478",
-    isRunning: typeof meditationRunning !== 'undefined' ? meditationRunning : false
-  };
-
-  // Pomodoro
-  const pomodoroData = {
-    workDuration: typeof workDuration !== 'undefined' ? workDuration : 25,
-    breakDuration: typeof breakDuration !== 'undefined' ? breakDuration : 5,
-    isRunning: typeof newPomodoroRunning !== 'undefined' ? newPomodoroRunning : false
-  };
 
   // Sleep
   let sleepAvg = null;
@@ -5445,34 +8063,18 @@ function gatherAppContext() {
     sleepAvg = (totalSleep / sleepLogs.length).toFixed(1);
   }
 
-  // Completion dates
-  let totalCompletionDays = 0;
-  try {
-    const dates = JSON.parse(localStorage.getItem("completionDates") || "[]");
-    totalCompletionDays = dates.length;
-  } catch (e) { }
-
   return {
     userName,
     currentTime: new Date().toLocaleString(),
-    tasks: {
-      total: totalTasks,
-      completed: completedTasks,
-      pending: totalTasks - completedTasks,
-      taskList: allTaskNames.slice(0, 15),
-      completedList: completedNames.slice(0, 10),
-      pendingList: pendingNames.slice(0, 10)
+    habits: {
+      total: hbTasks,
+      completed: hbCompleted
     },
-    streak: count,
-    water: waterData,
+    vitality: vitalityScore,
     mood: latestMood,
-    recentJournals,
-    dailyFocus,
-    meditation: meditationData,
-    pomodoro: pomodoroData,
     sleepAvg,
-    totalCompletionDays,
-    aiPersonality: localStorage.getItem("aiPersonality") || "savage"
+    aiPersonality: appStorage.getItem("aiPersonality") || "savage",
+    globalMemory: appStorage.getItem("aiGlobalMemory") || ""
   };
 }
 
@@ -5536,18 +8138,18 @@ function attachFile(file) {
   const sizeLabel = document.getElementById("ai-attachment-size");
   const thumb = document.getElementById("ai-attach-thumb");
   const fileIcon = document.getElementById("ai-attach-file-icon");
-  
+
   if (file.size > 2 * 1024 * 1024) {
     alert("File is too large! Please select a file under 2MB.");
     const input = document.getElementById("ai-file-input");
-    if(input) input.value = '';
+    if (input) input.value = '';
     return;
   }
-  
+
   const isImage = file.type && file.type.startsWith("image/");
-  
+
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = function (e) {
     currentAttachedFileData = {
       name: file.name,
       mimeType: file.type || "text/plain",
@@ -5555,7 +8157,7 @@ function attachFile(file) {
     };
     if (nameLabel) nameLabel.textContent = file.name;
     if (sizeLabel) sizeLabel.textContent = formatFileSize(file.size);
-    
+
     // Show image thumbnail or file icon
     if (isImage && thumb) {
       thumb.src = e.target.result;
@@ -5571,7 +8173,7 @@ function attachFile(file) {
         fileIcon.style.display = "flex";
       }
     }
-    
+
     if (preview) preview.style.display = "block";
   };
   reader.readAsDataURL(file);
@@ -5652,7 +8254,29 @@ async function sendMessageToAnmolAI(userMessage) {
     }
 
     const data = await response.json();
-    const reply = data.reply || "Hmm... I got nothing. Try asking again! 🤷";
+    let reply = data.reply || "Hmm... I got nothing. Try asking again! 🤷";
+
+    // Extract [MEMORY_APPEND: fact] commands
+    const memoryMatchRegex = /\[MEMORY_APPEND:\s*(.*?)\]/gi;
+    let memoriesFound = [];
+    let match;
+    while ((match = memoryMatchRegex.exec(reply)) !== null) {
+      if (match[1]) memoriesFound.push(match[1].trim());
+    }
+
+    if (memoriesFound.length > 0) {
+      // Append to the local storage global memory block
+      let currentMemory = appStorage.getItem("aiGlobalMemory") || "";
+      memoriesFound.forEach(mem => {
+        if (!currentMemory.includes(mem)) {
+          currentMemory += `\n- ${mem}`;
+        }
+      });
+      appStorage.setItem("aiGlobalMemory", currentMemory.trim());
+      
+      // Clean the bot's response by stripping out the hidden commands
+      reply = reply.replace(memoryMatchRegex, "").trim();
+    }
 
     aiConversationHistory.push({ role: "model", text: reply });
     saveCurrentChat();
@@ -5667,7 +8291,12 @@ async function sendMessageToAnmolAI(userMessage) {
   }
 }
 
-function showAnmolAIPage() {
+async function showAnmolAIPage() {
+  // Prevent race conditions: Ensure app load (and IndexedDB fetch) is totally finished first
+  if (typeof _appInitPromise !== "undefined" && _appInitPromise) {
+    await _appInitPromise;
+  }
+
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   const aiPage = document.getElementById("anmol-ai-page");
   if (aiPage) {
@@ -5802,577 +8431,592 @@ document.addEventListener("DOMContentLoaded", initMeditationAmbient);
 
 // ==================== BIG GOAL UI & LOGIC ====================
 document.addEventListener("DOMContentLoaded", () => {
-    const display = document.getElementById("big-goal-display");
-    const input = document.getElementById("big-goal-input");
-    const editBtn = document.getElementById("edit-big-goal-btn");
-    const saveBtn = document.getElementById("save-big-goal-btn");
-    const editArea = document.getElementById("big-goal-edit-area");
-    
-    if (!display || !input || !editBtn || !saveBtn || !editArea) return;
+  const display = document.getElementById("big-goal-display");
+  const input = document.getElementById("big-goal-input");
+  const editBtn = document.getElementById("edit-big-goal-btn");
+  const saveBtn = document.getElementById("save-big-goal-btn");
+  const editArea = document.getElementById("big-goal-edit-area");
 
-    // Load initial
-    const savedGoal = localStorage.getItem("bigGoal");
-    if (savedGoal) {
-        display.textContent = savedGoal;
+  if (!display || !input || !editBtn || !saveBtn || !editArea) return;
+
+  // Load initial
+  const savedGoal = appStorage.getItem("bigGoal");
+  if (savedGoal) {
+    display.textContent = savedGoal;
+  }
+
+  editBtn.addEventListener("click", () => {
+    input.value = appStorage.getItem("bigGoal") || "";
+    display.classList.add("hidden");
+    display.style.display = "none";
+    editArea.classList.remove("hidden");
+    editArea.style.display = "flex";
+    input.focus();
+  });
+
+  const saveGoal = () => {
+    const val = input.value.trim();
+    if (val) {
+      appStorage.setItem("bigGoal", val);
+      display.textContent = val;
+    } else {
+      appStorage.removeItem("bigGoal");
+      display.textContent = "Set your ultimate big goal...";
+    }
+    editArea.classList.add("hidden");
+    editArea.style.display = "none";
+    display.classList.remove("hidden");
+    display.style.display = "block";
+  };
+
+  saveBtn.addEventListener("click", saveGoal);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") saveGoal();
+    if (e.key === "Escape") {
+      editArea.classList.add("hidden");
+      editArea.style.display = "none";
+      display.classList.remove("hidden");
+      display.style.display = "block";
+    }
+  });
+
+  // ==================== AI PERSONALITY SELECTOR ====================
+  const personalitySelectors = document.querySelectorAll("#ai-personality-selector .theme-btn");
+  const currentPersonality = appStorage.getItem("aiPersonality") || "savage";
+
+  personalitySelectors.forEach(btn => {
+    if (btn.dataset.personality === currentPersonality) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
     }
 
-    editBtn.addEventListener("click", () => {
-        input.value = localStorage.getItem("bigGoal") || "";
-        display.classList.add("hidden");
-        display.style.display = "none";
-        editArea.classList.remove("hidden");
-        editArea.style.display = "flex";
-        input.focus();
+    btn.addEventListener("click", () => {
+      personalitySelectors.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      appStorage.setItem("aiPersonality", btn.dataset.personality);
+      if (typeof showNotification === "function") {
+        showNotification(`🤖 AI Personality set to: ${btn.textContent.trim()}`);
+      }
     });
-
-    const saveGoal = () => {
-        const val = input.value.trim();
-        if (val) {
-            localStorage.setItem("bigGoal", val);
-            display.textContent = val;
-        } else {
-            localStorage.removeItem("bigGoal");
-            display.textContent = "Set your ultimate big goal...";
-        }
-        editArea.classList.add("hidden");
-        editArea.style.display = "none";
-        display.classList.remove("hidden");
-        display.style.display = "block";
-    };
-
-    saveBtn.addEventListener("click", saveGoal);
-    input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") saveGoal();
-        if (e.key === "Escape") {
-            editArea.classList.add("hidden");
-            editArea.style.display = "none";
-            display.classList.remove("hidden");
-            display.style.display = "block";
-        }
-    });
-
-    // ==================== AI PERSONALITY SELECTOR ====================
-    const personalitySelectors = document.querySelectorAll("#ai-personality-selector .theme-btn");
-    const currentPersonality = localStorage.getItem("aiPersonality") || "savage";
-    
-    personalitySelectors.forEach(btn => {
-        if (btn.dataset.personality === currentPersonality) {
-            btn.classList.add("active");
-        } else {
-            btn.classList.remove("active");
-        }
-        
-        btn.addEventListener("click", () => {
-            personalitySelectors.forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
-            localStorage.setItem("aiPersonality", btn.dataset.personality);
-            if (typeof showNotification === "function") {
-                showNotification(`🤖 AI Personality set to: ${btn.textContent.trim()}`);
-            }
-        });
-    });
+  });
 });
-// ==================== MEMORY MATRIX BRAIN GAME ====================
+
+// ==================== MEMORY MATRIX BRAIN GAME ====================
 document.addEventListener("DOMContentLoaded", () => {
-    const gridContainer = document.getElementById("matrix-grid-container");
-    const startBtn = document.getElementById("start-matrix-btn");
-    const levelDisplay = document.getElementById("matrix-level-display");
-    const scoreDisplay = document.getElementById("matrix-score-display");
-    const highscoreDisplay = document.getElementById("matrix-highscore-display");
-    const livesDisplay = document.getElementById("matrix-lives-display");
-    const feedbackText = document.getElementById("matrix-feedback");
+  const gridContainer = document.getElementById("matrix-grid-container");
+  const startBtn = document.getElementById("start-matrix-btn");
+  const levelDisplay = document.getElementById("matrix-level-display");
+  const scoreDisplay = document.getElementById("matrix-score-display");
+  const highscoreDisplay = document.getElementById("matrix-highscore-display");
+  const livesDisplay = document.getElementById("matrix-lives-display");
+  const feedbackText = document.getElementById("matrix-feedback");
 
-    if (!gridContainer || !startBtn) return;
+  if (!gridContainer || !startBtn) return;
 
-    let level = 1;
-    let score = 0;
-    let lives = 3;
-    let activePattern = [];
-    let userClicks = [];
-    let isAcceptingInput = false;
+  let level = 1;
+  let score = 0;
+  let lives = 3;
+  let activePattern = [];
+  let userClicks = [];
+  let isAcceptingInput = false;
 
-    // Load Highscore
-    const savedMatrixHigh = localStorage.getItem("matrixHighScore") || 0;
-    highscoreDisplay.textContent = savedMatrixHigh;
+  // Load Highscore
+  const savedMatrixHigh = appStorage.getItem("matrixHighScore") || 0;
+  highscoreDisplay.textContent = savedMatrixHigh;
 
-    // Difficulty scaling (Grid Size, Active Tiles)
-    const getLevelData = (lvl) => {
-        if (lvl <= 2) return { grid: 3, tiles: 3 + (lvl - 1) }; // 3x3, 3-4 tiles
-        if (lvl <= 5) return { grid: 4, tiles: 4 + (lvl - 3) }; // 4x4, 4-6 tiles
-        if (lvl <= 9) return { grid: 5, tiles: 5 + (lvl - 6) }; // 5x5, 5-8 tiles
-        return { grid: 6, tiles: Math.min(6 + (lvl - 10), 15) }; // 6x6 max 15 tiles
-    };
+  // Difficulty scaling (Grid Size, Active Tiles)
+  const getLevelData = (lvl) => {
+    if (lvl <= 2) return { grid: 3, tiles: 3 + (lvl - 1) }; // 3x3, 3-4 tiles
+    if (lvl <= 5) return { grid: 4, tiles: 4 + (lvl - 3) }; // 4x4, 4-6 tiles
+    if (lvl <= 9) return { grid: 5, tiles: 5 + (lvl - 6) }; // 5x5, 5-8 tiles
+    return { grid: 6, tiles: Math.min(6 + (lvl - 10), 15) }; // 6x6 max 15 tiles
+  };
 
-    const updateLivesDisplay = () => {
-        livesDisplay.textContent = "❤️".repeat(lives) + "🖤".repeat(3 - lives);
-    };
+  const updateLivesDisplay = () => {
+    livesDisplay.textContent = "❤️".repeat(lives) + "🖤".repeat(3 - lives);
+  };
 
-    const showFeedback = (text, type = "success") => {
-        feedbackText.textContent = text;
-        feedbackText.style.color = type === "success" ? "var(--primary)" : "#ff4757";
-        
-        feedbackText.style.transform = "translate(-50%, -50%) scale(1)";
-        feedbackText.style.opacity = "1";
-        
-        setTimeout(() => {
-            feedbackText.style.transform = "translate(-50%, -50%) scale(0)";
-            feedbackText.style.opacity = "0";
-        }, 1200);
-    };
+  const showFeedback = (text, type = "success") => {
+    feedbackText.textContent = text;
+    feedbackText.style.color = type === "success" ? "var(--primary)" : "#ff4757";
 
-    const generateGrid = (size) => {
-        gridContainer.innerHTML = "";
-        gridContainer.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
-        gridContainer.style.gridTemplateRows = `repeat(${size}, 1fr)`;
-        
-        for (let i = 0; i < size * size; i++) {
-            const tile = document.createElement("div");
-            tile.className = "matrix-tile";
-            tile.dataset.index = i;
-            tile.addEventListener("click", () => handleTileClick(i, tile));
-            gridContainer.appendChild(tile);
-        }
-    };
+    feedbackText.style.transform = "translate(-50%, -50%) scale(1)";
+    feedbackText.style.opacity = "1";
 
-    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    setTimeout(() => {
+      feedbackText.style.transform = "translate(-50%, -50%) scale(0)";
+      feedbackText.style.opacity = "0";
+    }, 1200);
+  };
 
-    const startLevel = async () => {
+  const generateGrid = (size) => {
+    gridContainer.innerHTML = "";
+    gridContainer.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+    gridContainer.style.gridTemplateRows = `repeat(${size}, 1fr)`;
+
+    for (let i = 0; i < size * size; i++) {
+      const tile = document.createElement("div");
+      tile.className = "matrix-tile";
+      tile.dataset.index = i;
+      tile.addEventListener("click", () => handleTileClick(i, tile));
+      gridContainer.appendChild(tile);
+    }
+  };
+
+  const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const startLevel = async () => {
+    isAcceptingInput = false;
+    userClicks = [];
+    levelDisplay.textContent = level;
+    scoreDisplay.textContent = score;
+    updateLivesDisplay();
+
+    const { grid, tiles } = getLevelData(level);
+    generateGrid(grid);
+
+    // Generate random pattern
+    activePattern = [];
+    const totalCells = grid * grid;
+    while (activePattern.length < tiles) {
+      const r = Math.floor(Math.random() * totalCells);
+      if (!activePattern.includes(r)) activePattern.push(r);
+    }
+
+    startBtn.disabled = true;
+    startBtn.style.opacity = "0.5";
+
+    await sleep(500); // small pause before showing
+
+    // Flash pattern
+    const allTiles = document.querySelectorAll(".matrix-tile");
+    activePattern.forEach(idx => {
+      allTiles[idx].classList.add("flash");
+    });
+
+    // Hide after 1.5 seconds (slightly less as it gets harder)
+    const memoryTime = Math.max(1500 - (level * 50), 600);
+    await sleep(memoryTime);
+
+    activePattern.forEach(idx => {
+      allTiles[idx].classList.remove("flash");
+    });
+
+    isAcceptingInput = true;
+  };
+
+  const handleTileClick = async (index, tileEl) => {
+    if (!isAcceptingInput) return;
+
+    // Prevent double clicking same tile
+    if (userClicks.includes(index)) return;
+
+    if (activePattern.includes(index)) {
+      // Correct click
+      tileEl.classList.add("correct");
+      userClicks.push(index);
+
+      // Win condition
+      if (userClicks.length === activePattern.length) {
         isAcceptingInput = false;
-        userClicks = [];
-        levelDisplay.textContent = level;
+        score += (level * 10);
         scoreDisplay.textContent = score;
-        updateLivesDisplay();
+        showFeedback("Level Up!");
 
-        const { grid, tiles } = getLevelData(level);
-        generateGrid(grid);
-
-        // Generate random pattern
-        activePattern = [];
-        const totalCells = grid * grid;
-        while(activePattern.length < tiles) {
-            const r = Math.floor(Math.random() * totalCells);
-            if(!activePattern.includes(r)) activePattern.push(r);
+        // Save Highscore mid-game if broken
+        const currentHigh = parseInt(appStorage.getItem("matrixHighScore") || 0);
+        if (score > currentHigh) {
+          appStorage.setItem("matrixHighScore", score);
+          highscoreDisplay.textContent = score;
         }
 
-        startBtn.disabled = true;
-        startBtn.style.opacity = "0.5";
+        level++;
+        await sleep(1500);
+        startLevel();
+      }
+    } else {
+      // Wrong click
+      tileEl.classList.add("wrong");
+      lives--;
+      updateLivesDisplay();
+      isAcceptingInput = false; // pause input during shake/feedback
 
-        await sleep(500); // small pause before showing
+      if (lives <= 0) {
+        // Game Over
+        showFeedback("Game Over!", "error");
 
-        // Flash pattern
+        // Reveal remaining
         const allTiles = document.querySelectorAll(".matrix-tile");
         activePattern.forEach(idx => {
-            allTiles[idx].classList.add("flash");
+          if (!userClicks.includes(idx)) allTiles[idx].classList.add("flash");
         });
 
-        // Hide after 1.5 seconds (slightly less as it gets harder)
-        const memoryTime = Math.max(1500 - (level * 50), 600);
-        await sleep(memoryTime);
+        startBtn.disabled = false;
+        startBtn.style.opacity = "1";
+        startBtn.textContent = "Try Again";
+      } else {
+        showFeedback("Missed!", "error");
+        const allTiles = document.querySelectorAll(".matrix-tile");
+        activePattern.forEach(idx => allTiles[idx].classList.add("flash")); // reveal
 
-        activePattern.forEach(idx => {
-            allTiles[idx].classList.remove("flash");
-        });
-
-        isAcceptingInput = true;
-    };
-
-    const handleTileClick = async (index, tileEl) => {
-        if (!isAcceptingInput) return;
-
-        // Prevent double clicking same tile
-        if (userClicks.includes(index)) return;
-
-        if (activePattern.includes(index)) {
-            // Correct click
-            tileEl.classList.add("correct");
-            userClicks.push(index);
-
-            // Win condition
-            if (userClicks.length === activePattern.length) {
-                isAcceptingInput = false;
-                score += (level * 10);
-                scoreDisplay.textContent = score;
-                showFeedback("Level Up!");
-                
-                // Save Highscore mid-game if broken
-                const currentHigh = parseInt(localStorage.getItem("matrixHighScore") || 0);
-                if (score > currentHigh) {
-                    localStorage.setItem("matrixHighScore", score);
-                    highscoreDisplay.textContent = score;
-                }
-
-                level++;
-                await sleep(1500);
-                startLevel();
-            }
-        } else {
-            // Wrong click
-            tileEl.classList.add("wrong");
-            lives--;
-            updateLivesDisplay();
-            isAcceptingInput = false; // pause input during shake/feedback
-
-            if (lives <= 0) {
-                // Game Over
-                showFeedback("Game Over!", "error");
-                
-                // Reveal remaining
-                const allTiles = document.querySelectorAll(".matrix-tile");
-                activePattern.forEach(idx => {
-                    if(!userClicks.includes(idx)) allTiles[idx].classList.add("flash");
-                });
-
-                startBtn.disabled = false;
-                startBtn.style.opacity = "1";
-                startBtn.textContent = "Try Again";
-            } else {
-                showFeedback("Missed!", "error");
-                const allTiles = document.querySelectorAll(".matrix-tile");
-                activePattern.forEach(idx => allTiles[idx].classList.add("flash")); // reveal
-                
-                await sleep(1500);
-                // Drop a level if failing, but stay at least level 1
-                level = Math.max(1, level - 1); 
-                startLevel();
-            }
-        }
-    };
-
-    startBtn.addEventListener("click", () => {
-        level = 1;
-        score = 0;
-        lives = 3;
-        startBtn.textContent = "Training...";
+        await sleep(1500);
+        // Drop a level if failing, but stay at least level 1
+        level = Math.max(1, level - 1);
         startLevel();
-    });
-
-    const splashOverlay = document.getElementById("matrix-splash-overlay");
-    const splashStartBtn = document.getElementById("splash-start-matrix-btn");
-    
-    if (splashStartBtn && splashOverlay) {
-        splashStartBtn.addEventListener("click", () => {
-            splashOverlay.style.opacity = "0";
-            setTimeout(() => {
-                splashOverlay.style.display = "none";
-                startBtn.click(); // triggers the main logic above
-            }, 400);
-        });
+      }
     }
+  };
+
+  startBtn.addEventListener("click", () => {
+    level = 1;
+    score = 0;
+    lives = 3;
+    startBtn.textContent = "Training...";
+    startLevel();
+  });
+
+  const splashOverlay = document.getElementById("matrix-splash-overlay");
+  const splashStartBtn = document.getElementById("splash-start-matrix-btn");
+
+  if (splashStartBtn && splashOverlay) {
+    splashStartBtn.addEventListener("click", () => {
+      splashOverlay.style.opacity = "0";
+      setTimeout(() => {
+        splashOverlay.style.display = "none";
+        startBtn.click(); // triggers the main logic above
+      }, 400);
+    });
+  }
 });
 // ==================== GAMES HUB NAVIGATION ====================
 document.addEventListener("DOMContentLoaded", () => {
-    const hubView = document.getElementById("games-hub-view");
-    const matrixView = document.getElementById("matrix-game-view");
-    const cbView = document.getElementById("stroop-game-view");
+  const hubView = document.getElementById("games-hub-view");
+  const matrixView = document.getElementById("matrix-game-view");
+  const cbView = document.getElementById("stroop-game-view");
+  const gameNavBar = document.querySelector(".nav-bar");
 
-    document.getElementById("card-memory-matrix")?.addEventListener("click", () => {
-        if(hubView) hubView.classList.add("hidden");
-        if(matrixView) matrixView.classList.remove("hidden");
-    });
-    document.getElementById("card-stroop")?.addEventListener("click", () => {
-        if(hubView) hubView.classList.add("hidden");
-        if(cbView) cbView.classList.remove("hidden");
-        resetStroopMenu(); // ensure it starts fresh
-    });
-    document.getElementById("back-to-hub-matrix")?.addEventListener("click", () => {
-        if(matrixView) matrixView.classList.add("hidden");
-        if(hubView) hubView.classList.remove("hidden");
-    });
-    document.getElementById("back-to-hub-stroop")?.addEventListener("click", () => {
-        if(cbView) cbView.classList.add("hidden");
-        if(hubView) hubView.classList.remove("hidden");
-        if(typeof endStroopGame === "function") endStroopGame(); // kill active timers
-    });
+  function hideGameNav() { 
+      if (gameNavBar) gameNavBar.style.display = "none"; 
+      document.body.classList.add("game-active");
+  }
+  function showGameNav() { 
+      if (gameNavBar) gameNavBar.style.display = ""; 
+      document.body.classList.remove("game-active");
+  }
+
+  document.getElementById("card-memory-matrix")?.addEventListener("click", () => {
+    if (hubView) hubView.classList.add("hidden");
+    if (matrixView) matrixView.classList.remove("hidden");
+    hideGameNav();
+  });
+  document.getElementById("card-stroop")?.addEventListener("click", () => {
+    if (hubView) hubView.classList.add("hidden");
+    if (cbView) cbView.classList.remove("hidden");
+    hideGameNav();
+    resetStroopMenu(); // ensure it starts fresh
+  });
+  document.getElementById("back-to-hub-matrix")?.addEventListener("click", () => {
+    if (matrixView) matrixView.classList.add("hidden");
+    if (hubView) hubView.classList.remove("hidden");
+    showGameNav();
+  });
+  document.getElementById("back-to-hub-stroop")?.addEventListener("click", () => {
+    if (cbView) cbView.classList.add("hidden");
+    if (hubView) hubView.classList.remove("hidden");
+    showGameNav();
+    if (typeof endStroopGame === "function") endStroopGame(); // kill active timers
+  });
 });
 
 // ==================== BRAIN CLATTER (STROOP TEST) ====================
 let stroopState = {
-    mode: "sprint", // "sprint" or "survival"
-    score: 0,
-    isActive: false,
-    timerInt: null,
-    timeLeft: 0,
-    survivalDropRate: 0.05, // 5% drop per correct
-    currentMaxTime: 3000,   // 3 seconds initially
-    survivalStartTime: 0,
-    rafId: null,
-    currentColor: "",
-    currentText: "",
-    stats: {
-        hsSprint: parseInt(localStorage.getItem("stroopHsSprint") || 0),
-        hsSurvival: parseInt(localStorage.getItem("stroopHsSurvival") || 0),
-    }
+  mode: "sprint", // "sprint" or "survival"
+  score: 0,
+  isActive: false,
+  timerInt: null,
+  timeLeft: 0,
+  survivalDropRate: 0.05, // 5% drop per correct
+  currentMaxTime: 3000,   // 3 seconds initially
+  survivalStartTime: 0,
+  rafId: null,
+  currentColor: "",
+  currentText: "",
+  stats: {
+    hsSprint: parseInt(appStorage.getItem("stroopHsSprint") || 0),
+    hsSurvival: parseInt(appStorage.getItem("stroopHsSurvival") || 0),
+  }
 };
 
 const STROOP_COLORS_BASE = [
-    { name: "RED", hex: "#ff4757" },
-    { name: "BLUE", hex: "#3498db" },
-    { name: "GREEN", hex: "#2ed573" },
-    { name: "YELLOW", hex: "#eccc68" }
+  { name: "RED", hex: "#ff4757" },
+  { name: "BLUE", hex: "#3498db" },
+  { name: "GREEN", hex: "#2ed573" },
+  { name: "YELLOW", hex: "#eccc68" }
 ];
 const STROOP_COLORS_TIER2 = [...STROOP_COLORS_BASE, { name: "PURPLE", hex: "#9b59b6" }, { name: "ORANGE", hex: "#e67e22" }];
 const STROOP_COLORS_TIER3 = [...STROOP_COLORS_TIER2, { name: "CYAN", hex: "#00cec9" }, { name: "PINK", hex: "#fd79a8" }];
 document.addEventListener("DOMContentLoaded", () => {
-    // Menu Init
-    const sprintHS = document.getElementById("stroop-hs-sprint");
-    const survivalHS = document.getElementById("stroop-hs-survival");
-    if(sprintHS) sprintHS.textContent = stroopState.stats.hsSprint;
-    if(survivalHS) survivalHS.textContent = stroopState.stats.hsSurvival;
+  // Menu Init
+  const sprintHS = document.getElementById("stroop-hs-sprint");
+  const survivalHS = document.getElementById("stroop-hs-survival");
+  if (sprintHS) sprintHS.textContent = stroopState.stats.hsSprint;
+  if (survivalHS) survivalHS.textContent = stroopState.stats.hsSurvival;
 
-    document.getElementById("btn-stroop-sprint")?.addEventListener("click", () => startStroop("sprint"));
-    document.getElementById("btn-stroop-survival")?.addEventListener("click", () => startStroop("survival"));
-    document.getElementById("stroop-play-again-btn")?.addEventListener("click", resetStroopMenu);
+  document.getElementById("btn-stroop-sprint")?.addEventListener("click", () => startStroop("sprint"));
+  document.getElementById("btn-stroop-survival")?.addEventListener("click", () => startStroop("survival"));
+  document.getElementById("stroop-play-again-btn")?.addEventListener("click", resetStroopMenu);
 
-    // Color Buttons
-    const btns = document.querySelectorAll(".stroop-btn");
-    btns.forEach(btn => {
-        btn.addEventListener("click", (e) => {
-            if (!stroopState.isActive) return;
-            const clickedColor = e.target.getAttribute("data-color");
-            checkStroopMatch(clickedColor);
-        });
+  // Color Buttons
+  const btns = document.querySelectorAll(".stroop-btn");
+  btns.forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      if (!stroopState.isActive) return;
+      const clickedColor = e.target.getAttribute("data-color");
+      checkStroopMatch(clickedColor);
     });
+  });
 });
 
 function resetStroopMenu() {
-    stroopState.isActive = false;
-    document.getElementById("stroop-end-modal")?.classList.add("hidden");
-    document.getElementById("stroop-play-area")?.classList.add("hidden");
-    document.getElementById("stroop-menu-area")?.classList.remove("hidden");
-    
-    // Update stats UI
-    const sprintHS = document.getElementById("stroop-hs-sprint");
-    const survivalHS = document.getElementById("stroop-hs-survival");
-    if(sprintHS) sprintHS.textContent = stroopState.stats.hsSprint;
-    if(survivalHS) survivalHS.textContent = stroopState.stats.hsSurvival;
+  stroopState.isActive = false;
+  document.getElementById("stroop-end-modal")?.classList.add("hidden");
+  document.getElementById("stroop-play-area")?.classList.add("hidden");
+  document.getElementById("stroop-menu-area")?.classList.remove("hidden");
+
+  // Update stats UI
+  const sprintHS = document.getElementById("stroop-hs-sprint");
+  const survivalHS = document.getElementById("stroop-hs-survival");
+  if (sprintHS) sprintHS.textContent = stroopState.stats.hsSprint;
+  if (survivalHS) survivalHS.textContent = stroopState.stats.hsSurvival;
 }
 
 function startStroop(mode) {
-    stroopState.mode = mode;
-    stroopState.score = 0;
-    stroopState.isActive = true;
-    
-    document.getElementById("stroop-score-display").textContent = "0";
-    document.getElementById("stroop-menu-area").classList.add("hidden");
-    document.getElementById("stroop-end-modal").classList.add("hidden");
-    document.getElementById("stroop-play-area").classList.remove("hidden");
-    document.getElementById("stroop-new-hs-label").classList.add("hidden");
+  stroopState.mode = mode;
+  stroopState.score = 0;
+  stroopState.isActive = true;
 
-    // Reset button colors
-    const btns = document.querySelectorAll(".stroop-btn");
-    btns.forEach(btn => {
-        btn.style.background = btn.getAttribute("data-color");
-        btn.style.color = "white";
-    });
+  document.getElementById("stroop-score-display").textContent = "0";
+  document.getElementById("stroop-menu-area").classList.add("hidden");
+  document.getElementById("stroop-end-modal").classList.add("hidden");
+  document.getElementById("stroop-play-area").classList.remove("hidden");
+  document.getElementById("stroop-new-hs-label").classList.add("hidden");
 
-    if (mode === "sprint") {
-        stroopState.timeLeft = 60;
-        document.getElementById("stroop-time-display").parentElement.style.display = "block";
-        document.getElementById("stroop-time-display").textContent = "60";
-        document.getElementById("stroop-timer-container").style.display = "none";
-        
-        stroopState.timerInt = setInterval(() => {
-            stroopState.timeLeft--;
-            document.getElementById("stroop-time-display").textContent = stroopState.timeLeft;
-            if (stroopState.timeLeft <= 0) {
-                endStroopGame("Time's Up! 🏁");
-            }
-        }, 1000);
-    } else {
-        // Survival
-        document.getElementById("stroop-time-display").parentElement.style.display = "none";
-        document.getElementById("stroop-timer-container").style.display = "block";
-        stroopState.currentMaxTime = 3000;
-        stroopState.survivalStartTime = performance.now();
-        startSurvivalLoop();
-    }
+  // Reset button colors
+  const btns = document.querySelectorAll(".stroop-btn");
+  btns.forEach(btn => {
+    btn.style.background = btn.getAttribute("data-color");
+    btn.style.color = "white";
+  });
 
-    renderNextStroopWord();
+  if (mode === "sprint") {
+    stroopState.timeLeft = 60;
+    document.getElementById("stroop-time-display").parentElement.style.display = "block";
+    document.getElementById("stroop-time-display").textContent = "60";
+    document.getElementById("stroop-timer-container").style.display = "none";
+
+    stroopState.timerInt = setInterval(() => {
+      stroopState.timeLeft--;
+      document.getElementById("stroop-time-display").textContent = stroopState.timeLeft;
+      if (stroopState.timeLeft <= 0) {
+        endStroopGame("Time's Up! 🏁");
+      }
+    }, 1000);
+  } else {
+    // Survival
+    document.getElementById("stroop-time-display").parentElement.style.display = "none";
+    document.getElementById("stroop-timer-container").style.display = "block";
+    stroopState.currentMaxTime = 3000;
+    stroopState.survivalStartTime = performance.now();
+    startSurvivalLoop();
+  }
+
+  renderNextStroopWord();
 }
 
 function renderNextStroopWord() {
-    let activeColors = STROOP_COLORS_BASE;
-    const btnContainer = document.querySelector(".stroop-buttons");
-    
-    // Scale Difficulty by unlocking colors and expanding the grid
-    if (stroopState.score >= 5 || (stroopState.mode === "survival" && stroopState.score >= 5)) {
-        activeColors = STROOP_COLORS_TIER2;
-    }
-    if (stroopState.score >= 10 || (stroopState.mode === "survival" && stroopState.score >= 10)) {
-        activeColors = STROOP_COLORS_TIER3;
-    }
+  let activeColors = STROOP_COLORS_BASE;
+  const btnContainer = document.querySelector(".stroop-buttons");
 
-    if (btnContainer) {
-        if (activeColors.length === 4) {
-             btnContainer.style.gridTemplateColumns = "1fr 1fr";
-             Array.from(btnContainer.children).forEach(btn => {
-                 if (STROOP_COLORS_BASE.some(c => c.name === btn.textContent)) btn.classList.remove("hidden");
-                 else btn.classList.add("hidden");
-             });
-        } else if (activeColors.length === 6) {
-             btnContainer.style.gridTemplateColumns = "repeat(3, 1fr)";
-             Array.from(btnContainer.children).forEach(btn => {
-                 if (STROOP_COLORS_TIER2.some(c => c.name === btn.textContent)) btn.classList.remove("hidden");
-                 else btn.classList.add("hidden");
-             });
-        } else {
-             btnContainer.style.gridTemplateColumns = "repeat(4, 1fr)";
-             Array.from(btnContainer.children).forEach(btn => btn.classList.remove("hidden"));
-        }
-    }
+  // Scale Difficulty by unlocking colors and expanding the grid
+  if (stroopState.score >= 5 || (stroopState.mode === "survival" && stroopState.score >= 5)) {
+    activeColors = STROOP_COLORS_TIER2;
+  }
+  if (stroopState.score >= 10 || (stroopState.mode === "survival" && stroopState.score >= 10)) {
+    activeColors = STROOP_COLORS_TIER3;
+  }
 
-    // 70% chance to mismatch color and text to force Stroop effect interference
-    const isMismatch = Math.random() < 0.7;
-    
-    const textObj = activeColors[Math.floor(Math.random() * activeColors.length)];
-    let colorObj = textObj;
-    
-    if (isMismatch) {
-        const otherColors = activeColors.filter(c => c.name !== textObj.name);
-        colorObj = otherColors[Math.floor(Math.random() * otherColors.length)];
+  if (btnContainer) {
+    if (activeColors.length === 4) {
+      btnContainer.style.gridTemplateColumns = "1fr 1fr";
+      Array.from(btnContainer.children).forEach(btn => {
+        if (STROOP_COLORS_BASE.some(c => c.name === btn.textContent)) btn.classList.remove("hidden");
+        else btn.classList.add("hidden");
+      });
+    } else if (activeColors.length === 6) {
+      btnContainer.style.gridTemplateColumns = "repeat(3, 1fr)";
+      Array.from(btnContainer.children).forEach(btn => {
+        if (STROOP_COLORS_TIER2.some(c => c.name === btn.textContent)) btn.classList.remove("hidden");
+        else btn.classList.add("hidden");
+      });
+    } else {
+      btnContainer.style.gridTemplateColumns = "repeat(4, 1fr)";
+      Array.from(btnContainer.children).forEach(btn => btn.classList.remove("hidden"));
     }
+  }
 
-    stroopState.currentText = textObj.name;
-    stroopState.currentColor = colorObj.hex;
+  // 70% chance to mismatch color and text to force Stroop effect interference
+  const isMismatch = Math.random() < 0.7;
 
-    const wordEl = document.getElementById("stroop-word");
-    if(!wordEl) return;
-    
-    wordEl.textContent = textObj.name;
-    wordEl.style.color = colorObj.hex;
-    
-    // Sprint Difficulty Upgrades
-    let transformStr = "scale(1)";
-    if (stroopState.mode === "sprint") {
-        if (stroopState.score >= 5) {
-            // Level 2: Tilt the word dynamically to mess with reading speed
-            const tilt = (Math.random() * 30 - 15) + "deg"; // -15 to 15 degrees
-            transformStr = `scale(1) rotate(${tilt})`;
-        }
-        if (stroopState.score >= 10) {
-            // Level 3: Shuffle the position of the color buttons to destroy muscle memory
-            const btnContainer = document.querySelector(".stroop-buttons");
-            if (btnContainer) {
-                for (let i = btnContainer.children.length; i >= 0; i--) {
-                    btnContainer.appendChild(btnContainer.children[Math.random() * i | 0]);
-                }
-            }
-        }
-        if (stroopState.score >= 15) {
-            // Level 4: Strip button background colors. They become uniform dark grey
-            const btns = document.querySelectorAll(".stroop-btn");
-            btns.forEach(btn => {
-                btn.style.background = "#2d3436";
-                btn.style.color = btn.getAttribute("data-color");
-            });
-        }
-        if (stroopState.score >= 20) {
-            // Level 5: Randomly completely flip the word upside down
-            if (Math.random() > 0.5) {
-                transformStr += " rotateX(180deg)";
-            }
-        }
+  const textObj = activeColors[Math.floor(Math.random() * activeColors.length)];
+  let colorObj = textObj;
+
+  if (isMismatch) {
+    const otherColors = activeColors.filter(c => c.name !== textObj.name);
+    colorObj = otherColors[Math.floor(Math.random() * otherColors.length)];
+  }
+
+  stroopState.currentText = textObj.name;
+  stroopState.currentColor = colorObj.hex;
+
+  const wordEl = document.getElementById("stroop-word");
+  if (!wordEl) return;
+
+  wordEl.textContent = textObj.name;
+  wordEl.style.setProperty("color", colorObj.hex, "important");
+
+  // Sprint Difficulty Upgrades
+  let transformStr = "scale(1)";
+  if (stroopState.mode === "sprint") {
+    if (stroopState.score >= 5) {
+      // Level 2: Tilt the word dynamically to mess with reading speed
+      const tilt = (Math.random() * 30 - 15) + "deg"; // -15 to 15 degrees
+      transformStr = `scale(1) rotate(${tilt})`;
     }
-    
-    // Mini pop animation
-    wordEl.style.transform = "scale(0.8)";
-    setTimeout(() => { wordEl.style.transform = transformStr; }, 50);
-
-    // Reset Survival timer
-    if (stroopState.mode === "survival") {
-        stroopState.survivalStartTime = performance.now();
+    if (stroopState.score >= 10) {
+      // Level 3: Shuffle the position of the color buttons to destroy muscle memory
+      const btnContainer = document.querySelector(".stroop-buttons");
+      if (btnContainer) {
+        for (let i = btnContainer.children.length; i >= 0; i--) {
+          btnContainer.appendChild(btnContainer.children[Math.random() * i | 0]);
+        }
+      }
     }
+    if (stroopState.score >= 15) {
+      // Level 4: Strip button background colors. They become uniform dark grey
+      const btns = document.querySelectorAll(".stroop-btn");
+      btns.forEach(btn => {
+        btn.style.setProperty("background", "#2d3436", "important");
+        btn.style.setProperty("color", btn.getAttribute("data-color"), "important");
+      });
+    }
+    if (stroopState.score >= 20) {
+      // Level 5: Randomly completely flip the word upside down
+      if (Math.random() > 0.5) {
+        transformStr += " rotateX(180deg)";
+      }
+    }
+  }
+
+  // Mini pop animation
+  wordEl.style.transform = "scale(0.8)";
+  setTimeout(() => { wordEl.style.transform = transformStr; }, 50);
+
+  // Reset Survival timer
+  if (stroopState.mode === "survival") {
+    stroopState.survivalStartTime = performance.now();
+  }
 }
 
 function checkStroopMatch(clickedHex) {
-    if (!stroopState.isActive) return;
+  if (!stroopState.isActive) return;
 
-    if (clickedHex === stroopState.currentColor) {
-        // Correct guess
-        stroopState.score++;
-        document.getElementById("stroop-score-display").textContent = stroopState.score;
-        
-        if (stroopState.mode === "survival") {
-            // Drop max time by 5% but floor it at 800ms to keep it humanly possible
-            stroopState.currentMaxTime = Math.max(800, stroopState.currentMaxTime * (1 - stroopState.survivalDropRate));
-        }
-        renderNextStroopWord();
-    } else {
-        // Wrong guess
+  if (clickedHex === stroopState.currentColor) {
+    // Correct guess
+    stroopState.score++;
+    document.getElementById("stroop-score-display").textContent = stroopState.score;
 
-        // Flash screen red briefly to indicate error
-        const container = document.querySelector(".stroop-game-container");
-        if(container) {
-            container.style.boxShadow = "inset 0 0 50px rgba(255, 71, 87, 0.5)";
-            setTimeout(() => { container.style.boxShadow = ""; }, 200);
-        }
-        
-        // Instant Death on wrong tap for BOTH modes
-        endStroopGame("Wrong Color! ❌");
+    if (stroopState.mode === "survival") {
+      // Drop max time by 5% but floor it at 800ms to keep it humanly possible
+      stroopState.currentMaxTime = Math.max(800, stroopState.currentMaxTime * (1 - stroopState.survivalDropRate));
     }
+    renderNextStroopWord();
+  } else {
+    // Wrong guess
+
+    // Flash screen red briefly to indicate error
+    const container = document.querySelector(".stroop-game-container");
+    if (container) {
+      container.style.boxShadow = "inset 0 0 50px rgba(255, 71, 87, 0.5)";
+      setTimeout(() => { container.style.boxShadow = ""; }, 200);
+    }
+
+    // Instant Death on wrong tap for BOTH modes
+    endStroopGame("Wrong Color! ❌");
+  }
 }
 
 function startSurvivalLoop() {
-    function tick(now) {
-        if (!stroopState.isActive || stroopState.mode !== "survival") return;
-        
-        const elapsed = now - stroopState.survivalStartTime;
-        const remainingStrpt = Math.max(0, 1 - (elapsed / stroopState.currentMaxTime));
-        const timerBar = document.getElementById("stroop-timer-bar");
-        
-        if(timerBar) {
-            timerBar.style.width = `${remainingStrpt * 100}%`;
-        }
+  function tick(now) {
+    if (!stroopState.isActive || stroopState.mode !== "survival") return;
 
-        if (remainingStrpt <= 0) {
-             // Time ran out
-            endStroopGame("Time's Up! 🏁");
-            return;
-        }
-        
-        stroopState.rafId = requestAnimationFrame(tick);
+    const elapsed = now - stroopState.survivalStartTime;
+    const remainingStrpt = Math.max(0, 1 - (elapsed / stroopState.currentMaxTime));
+    const timerBar = document.getElementById("stroop-timer-bar");
+
+    if (timerBar) {
+      timerBar.style.width = `${remainingStrpt * 100}%`;
     }
+
+    if (remainingStrpt <= 0) {
+      // Time ran out
+      endStroopGame("Time's Up! 🏁");
+      return;
+    }
+
     stroopState.rafId = requestAnimationFrame(tick);
+  }
+  stroopState.rafId = requestAnimationFrame(tick);
 }
 
 function endStroopGame(reason = "Time's Up! 🏁") {
-    stroopState.isActive = false;
-    clearInterval(stroopState.timerInt);
-    cancelAnimationFrame(stroopState.rafId);
-    
-    // Update End Modal Title
-    const titleEl = document.getElementById("stroop-end-title");
-    if(titleEl) titleEl.textContent = reason;
+  stroopState.isActive = false;
+  clearInterval(stroopState.timerInt);
+  cancelAnimationFrame(stroopState.rafId);
 
-    // Check High Scores
-    let isNewHS = false;
-    if (stroopState.mode === "sprint") {
-        if (stroopState.score > stroopState.stats.hsSprint) {
-            stroopState.stats.hsSprint = stroopState.score;
-            localStorage.setItem("stroopHsSprint", stroopState.score);
-            isNewHS = true;
-        }
+  // Update End Modal Title
+  const titleEl = document.getElementById("stroop-end-title");
+  if (titleEl) titleEl.textContent = reason;
+
+  // Check High Scores
+  let isNewHS = false;
+  if (stroopState.mode === "sprint") {
+    if (stroopState.score > stroopState.stats.hsSprint) {
+      stroopState.stats.hsSprint = stroopState.score;
+      appStorage.setItem("stroopHsSprint", stroopState.score);
+      isNewHS = true;
+    }
+  } else {
+    if (stroopState.score > stroopState.stats.hsSurvival) {
+      stroopState.stats.hsSurvival = stroopState.score;
+      appStorage.setItem("stroopHsSurvival", stroopState.score);
+      isNewHS = true;
+    }
+  }
+
+  const finalScoreDisplay = document.getElementById("stroop-final-score");
+  if (finalScoreDisplay) finalScoreDisplay.textContent = stroopState.score;
+
+  const hsLabel = document.getElementById("stroop-new-hs-label");
+  if (hsLabel) {
+    if (isNewHS && stroopState.score > 0) {
+      hsLabel.classList.remove("hidden");
     } else {
-        if (stroopState.score > stroopState.stats.hsSurvival) {
-            stroopState.stats.hsSurvival = stroopState.score;
-            localStorage.setItem("stroopHsSurvival", stroopState.score);
-            isNewHS = true;
-        }
+      hsLabel.classList.add("hidden");
     }
+  }
 
-    const finalScoreDisplay = document.getElementById("stroop-final-score");
-    if(finalScoreDisplay) finalScoreDisplay.textContent = stroopState.score;
-    
-    const hsLabel = document.getElementById("stroop-new-hs-label");
-    if (hsLabel) {
-        if (isNewHS && stroopState.score > 0) {
-            hsLabel.classList.remove("hidden");
-        } else {
-            hsLabel.classList.add("hidden");
-        }
-    }
-
-    document.getElementById("stroop-end-modal")?.classList.remove("hidden");
+  document.getElementById("stroop-end-modal")?.classList.remove("hidden");
 }
 
 // End of Stroop
@@ -6382,248 +9026,252 @@ function endStroopGame(reason = "Time's Up! 🏁") {
 ========================================================================= */
 
 const tugState = {
-    isActive: false,
-    level: 1,
-    streak: 0,
-    ringPosition: 50, // 50 is center, >90 AI wins, <=10 player pushed back
-    currentEq: { str: "", ans: 0 },
-    playerInput: "",
-    aiTimeout: null,
-    hsStreak: parseInt(localStorage.getItem("tugHsStreak") || 0),
-    hsLevel: parseInt(localStorage.getItem("tugHsLevel") || 1)
+  isActive: false,
+  level: 1,
+  streak: 0,
+  ringPosition: 50, // 50 is center, >90 AI wins, <=10 player pushed back
+  currentEq: { str: "", ans: 0 },
+  playerInput: "",
+  aiTimeout: null,
+  hsStreak: parseInt(appStorage.getItem("tugHsStreak") || 0),
+  hsLevel: parseInt(appStorage.getItem("tugHsLevel") || 1)
 };
 
 function initTugOfWar() {
-    const hsDisplay = document.getElementById("tug-hs-streak");
-    if(hsDisplay) hsDisplay.textContent = tugState.hsStreak;
-    const hsLvlDisplay = document.getElementById("tug-hs-level");
-    if(hsLvlDisplay) hsLvlDisplay.textContent = tugState.hsLevel;
+  const hsDisplay = document.getElementById("tug-hs-streak");
+  if (hsDisplay) hsDisplay.textContent = tugState.hsStreak;
+  const hsLvlDisplay = document.getElementById("tug-hs-level");
+  if (hsLvlDisplay) hsLvlDisplay.textContent = tugState.hsLevel;
 
-    // Load saved avatars
-    const savedPlayer = localStorage.getItem("tugPlayerAvatar");
-    const savedAi = localStorage.getItem("tugAiAvatar");
-    if(savedPlayer) {
-        const pSelect = document.getElementById("tug-player-select");
-        if(pSelect) pSelect.value = savedPlayer;
-    }
-    if(savedAi) {
-        const aSelect = document.getElementById("tug-ai-select");
-        if(aSelect) aSelect.value = savedAi;
-    }
+  // Load saved avatars
+  const savedPlayer = appStorage.getItem("tugPlayerAvatar");
+  const savedAi = appStorage.getItem("tugAiAvatar");
+  if (savedPlayer) {
+    const pSelect = document.getElementById("tug-player-select");
+    if (pSelect) pSelect.value = savedPlayer;
+  }
+  if (savedAi) {
+    const aSelect = document.getElementById("tug-ai-select");
+    if (aSelect) aSelect.value = savedAi;
+  }
 
-    document.getElementById("card-tug")?.addEventListener("click", () => {
-        document.getElementById("games-hub-view").classList.add("hidden");
-        document.getElementById("tug-game-view").classList.remove("hidden");
-    });
-    
-    document.getElementById("back-to-hub-tug")?.addEventListener("click", () => {
-        document.getElementById("tug-game-view").classList.add("hidden");
-        document.getElementById("games-hub-view").classList.remove("hidden");
-        if(tugState.isActive) endTugGame();
-    });
+  document.getElementById("card-tug")?.addEventListener("click", () => {
+    document.getElementById("games-hub-view").classList.add("hidden");
+    document.getElementById("tug-game-view").classList.remove("hidden");
+    document.body.classList.add("game-active");
+    const nb = document.querySelector(".nav-bar"); if (nb) nb.style.display = "none";
+  });
 
-    document.getElementById("btn-tug-start")?.addEventListener("click", startTugGame);
-    document.getElementById("tug-play-again-btn")?.addEventListener("click", () => {
-        document.getElementById("tug-end-modal").classList.add("hidden");
-        startTugGame();
-    });
+  document.getElementById("back-to-hub-tug")?.addEventListener("click", () => {
+    document.getElementById("tug-game-view").classList.add("hidden");
+    document.getElementById("games-hub-view").classList.remove("hidden");
+    document.body.classList.remove("game-active");
+    const nb = document.querySelector(".nav-bar"); if (nb) nb.style.display = "";
+    if (tugState.isActive) endTugGame();
+  });
 
-    // Numpad Controls
-    document.querySelectorAll(".tug-num-btn").forEach(btn => {
-        btn.addEventListener("click", (e) => {
-            if (!tugState.isActive) return;
-            const action = e.target.getAttribute("data-action");
-            if (action === "clear") {
-                tugState.playerInput = "";
-                updateTugInputDisplay();
-            } else if (action === "submit") {
-                checkTugAnswer();
-            } else {
-                if (tugState.playerInput.length < 4) {
-                    tugState.playerInput += e.target.textContent;
-                    updateTugInputDisplay();
-                }
-            }
-        });
-    });
+  document.getElementById("btn-tug-start")?.addEventListener("click", startTugGame);
+  document.getElementById("tug-play-again-btn")?.addEventListener("click", () => {
+    document.getElementById("tug-end-modal").classList.add("hidden");
+    startTugGame();
+  });
 
-    // Keyboard support
-    document.addEventListener("keydown", (e) => {
-        if (!tugState.isActive) return;
-        if (e.key >= "0" && e.key <= "9") {
-            if (tugState.playerInput.length < 4) tugState.playerInput += e.key;
-            updateTugInputDisplay();
-        } else if (e.key === "Backspace") {
-            tugState.playerInput = tugState.playerInput.slice(0, -1);
-            updateTugInputDisplay();
-        } else if (e.key === "Enter") {
-            checkTugAnswer();
-        } else if (e.key === "Escape" || e.key.toLowerCase() === "c") {
-            tugState.playerInput = "";
-            updateTugInputDisplay();
+  // Numpad Controls
+  document.querySelectorAll(".tug-num-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      if (!tugState.isActive) return;
+      const action = e.target.getAttribute("data-action");
+      if (action === "clear") {
+        tugState.playerInput = "";
+        updateTugInputDisplay();
+      } else if (action === "submit") {
+        checkTugAnswer();
+      } else {
+        if (tugState.playerInput.length < 4) {
+          tugState.playerInput += e.target.textContent;
+          updateTugInputDisplay();
         }
+      }
     });
+  });
+
+  // Keyboard support
+  document.addEventListener("keydown", (e) => {
+    if (!tugState.isActive) return;
+    if (e.key >= "0" && e.key <= "9") {
+      if (tugState.playerInput.length < 4) tugState.playerInput += e.key;
+      updateTugInputDisplay();
+    } else if (e.key === "Backspace") {
+      tugState.playerInput = tugState.playerInput.slice(0, -1);
+      updateTugInputDisplay();
+    } else if (e.key === "Enter") {
+      checkTugAnswer();
+    } else if (e.key === "Escape" || e.key.toLowerCase() === "c") {
+      tugState.playerInput = "";
+      updateTugInputDisplay();
+    }
+  });
 }
 
 function startTugGame() {
-    tugState.isActive = true;
-    tugState.level = 1;
-    tugState.streak = 0;
-    tugState.ringPosition = 50;
-    tugState.playerInput = "";
-    
-    // Apply chosen avatars
-    const playerEmoji = document.getElementById("tug-player-select")?.value || "🙎‍♂️";
-    const aiEmoji = document.getElementById("tug-ai-select")?.value || "🤖";
-    
-    const pAv = document.getElementById("tug-player-avatar");
-    if(pAv) pAv.textContent = playerEmoji;
-    
-    const aAv = document.getElementById("tug-ai-avatar");
-    if(aAv) aAv.textContent = aiEmoji;
+  tugState.isActive = true;
+  tugState.level = 1;
+  tugState.streak = 0;
+  tugState.ringPosition = 50;
+  tugState.playerInput = "";
 
-    localStorage.setItem("tugPlayerAvatar", playerEmoji);
-    localStorage.setItem("tugAiAvatar", aiEmoji);
-    
-    document.getElementById("tug-level-display").textContent = "1";
-    document.getElementById("tug-streak-display").textContent = "0";
-    
-    document.getElementById("tug-menu-area").classList.add("hidden");
-    document.getElementById("tug-end-modal").classList.add("hidden");
-    document.getElementById("tug-play-area").classList.remove("hidden");
-    
-    updateTugRing();
-    updateTugInputDisplay();
-    nextTugRound();
+  // Apply chosen avatars
+  const playerEmoji = document.getElementById("tug-player-select")?.value || "🙎‍♂️";
+  const aiEmoji = document.getElementById("tug-ai-select")?.value || "🤖";
+
+  const pAv = document.getElementById("tug-player-avatar");
+  if (pAv) pAv.textContent = playerEmoji;
+
+  const aAv = document.getElementById("tug-ai-avatar");
+  if (aAv) aAv.textContent = aiEmoji;
+
+  appStorage.setItem("tugPlayerAvatar", playerEmoji);
+  appStorage.setItem("tugAiAvatar", aiEmoji);
+
+  document.getElementById("tug-level-display").textContent = "1";
+  document.getElementById("tug-streak-display").textContent = "0";
+
+  document.getElementById("tug-menu-area").classList.add("hidden");
+  document.getElementById("tug-end-modal").classList.add("hidden");
+  document.getElementById("tug-play-area").classList.remove("hidden");
+
+  updateTugRing();
+  updateTugInputDisplay();
+  nextTugRound();
 }
 
 function updateTugInputDisplay() {
-    const el = document.getElementById("tug-answer-input");
-    if(el) el.textContent = tugState.playerInput;
+  const el = document.getElementById("tug-answer-input");
+  if (el) el.textContent = tugState.playerInput;
 }
 
 function updateTugRing() {
-    const knot = document.getElementById("tug-knot");
-    if(knot) {
-        knot.style.left = `${tugState.ringPosition}%`;
-    }
+  const knot = document.getElementById("tug-knot");
+  if (knot) {
+    knot.style.left = `${tugState.ringPosition}%`;
+  }
 }
 
 function nextTugRound() {
-    let minT = 1, maxT = 10, ops = ["+"];
-    if (tugState.level >= 2) { maxT = 20; ops = ["+", "-"]; }
-    if (tugState.level >= 4) { minT = 5; maxT = 40; }
-    if (tugState.level >= 6) { ops = ["+", "-", "*"]; maxT = 12; }
-    if (tugState.level >= 10) { minT = 10; maxT = 100; ops = ["+", "-"]; }
-    // Very hard scaling
-    if (tugState.level >= 20) { minT = 20; maxT = 200; ops = ["*", "-", "+"]; }
-    
-    const op = ops[Math.floor(Math.random() * ops.length)];
-    let n1 = Math.floor(Math.random() * (maxT - minT)) + minT;
-    let n2 = Math.floor(Math.random() * (maxT - minT)) + minT;
-    
-    // Prevent negatives
-    if (op === "-" && n1 < n2) [n1, n2] = [n2, n1];
-    
-    let ans = 0;
-    if (op === "+") ans = n1 + n2;
-    else if (op === "-") ans = n1 - n2;
-    else if (op === "*") ans = n1 * n2;
-    
-    tugState.currentEq = { str: `${n1} ${op} ${n2}`, ans };
-    document.getElementById("tug-equation").textContent = tugState.currentEq.str;
-    
-    tugState.playerInput = "";
-    updateTugInputDisplay();
-    
-    clearTimeout(tugState.aiTimeout);
-    
-    // AI speed calculation (becomes brutal quickly)
-    let aiBaseSpeed = Math.max(1200, 4500 - (tugState.level * 300));
-    let aiRandomSpeed = aiBaseSpeed * (0.8 + Math.random() * 0.4);
-    
-    tugState.aiTimeout = setTimeout(() => {
-        handleAiPull();
-    }, aiRandomSpeed);
+  let minT = 1, maxT = 10, ops = ["+"];
+  if (tugState.level >= 2) { maxT = 20; ops = ["+", "-"]; }
+  if (tugState.level >= 4) { minT = 5; maxT = 40; }
+  if (tugState.level >= 6) { ops = ["+", "-", "*"]; maxT = 12; }
+  if (tugState.level >= 10) { minT = 10; maxT = 100; ops = ["+", "-"]; }
+  // Very hard scaling
+  if (tugState.level >= 20) { minT = 20; maxT = 200; ops = ["*", "-", "+"]; }
+
+  const op = ops[Math.floor(Math.random() * ops.length)];
+  let n1 = Math.floor(Math.random() * (maxT - minT)) + minT;
+  let n2 = Math.floor(Math.random() * (maxT - minT)) + minT;
+
+  // Prevent negatives
+  if (op === "-" && n1 < n2) [n1, n2] = [n2, n1];
+
+  let ans = 0;
+  if (op === "+") ans = n1 + n2;
+  else if (op === "-") ans = n1 - n2;
+  else if (op === "*") ans = n1 * n2;
+
+  tugState.currentEq = { str: `${n1} ${op} ${n2}`, ans };
+  document.getElementById("tug-equation").textContent = tugState.currentEq.str;
+
+  tugState.playerInput = "";
+  updateTugInputDisplay();
+
+  clearTimeout(tugState.aiTimeout);
+
+  // AI speed calculation (becomes brutal quickly)
+  let aiBaseSpeed = Math.max(1200, 4500 - (tugState.level * 300));
+  let aiRandomSpeed = aiBaseSpeed * (0.8 + Math.random() * 0.4);
+
+  tugState.aiTimeout = setTimeout(() => {
+    handleAiPull();
+  }, aiRandomSpeed);
 }
 
 function handleAiPull() {
-    if (!tugState.isActive) return;
-    tugState.ringPosition += 15; // AI yanks the rope
-    
-    const eqCont = document.getElementById("tug-equation-container");
-    if (eqCont) {
-        eqCont.style.transform = "translateX(20px)";
-        setTimeout(() => { eqCont.style.transform = ""; }, 200);
-    }
-    
-    // Force player input wipe to disorient
-    tugState.playerInput = "";
-    updateTugInputDisplay();
+  if (!tugState.isActive) return;
+  tugState.ringPosition += 15; // AI yanks the rope
 
-    checkTugWinState();
-    if (tugState.isActive) nextTugRound();
+  const eqCont = document.getElementById("tug-equation-container");
+  if (eqCont) {
+    eqCont.style.transform = "translateX(20px)";
+    setTimeout(() => { eqCont.style.transform = ""; }, 200);
+  }
+
+  // Force player input wipe to disorient
+  tugState.playerInput = "";
+  updateTugInputDisplay();
+
+  checkTugWinState();
+  if (tugState.isActive) nextTugRound();
 }
 
 function checkTugAnswer() {
-    const playerAns = parseInt(tugState.playerInput);
-    if (isNaN(playerAns)) return;
-    
-    if (playerAns === tugState.currentEq.ans) {
-        // Player wins the pull
-        clearTimeout(tugState.aiTimeout);
-        tugState.ringPosition -= 15;
-        tugState.streak++;
-        
-        if (tugState.streak % 3 === 0) tugState.level++;
-        
-        document.getElementById("tug-streak-display").textContent = tugState.streak;
-        document.getElementById("tug-level-display").textContent = tugState.level;
-        
-        const eqCont = document.getElementById("tug-equation-container");
-        if (eqCont) {
-            eqCont.style.transform = "scale(1.1) translateX(-20px)";
-            setTimeout(() => { eqCont.style.transform = ""; }, 200);
-        }
+  const playerAns = parseInt(tugState.playerInput);
+  if (isNaN(playerAns)) return;
 
-        checkTugWinState();
-        if (tugState.isActive) nextTugRound();
-    } else {
-        // Wrong answer, immediate AI punishment pull
-        clearTimeout(tugState.aiTimeout);
-        handleAiPull();
+  if (playerAns === tugState.currentEq.ans) {
+    // Player wins the pull
+    clearTimeout(tugState.aiTimeout);
+    tugState.ringPosition -= 15;
+    tugState.streak++;
+
+    if (tugState.streak % 3 === 0) tugState.level++;
+
+    document.getElementById("tug-streak-display").textContent = tugState.streak;
+    document.getElementById("tug-level-display").textContent = tugState.level;
+
+    const eqCont = document.getElementById("tug-equation-container");
+    if (eqCont) {
+      eqCont.style.transform = "scale(1.1) translateX(-20px)";
+      setTimeout(() => { eqCont.style.transform = ""; }, 200);
     }
+
+    checkTugWinState();
+    if (tugState.isActive) nextTugRound();
+  } else {
+    // Wrong answer, immediate AI punishment pull
+    clearTimeout(tugState.aiTimeout);
+    handleAiPull();
+  }
 }
 
 function checkTugWinState() {
-    // If player pushes it past 10%, we clamp it there to create endless survival
-    tugState.ringPosition = Math.max(10, Math.min(100, tugState.ringPosition));
-    updateTugRing();
-    
-    // If AI pulls it to 90%, it's game over
-    if (tugState.ringPosition >= 90) {
-        endTugGame();
-    }
+  // If player pushes it past 10%, we clamp it there to create endless survival
+  tugState.ringPosition = Math.max(10, Math.min(100, tugState.ringPosition));
+  updateTugRing();
+
+  // If AI pulls it to 90%, it's game over
+  if (tugState.ringPosition >= 90) {
+    endTugGame();
+  }
 }
 
 function endTugGame() {
-    tugState.isActive = false;
-    clearTimeout(tugState.aiTimeout);
-    
-    if (tugState.streak > tugState.hsStreak) {
-        tugState.hsStreak = tugState.streak;
-        localStorage.setItem("tugHsStreak", tugState.hsStreak);
-        document.getElementById("tug-hs-streak").textContent = tugState.hsStreak;
-    }
-    if (tugState.level > tugState.hsLevel) {
-        tugState.hsLevel = tugState.level;
-        localStorage.setItem("tugHsLevel", tugState.hsLevel);
-        const lDisp = document.getElementById("tug-hs-level");
-        if(lDisp) lDisp.textContent = tugState.hsLevel;
-    }
-    
-    document.getElementById("tug-final-level").textContent = tugState.level;
-    document.getElementById("tug-end-modal").classList.remove("hidden");
+  tugState.isActive = false;
+  clearTimeout(tugState.aiTimeout);
+
+  if (tugState.streak > tugState.hsStreak) {
+    tugState.hsStreak = tugState.streak;
+    appStorage.setItem("tugHsStreak", tugState.hsStreak);
+    document.getElementById("tug-hs-streak").textContent = tugState.hsStreak;
+  }
+  if (tugState.level > tugState.hsLevel) {
+    tugState.hsLevel = tugState.level;
+    appStorage.setItem("tugHsLevel", tugState.hsLevel);
+    const lDisp = document.getElementById("tug-hs-level");
+    if (lDisp) lDisp.textContent = tugState.hsLevel;
+  }
+
+  document.getElementById("tug-final-level").textContent = tugState.level;
+  document.getElementById("tug-end-modal").classList.remove("hidden");
 }
 
 document.addEventListener("DOMContentLoaded", initTugOfWar);
@@ -6631,3 +9279,760 @@ document.addEventListener("DOMContentLoaded", initTugOfWar);
 // End of file
 
 
+document.addEventListener("DOMContentLoaded", () => {
+  const taskCard = document.querySelector(".bloom-tasks-card");
+  const taskTitle = document.querySelector(".bloom-tasks-card .bloom-card-title");
+
+  function setTaskTextExpanded(expanded) {
+    const spans = taskCard.querySelectorAll("#task li span.task-text, #task li span[style]");
+    spans.forEach(span => {
+      // Skip emoji/tag/priority badge spans
+      if (span.classList.contains('task-emoji') || span.classList.contains('task-tag') || span.classList.contains('task-priority-badge') || span.classList.contains('task-select-cb')) return;
+      
+      if (expanded) {
+        // Must use setProperty with 'important' to beat CSS !important rules
+        span.style.setProperty('white-space', 'normal', 'important');
+        span.style.setProperty('overflow', 'visible', 'important');
+        span.style.setProperty('text-overflow', 'unset', 'important');
+        span.style.setProperty('word-break', 'break-word', 'important');
+        span.style.setProperty('display', 'block', 'important');
+        span.style.setProperty('height', 'auto', 'important');
+      } else {
+        span.style.setProperty('white-space', 'nowrap', 'important');
+        span.style.setProperty('overflow', 'hidden', 'important');
+        span.style.setProperty('text-overflow', 'ellipsis', 'important');
+        span.style.removeProperty('word-break');
+        span.style.setProperty('display', 'block', 'important');
+      }
+    });
+  }
+
+  if (taskCard && taskTitle) {
+    taskCard.addEventListener("click", (e) => {
+      if (!taskCard.classList.contains("expanded")) {
+        taskCard.classList.add("expanded");
+        setTaskTextExpanded(true);
+      }
+    });
+
+    taskTitle.addEventListener("click", (e) => {
+      if (taskCard.classList.contains("expanded")) {
+        taskCard.classList.remove("expanded");
+        setTaskTextExpanded(false);
+        e.stopPropagation();
+      }
+    });
+  }
+});
+document.addEventListener("DOMContentLoaded", () => {
+  const backBtn = document.getElementById("tasks-back-btn");
+  const taskCard = document.querySelector(".bloom-tasks-card");
+
+  function setTaskTextExpanded(expanded) {
+    const spans = taskCard.querySelectorAll("#task li span.task-text, #task li span[style]");
+    spans.forEach(span => {
+      if (span.classList.contains('task-emoji') || span.classList.contains('task-tag') || span.classList.contains('task-priority-badge') || span.classList.contains('task-select-cb')) return;
+      
+      if (expanded) {
+        span.style.setProperty('white-space', 'normal', 'important');
+        span.style.setProperty('overflow', 'visible', 'important');
+        span.style.setProperty('text-overflow', 'unset', 'important');
+        span.style.setProperty('word-break', 'break-word', 'important');
+        span.style.setProperty('display', 'block', 'important');
+        span.style.setProperty('height', 'auto', 'important');
+      } else {
+        span.style.setProperty('white-space', 'nowrap', 'important');
+        span.style.setProperty('overflow', 'hidden', 'important');
+        span.style.setProperty('text-overflow', 'ellipsis', 'important');
+        span.style.removeProperty('word-break');
+        span.style.setProperty('display', 'block', 'important');
+      }
+    });
+  }
+
+  if (backBtn && taskCard) {
+    backBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      taskCard.classList.remove("expanded");
+      setTaskTextExpanded(false);
+    });
+  }
+});
+
+// ==================== DYNAMIC LANDSCAPE TIME-OF-DAY ====================
+function updateHeroTimeOfDay() {
+  var hero = document.querySelector('.bloom-hero');
+  if (!hero) return;
+  var hour = new Date().getHours();
+  var timeClass;
+  if (hour >= 5 && hour < 12) {
+    timeClass = 'time-morning';
+  } else if (hour >= 12 && hour < 17) {
+    timeClass = 'time-afternoon';
+  } else if (hour >= 17 && hour < 19) {
+    timeClass = 'time-evening';
+  } else {
+    timeClass = 'time-night';
+  }
+  hero.classList.remove('time-morning', 'time-afternoon', 'time-evening', 'time-night');
+  hero.classList.add(timeClass);
+  // Notify the 3D landscape engine of time change
+  window.dispatchEvent(new CustomEvent('heroTimeChanged', { detail: { timeClass: timeClass } }));
+}
+
+// ==================== HABITS MANAGER ====================
+// Load from localStorage as quick sync cache; localForage is source of truth
+let userHabits = JSON.parse(appStorage.getItem("userHabits") || "[]");
+let _habitsLoadedFromForage = false;
+
+// On startup, load from localForage (async) and override localStorage cache
+(async function loadHabitsFromForage() {
+    if (typeof localforage === 'undefined') return;
+    try {
+        const stored = await localforage.getItem("userHabits");
+        if (stored && Array.isArray(stored)) {
+            userHabits = stored;
+            _habitsLoadedFromForage = true;
+            appStorage.setItem("userHabits", JSON.stringify(userHabits));
+            processHabitsNewDay();
+            renderHabits();
+        } else if (userHabits.length > 0 && !_habitsLoadedFromForage) {
+            await localforage.setItem("userHabits", userHabits);
+        }
+    } catch (e) {
+        console.warn("[Habits] localForage load failed, using localStorage fallback", e);
+    }
+})();
+
+function saveUserHabits() {
+    appStorage.setItem("userHabits", JSON.stringify(userHabits));
+    if (typeof localforage !== 'undefined') {
+        localforage.setItem("userHabits", userHabits).catch(e =>
+            console.warn("[Habits] localForage save failed", e)
+        );
+    }
+}
+
+function processHabitsNewDay() {
+    const todayStr = new Date().toDateString();
+    const yesterdayStr = new Date(Date.now() - 86400000).toDateString();
+    let changed = false;
+
+    userHabits.forEach(h => {
+        if (!Array.isArray(h.history)) h.history = [];
+        if (h.completedToday && h.lastCompletedDate !== todayStr) {
+            h.completedToday = false;
+            changed = true;
+        }
+        if (h.lastCompletedDate && h.lastCompletedDate !== todayStr && h.lastCompletedDate !== yesterdayStr) {
+            if (h.streak > 0) {
+                h.streak = 0;
+                changed = true;
+            }
+        }
+    });
+
+    if (changed) saveUserHabits();
+}
+
+let habitSelectionMode = false;
+let selectedHabitIndices = [];
+
+function renderHabits() {
+    const habitsList = document.getElementById("habits-list");
+    if (!habitsList) return;
+    habitsList.innerHTML = "";
+    
+    // Toggle menu items visibility based on selection mode
+    const hInputContainer = document.querySelector("#habits-view .input-container");
+    const hSelectControls = document.getElementById("habit-selection-controls");
+    const hMenuBtn = document.getElementById("habitMenuBtn");
+    
+    if (habitSelectionMode) {
+        if (hInputContainer) hInputContainer.classList.add("hidden");
+        if (hSelectControls) hSelectControls.classList.remove("hidden");
+        if (hMenuBtn) hMenuBtn.classList.add("hidden");
+        
+        const selCount = document.getElementById("habitSelectedCount");
+        if (selCount) selCount.textContent = selectedHabitIndices.length.toString();
+    } else {
+        if (hInputContainer) hInputContainer.classList.remove("hidden");
+        if (hSelectControls) hSelectControls.classList.add("hidden");
+        if (hMenuBtn) hMenuBtn.classList.remove("hidden");
+    }
+
+    if (userHabits.length === 0) {
+        habitsList.innerHTML = `
+            <div class="habit-empty-state">
+                <div class="habit-empty-icon">🌱</div>
+                <h4 class="habit-empty-title">Build Your Routine</h4>
+                <p class="habit-empty-desc">Habits are the foundation of growth. Add your first daily habit and watch your streak grow!</p>
+                <button class="habit-empty-cta" onclick="document.getElementById('habit-input').focus();">
+                    ✨ Add First Habit
+                </button>
+            </div>`;
+        return;
+    }
+
+    userHabits.forEach((h, index) => {
+        const li = document.createElement("li");
+        li.className = `habit-item ${h.completedToday ? "completed" : ""}`;
+
+        // Emoji badge
+        const emoji = h.emoji || getEmojiForTask(h.text);
+        const emojiBadge = document.createElement("span");
+        emojiBadge.className = "habit-emoji";
+        emojiBadge.textContent = emoji;
+        emojiBadge.style.cssText = `
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+            border-radius: 16px;
+            background: linear-gradient(145deg, rgba(255,255,255,0.6), rgba(255,255,255,0.3));
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1.5px solid rgba(255, 255, 255, 0.7);
+            margin-right: 12px;
+            font-size: 28px;
+            flex-shrink: 0;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.8);
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        `;
+        
+        if (!h.color) {
+            h.color = getNextColor(); // Persist unique color per habit
+        }
+
+        // Checkbox — locked once checked today
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.className = "habit-checkbox";
+        cb.checked = h.completedToday;
+        if (h.completedToday) {
+            cb.disabled = true;
+            cb.title = "Already completed today ✔";
+        }
+        cb.onchange = () => toggleHabit(index, cb.checked);
+
+        // Text
+        const span = document.createElement("span");
+        span.className = "habit-text";
+        span.textContent = h.text;
+        span.style.backgroundColor = h.color;
+        span.style.color = "white"; 
+        span.style.cssText += " flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; padding: 6px 12px; border-radius: 8px;";
+
+        // Double-click to edit if not completed
+        if (!h.completedToday) {
+            span.addEventListener("dblclick", (e) => {
+                if (habitSelectionMode) return;
+                e.stopPropagation();
+                
+                const input = document.createElement("input");
+                input.type = "text";
+                input.className = "habit-edit-input";
+                input.value = h.text;
+                
+                // Styling to match text
+                input.style.border = "1px solid var(--primary)";
+                input.style.borderRadius = "8px";
+                input.style.padding = "4px 8px";
+                input.style.background = "var(--bg-card)";
+                input.style.color = "var(--text-main)";
+                input.style.fontSize = "1.05rem";
+                input.style.width = "calc(100% - 20px)";
+                input.style.outline = "none";
+
+                span.replaceWith(input);
+                input.focus();
+
+                const saveEdit = () => {
+                    const newText = input.value.trim();
+                    if (newText && newText !== h.text) {
+                        h.text = newText;
+                        saveUserHabits();
+                    }
+                    renderHabits();
+                    if (typeof updateBloomWidgets === 'function') updateBloomWidgets();
+                };
+
+                input.addEventListener("blur", saveEdit);
+                input.addEventListener("keydown", (ev) => {
+                    if (ev.key === "Enter") {
+                        input.removeEventListener("blur", saveEdit);
+                        saveEdit();
+                    } else if (ev.key === "Escape") {
+                        input.removeEventListener("blur", saveEdit);
+                        renderHabits();
+                    }
+                });
+            });
+        }
+
+        const contentDiv = document.createElement("div");
+        contentDiv.className = "habit-content";
+        
+        // Render selection checkbox if in selection mode, otherwise emoji mapping
+        if (habitSelectionMode) {
+            const selCb = document.createElement("input");
+            selCb.type = "checkbox";
+            selCb.className = "habit-select-cb";
+            selCb.style.width = "22px";
+            selCb.style.height = "22px";
+            selCb.style.accentColor = "#ef4444";
+            selCb.style.cursor = "pointer";
+            selCb.checked = selectedHabitIndices.includes(index);
+            selCb.onchange = (e) => {
+                if (e.target.checked) {
+                    selectedHabitIndices.push(index);
+                } else {
+                    selectedHabitIndices = selectedHabitIndices.filter(i => i !== index);
+                }
+                renderHabits();
+            };
+            contentDiv.appendChild(selCb);
+            li.style.cursor = "pointer";
+            li.onclick = (e) => {
+                if(e.target !== selCb) {
+                    selCb.checked = !selCb.checked;
+                    selCb.dispatchEvent(new Event("change"));
+                }
+            };
+        } else {
+            contentDiv.appendChild(emojiBadge);
+            contentDiv.appendChild(cb);
+        }
+        
+        contentDiv.appendChild(span);
+
+        // Streak badge
+        const streakDiv = document.createElement("div");
+        streakDiv.className = "habit-streak";
+        streakDiv.innerHTML = `<span class="habit-streak-fire">🔥</span><span class="habit-streak-num">${h.streak}</span>`;
+
+        // Focus/Pomodoro button — unique design for habits
+        const focusBtn = document.createElement("button");
+        focusBtn.className = "habit-focus-btn";
+        focusBtn.innerHTML = `<span class="habit-focus-icon">⏱</span>`;
+        focusBtn.title = `Start a focus session for "${h.text}"`;
+        if (h.completedToday || habitSelectionMode) {
+            focusBtn.style.opacity = "0.3";
+            focusBtn.style.pointerEvents = "none";
+        }
+        focusBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            startHabitFocusSession(h.text, index);
+        });
+
+        const rightDiv = document.createElement("div");
+        rightDiv.className = "habit-actions";
+        if (!habitSelectionMode) {
+            rightDiv.appendChild(streakDiv);
+            rightDiv.appendChild(focusBtn);
+        }
+
+        li.appendChild(contentDiv);
+        li.appendChild(rightDiv);
+
+        // Entry animation
+        li.style.opacity = "0";
+        li.style.transform = "translateY(10px)";
+        setTimeout(() => {
+            li.style.transition = "all 0.3s ease-out";
+            li.style.opacity = "1";
+            li.style.transform = "translateY(0)";
+        }, index * 50);
+
+        habitsList.appendChild(li);
+    });
+}
+
+// Start a focus Pomodoro session for a habit
+function startHabitFocusSession(habitName, habitIndex) {
+    showPage('pomodoro-page');
+    currentFocusHabitIndex = habitIndex;
+    currentFocusTaskCheckbox = null; // Clear any task focus
+
+    const heading = document.getElementById('pomodoro-heading');
+    if (heading) heading.textContent = `🍅 Pomodoro Timer`;
+
+    const banner = document.getElementById('focus-task-banner');
+    if (banner) {
+        const emoji = getEmojiForTask(habitName);
+        banner.innerHTML = `
+            <div class="focus-banner-label">HABIT FOCUS SESSION</div>
+            <span class="focus-banner-emoji">${emoji}</span>
+            <div class="focus-banner-task">${habitName}</div>
+        `;
+        banner.classList.remove('hidden');
+        banner.classList.add('habit-focus-active');
+    }
+
+    showNotification(`⏱ Habit focus: "${habitName}". Complete the pomodoro to auto-check!`);
+}
+
+function toggleHabit(index, isChecked) {
+    const h = userHabits[index];
+    const todayStr = new Date().toDateString();
+    if (!Array.isArray(h.history)) h.history = [];
+
+    if (isChecked && !h.completedToday) {
+        h.completedToday = true;
+        h.streak++;
+        h.lastCompletedDate = todayStr;
+        if (!h.history.includes(todayStr)) {
+            h.history.push(todayStr);
+        }
+        showNotification(`🔥 "${h.text}" done! Streak: ${h.streak}`);
+    }
+
+    saveUserHabits();
+    renderHabits();
+    if (typeof updateBloomWidgets === "function") updateBloomWidgets();
+    if (typeof tryVitalityStreak === "function") tryVitalityStreak();
+}
+
+// ==================== HABIT STATS PAGE ====================
+let _habitStatsMonth = new Date().getMonth();
+let _habitStatsYear = new Date().getFullYear();
+
+function showHabitStats() {
+    _habitStatsMonth = new Date().getMonth();
+    _habitStatsYear = new Date().getFullYear();
+    _renderHabitStatsOverlay();
+}
+
+function _renderHabitStatsOverlay() {
+    let overlay = document.getElementById("habit-stats-overlay");
+    if (overlay) overlay.remove();
+
+    overlay = document.createElement("div");
+    overlay.id = "habit-stats-overlay";
+    overlay.style.cssText = `
+        position:fixed;top:0;left:0;width:100%;height:100%;
+        background:var(--bg-color,#fff);
+        z-index:10000;overflow-y:auto;
+        animation:fadeIn 0.3s ease;
+        padding:20px;box-sizing:border-box;
+    `;
+
+    const now = new Date();
+    const year = _habitStatsYear;
+    const month = _habitStatsMonth;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const monthName = new Date(year, month).toLocaleString('default', { month: 'long', year: 'numeric' });
+    const isCurrentMonth = (year === now.getFullYear() && month === now.getMonth());
+
+    let html = `
+        <div style="max-width:600px;margin:0 auto;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+                <h2 style="margin:0;color:var(--text-main);font-size:1.3rem;">📊 Habit Insights</h2>
+                <button id="close-habit-stats" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-main);">×</button>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+                <button id="habit-cal-prev" class="habit-cal-nav-btn">←</button>
+                <span style="font-weight:700;font-size:1rem;color:var(--text-main);">${monthName}</span>
+                <button id="habit-cal-next" class="habit-cal-nav-btn" ${isCurrentMonth ? 'disabled style="opacity:0.3;cursor:default;"' : ''}>→</button>
+            </div>
+    `;
+
+    if (userHabits.length === 0) {
+        html += `<p style="color:var(--text-muted);text-align:center;padding:40px;">No habits to show yet.</p>`;
+    } else {
+        userHabits.forEach(h => {
+            if (!Array.isArray(h.history)) h.history = [];
+            const emoji = h.emoji || getEmojiForTask(h.text);
+
+            // Determine the created date for this habit
+            const createdDate = h.createdDate ? new Date(h.createdDate) : null;
+
+            // Count completed days this month
+            const completedThisMonth = h.history.filter(d => {
+                const dt = new Date(d);
+                return dt.getFullYear() === year && dt.getMonth() === month;
+            }).length;
+
+            // Count trackable days (days from creation date to today within this month)
+            let trackableDays = 0;
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dt = new Date(year, month, day);
+                if (dt > now) break; // future
+                if (createdDate && dt < new Date(createdDate.getFullYear(), createdDate.getMonth(), createdDate.getDate())) continue;
+                trackableDays++;
+            }
+            const completionRate = trackableDays > 0 ? Math.round((completedThisMonth / trackableDays) * 100) : 0;
+
+            html += `
+                <div class="habit-stats-card">
+                    <div class="habit-stats-header">
+                        <span class="habit-stats-emoji">${emoji}</span>
+                        <div>
+                            <div class="habit-stats-name">${h.text}</div>
+                            <div class="habit-stats-meta">🔥 ${h.streak} day streak &bull; ${completionRate}% completion</div>
+                        </div>
+                    </div>
+                    <div class="habit-calendar-grid">`;
+
+            const dayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+            dayLabels.forEach(d => {
+                html += `<div class="habit-cal-header">${d}</div>`;
+            });
+
+            const firstDay = new Date(year, month, 1).getDay();
+            for (let i = 0; i < firstDay; i++) {
+                html += `<div class="habit-cal-cell empty"></div>`;
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dt = new Date(year, month, day);
+                const dateStr = dt.toDateString();
+                const isCompleted = h.history.includes(dateStr);
+                const isToday = isCurrentMonth && day === now.getDate();
+                const isFuture = dt > now;
+                const isBeforeCreation = createdDate && dt < new Date(createdDate.getFullYear(), createdDate.getMonth(), createdDate.getDate());
+                const isPast = !isFuture && !isToday;
+                const isMissed = isPast && !isCompleted && !isBeforeCreation;
+
+                let cellClass = 'habit-cal-cell';
+                if (isBeforeCreation || isFuture) cellClass += ' inactive';
+                else if (isCompleted) cellClass += ' done';
+                else if (isMissed) cellClass += ' missed';
+                if (isToday) cellClass += ' today';
+
+                let icon = '';
+                if (isCompleted) icon = '✓';
+                else if (isMissed) icon = '✗';
+
+                html += `<div class="${cellClass}"><span class="cal-day-num">${day}</span>${icon ? `<span class="cal-icon">${icon}</span>` : ''}</div>`;
+            }
+
+            html += `</div></div>`;
+        });
+
+        // Summary
+        const totalHabits = userHabits.length;
+        const completedToday = userHabits.filter(h => h.completedToday).length;
+        const longestStreak = Math.max(...userHabits.map(h => h.streak), 0);
+
+        html += `
+            <div class="habit-stats-summary">
+                <div class="habit-summary-item">
+                    <div class="habit-summary-val">${completedToday}/${totalHabits}</div>
+                    <div class="habit-summary-lbl">Done Today</div>
+                </div>
+                <div class="habit-summary-item">
+                    <div class="habit-summary-val">${longestStreak}</div>
+                    <div class="habit-summary-lbl">Best Streak</div>
+                </div>
+                <div class="habit-summary-item">
+                    <div class="habit-summary-val">${totalHabits}</div>
+                    <div class="habit-summary-lbl">Total Habits</div>
+                </div>
+            </div>`;
+    }
+
+    html += `</div>`;
+    overlay.innerHTML = html;
+    document.body.appendChild(overlay);
+
+    document.getElementById("close-habit-stats").addEventListener("click", () => overlay.remove());
+    document.getElementById("habit-cal-prev").addEventListener("click", () => {
+        _habitStatsMonth--;
+        if (_habitStatsMonth < 0) { _habitStatsMonth = 11; _habitStatsYear--; }
+        _renderHabitStatsOverlay();
+    });
+    const nextBtn = document.getElementById("habit-cal-next");
+    if (nextBtn && !nextBtn.disabled) {
+        nextBtn.addEventListener("click", () => {
+            _habitStatsMonth++;
+            if (_habitStatsMonth > 11) { _habitStatsMonth = 0; _habitStatsYear++; }
+            _renderHabitStatsOverlay();
+        });
+    }
+}
+
+function initHabitsUI() {
+    // ── ALL DOM LOOKUPS FIRST ──
+    const btnTasks = document.getElementById("tab-tasks");
+    const btnHabits = document.getElementById("tab-habits");
+    const viewTasks = document.getElementById("tasks-view");
+    const viewHabits = document.getElementById("habits-view");
+    const menuWrapper = document.getElementById("tasks-menu-wrapper");
+    const habitsMenuWrapper = document.getElementById("habits-menu-wrapper");
+    const hInput = document.getElementById("habit-input");
+    const hBtn = document.getElementById("habit-plus");
+    const habitMenuBtn = document.getElementById("habitMenuBtn");
+    const habitMenuDropdown = document.getElementById("habitMenuDropdown");
+    const habitSelectionModeBtn = document.getElementById("habitSelectionModeBtn");
+    const deleteSelectedHabitsBtn = document.getElementById("deleteSelectedHabits");
+    const cancelHabitSelection = document.getElementById("cancelHabitSelection");
+    const shuffleHabitsBtn = document.getElementById("shuffleHabitsBtn");
+    const habitStatsNavBtn = document.getElementById("habitStatsNavBtn");
+
+    const activeTab = appStorage.getItem("trackerActiveTab") || "habits";
+
+    // ── TAB TOGGLE ──
+    const showTasks = () => {
+        if (btnTasks) btnTasks.classList.add("active");
+        if (btnHabits) btnHabits.classList.remove("active");
+        if (viewTasks) viewTasks.classList.remove("hidden");
+        if (viewHabits) viewHabits.classList.add("hidden");
+        if (menuWrapper) menuWrapper.style.display = "";
+        if (habitsMenuWrapper) habitsMenuWrapper.style.display = "none";
+        appStorage.setItem("trackerActiveTab", "tasks");
+    };
+
+    const showHabits = () => {
+        if (btnHabits) btnHabits.classList.add("active");
+        if (btnTasks) btnTasks.classList.remove("active");
+        if (viewHabits) viewHabits.classList.remove("hidden");
+        if (viewTasks) viewTasks.classList.add("hidden");
+        if (menuWrapper) menuWrapper.style.display = "none";
+        if (habitsMenuWrapper) habitsMenuWrapper.style.display = "";
+        renderHabits();
+        appStorage.setItem("trackerActiveTab", "habits");
+    };
+
+    if (btnTasks && btnHabits) {
+        btnTasks.addEventListener("click", showTasks);
+        btnHabits.addEventListener("click", showHabits);
+
+        if (activeTab === "tasks") {
+            showTasks();
+        } else {
+            showHabits();
+        }
+    }
+
+    // ── ADD HABIT ──
+    window.addHabitFromUI = () => {
+        if (!hInput) return;
+        const text = hInput.value.trim();
+        if (text) {
+            const emoji = getEmojiForTask(text);
+            const color = getNextColor();
+            userHabits.push({ text, emoji, color, completedToday: false, streak: 0, lastCompletedDate: null, history: [], createdDate: new Date().toDateString() });
+            saveUserHabits();
+            renderHabits();
+            hInput.value = "";
+            if (typeof updateBloomWidgets === "function") updateBloomWidgets();
+            if (typeof tryVitalityStreak === "function") tryVitalityStreak();
+        }
+    };
+
+    if (hBtn) hBtn.addEventListener("click", window.addHabitFromUI);
+    if (hInput) hInput.addEventListener("keypress", (e) => { if (e.key === "Enter") window.addHabitFromUI(); });
+
+    // ── HABIT MENU ──
+    if (habitMenuBtn && habitMenuDropdown) {
+        habitMenuBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            habitMenuDropdown.classList.toggle("hidden");
+        });
+        document.addEventListener("click", (e) => {
+            if (!habitMenuBtn.contains(e.target) && !habitMenuDropdown.contains(e.target)) {
+                habitMenuDropdown.classList.add("hidden");
+            }
+        });
+    }
+
+    if (habitSelectionModeBtn) {
+        habitSelectionModeBtn.addEventListener("click", () => {
+            if (habitMenuDropdown) habitMenuDropdown.classList.add("hidden");
+            habitSelectionMode = true;
+            selectedHabitIndices = [];
+            renderHabits();
+        });
+    }
+
+    if (cancelHabitSelection) {
+        cancelHabitSelection.addEventListener("click", () => {
+            habitSelectionMode = false;
+            selectedHabitIndices = [];
+            renderHabits();
+        });
+    }
+
+    if (deleteSelectedHabitsBtn) {
+        deleteSelectedHabitsBtn.addEventListener("click", () => {
+            if (selectedHabitIndices.length === 0) return;
+            if (confirm(`Delete ${selectedHabitIndices.length} selected habits?`)) {
+                selectedHabitIndices.sort((a, b) => b - a);
+                selectedHabitIndices.forEach(idx => { userHabits.splice(idx, 1); });
+                saveUserHabits();
+                habitSelectionMode = false;
+                selectedHabitIndices = [];
+                renderHabits();
+                if (typeof updateBloomWidgets === "function") updateBloomWidgets();
+            }
+        });
+    }
+
+    if (shuffleHabitsBtn) {
+        shuffleHabitsBtn.addEventListener("click", () => {
+            if (habitMenuDropdown) habitMenuDropdown.classList.add("hidden");
+            for (let i = userHabits.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [userHabits[i], userHabits[j]] = [userHabits[j], userHabits[i]];
+            }
+            saveUserHabits();
+            renderHabits();
+        });
+    }
+
+    if (habitStatsNavBtn) {
+        habitStatsNavBtn.addEventListener("click", () => {
+            if (habitMenuDropdown) habitMenuDropdown.classList.add("hidden");
+            if (typeof showHabitStats === "function") showHabitStats();
+        });
+    }
+
+    processHabitsNewDay();
+    renderHabits();
+}
+
+// Initialize landscape on load
+document.addEventListener('DOMContentLoaded', function() {
+  initHabitsUI();
+  updateHeroTimeOfDay();
+
+  // ── 1. Zen Mode Logic (Force Hide UI elements) ── //
+  const zenBtn = document.getElementById("zenModeBtn");
+  if (zenBtn) {
+      const newZenBtn = zenBtn.cloneNode(true);
+      zenBtn.parentNode.replaceChild(newZenBtn, zenBtn);
+      newZenBtn.addEventListener("click", () => {
+          document.body.classList.toggle("zen-mode");
+          const dropdown = document.getElementById("menuDropdown");
+          if(dropdown) dropdown.classList.add("hidden");
+          if(typeof showPage === 'function'){ showPage('main'); }
+      });
+  }
+
+  // ── 2. Full App Format & Reset ── //
+  const resetBtn = document.getElementById("resetApp");
+  if (resetBtn) {
+      const newResetBtn = resetBtn.cloneNode(true);
+      resetBtn.parentNode.replaceChild(newResetBtn, resetBtn);
+      newResetBtn.addEventListener("click", async () => {
+          if(confirm("🚨 WARNING: Are you ABSOLUTELY sure you want to reset Ultradian? This will delete ALL tasks, streaks, library books, and settings.")) {
+              if(confirm("Final Warning! This action CANNOT be undone. Proceed with format?")) {
+                  localStorage.clear();
+                  sessionStorage.clear();
+                  if(typeof localforage !== 'undefined') {
+                      try { await localforage.clear(); } catch(e) { console.error("LocalForage error", e); }
+                  }
+                  if ('serviceWorker' in navigator) {
+                      const regs = await navigator.serviceWorker.getRegistrations();
+                      for(let reg of regs) { await reg.unregister(); }
+                  }
+                  window.location.reload();
+              }
+          }
+      });
+  }
+});

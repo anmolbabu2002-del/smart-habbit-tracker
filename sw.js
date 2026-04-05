@@ -1,12 +1,18 @@
-const CACHE_NAME = 'ultradian-v5';
+const CACHE_NAME = 'ultradian-v9';
 const urlsToCache = [
   '/',
   '/index.html',
   '/styles.css?v=3.0',
-  '/script.js?v=3.0',
+  '/script.js?v=4.0',
+  '/storage.js',
   '/castle-3d.js?v=3.0',
+  '/math-missile.js',
+  '/pattern-prophet.js',
+  '/omniscient.js',
+  '/cross-zero.js',
   '/quotes.js',
   '/tips.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
@@ -85,6 +91,29 @@ self.addEventListener('fetch', event => {
         // If everything fails and it's an HTML request, serve index.html
         if (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html')) {
           return caches.match('/index.html');
+        }
+      })
+  );
+});
+
+// Notification click behavior: focus window or open start URL
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(windowClients => {
+        // If the app is already open, focus the tab
+        for (let i = 0; i < windowClients.length; i++) {
+          const client = windowClients[i];
+          const clientUrl = new URL(client.url);
+          if (clientUrl.origin === location.origin) {
+            if ('focus' in client) return client.focus();
+          }
+        }
+        // If not open, open a new window at the start URL
+        if (clients.openWindow) {
+          return clients.openWindow('/');
         }
       })
   );

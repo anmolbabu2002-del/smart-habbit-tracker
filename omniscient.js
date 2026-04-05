@@ -9,11 +9,12 @@
 // ── CATEGORY MAP (OpenTDB IDs) ──
 // Globally neutral categories (no US-biased Politics/Celebrities)
 const OMN_CATEGORIES = [
-    { id: 9, name: "General Knowledge", icon: "🌐" },
+    { id: 9, name: "General Knowledge", icon: "🌐" },
+    { id: 9, name: "General Knowledge", icon: "🌐 " },
     { id: 21, name: "Sports", icon: "⚽" },
     { id: 17, name: "Science & Nature", icon: "🔬" },
     { id: 23, name: "History", icon: "📜" },
-    { id: 22, name: "Geography", icon: "🗺️" },
+    { id: 22, name: "Geography", icon: "🗺️ " },
     { id: 11, name: "Film", icon: "🎬" },
     { id: 12, name: "Music", icon: "🎵" },
     { id: 27, name: "Animals", icon: "🐾" },
@@ -41,8 +42,8 @@ let omnState = {
     fiftyFiftyUsed: false,
     extraTimeUsed: false,
     skipUsed: false,
-    hsScore: parseInt(localStorage.getItem("omnHsScore") || 0),
-    hsLevel: parseInt(localStorage.getItem("omnHsLevel") || 1),
+    hsScore: parseInt(appStorage.getItem("omnHsScore") || 0),
+    hsLevel: parseInt(appStorage.getItem("omnHsLevel") || 1),
 
     // Timer
     timerMax: 20,      // seconds to answer
@@ -60,12 +61,12 @@ let omnState = {
 // ── DOM REFS (lazy-loaded on DOMContentLoaded) ──
 let omnEl = {};
 
-// ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 // DOPAMINE BANK — Ultra-obvious questions for Q1-12
 // These are GUARANTEED to be served first. No API needed.
 // They are so easy that every single person knows the answer.
 // This builds momentum and makes the user feel smart.
-// ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 const omnDopamineBank = [
     // --- Tier 1: Q1-6 — A literal child knows these ---
     { question: "What color is the sky on a clear day?", correct_answer: "Blue", incorrect_answers: ["Green", "Red", "Purple"], difficulty: "easy", category: "General Knowledge" },
@@ -426,20 +427,26 @@ function spawnCorrectBurst() {
 /* ================== TIMER ================== */
 
 function startOmnTimer() {
-    clearInterval(omnState.timerInterval);
+    cancelAnimationFrame(omnState.timerInterval);
     // Timer gets tighter as levels increase
     omnState.timerMax = Math.max(8, 20 - Math.floor(omnState.level / 3));
     omnState.timerLeft = omnState.timerMax;
     updateTimerBar();
 
-    omnState.timerInterval = setInterval(() => {
-        omnState.timerLeft -= 0.05;
+    let lastTime = performance.now();
+    const tick = (now) => {
+        if (!omnState.isActive) return;
+        const dt = (now - lastTime) / 1000;
+        lastTime = now;
+        omnState.timerLeft -= dt;
         updateTimerBar();
         if (omnState.timerLeft <= 0) {
-            clearInterval(omnState.timerInterval);
             handleTimeout();
+        } else {
+            omnState.timerInterval = requestAnimationFrame(tick);
         }
-    }, 50);
+    };
+    omnState.timerInterval = requestAnimationFrame(tick);
 }
 
 function updateTimerBar() {
@@ -504,7 +511,8 @@ function useExtraTime() {
     omnState.extraTimeUsed = true;
     disableLifelineBtn(omnEl.timeBtn);
 
-    omnState.timerLeft = Math.min(omnState.timerLeft + 10, omnState.timerMax + 10);
+    omnState.timerMax += 10;
+    omnState.timerLeft += 10;
     updateTimerBar();
 
     // Flash effect
@@ -519,7 +527,7 @@ function useSkip() {
     if (omnState.skipUsed || !omnState.isActive) return;
     omnState.skipUsed = true;
     disableLifelineBtn(omnEl.skipBtn);
-    clearInterval(omnState.timerInterval);
+    cancelAnimationFrame(omnState.timerInterval);
     nextOmnQuestion();
 }
 
@@ -546,7 +554,7 @@ function updateOmnHUD() {
 
 async function startOmnGame() {
     // Clean up any previous session
-    clearInterval(omnState.timerInterval);
+    cancelAnimationFrame(omnState.timerInterval);
     cancelAnimationFrame(omnState.animationId);
     if (omnState.scene) destroyOmn3D();
 
@@ -589,6 +597,8 @@ async function startOmnGame() {
     omnEl.hubView.classList.add("hidden");
     omnEl.gameView.classList.remove("hidden");
     omnEl.gameOverModal.classList.add("hidden");
+    document.body.classList.add("game-active");
+    const nb = document.querySelector(".nav-bar"); if (nb) nb.style.display = "none";
 
     // Reset all lifeline buttons
     [omnEl.fiftyBtn, omnEl.timeBtn, omnEl.skipBtn].forEach(btn => {
@@ -623,7 +633,7 @@ async function startOmnGame() {
 
 async function nextOmnQuestion() {
     if (!omnState.isActive) return;
-    clearInterval(omnState.timerInterval);
+    cancelAnimationFrame(omnState.timerInterval);
 
     // Level up every 5 correct answers
     if (omnState.questionsAnswered > 0 && omnState.questionsAnswered % 5 === 0) {
@@ -663,7 +673,7 @@ function renderOmnQuestion(q) {
     // Show category badge
     if (omnEl.categoryBadge) {
         const cat = OMN_CATEGORIES.find(c => q.category && q.category.includes(c.name));
-        omnEl.categoryBadge.textContent = cat ? `${cat.icon} ${cat.name}` : `🌐 ${q.category || 'General'}`;
+        omnEl.categoryBadge.textContent = cat ? `${cat.icon} ${cat.name}` : `🌐 ${q.category || 'General'}`;
         omnEl.categoryBadge.style.display = "inline-block";
     }
 
@@ -703,7 +713,7 @@ function handleOmnAnswer(e) {
     const btn = e.target.closest('.omn-answer-btn');
     if (!btn || btn.disabled) return;
 
-    clearInterval(omnState.timerInterval);
+    cancelAnimationFrame(omnState.timerInterval);
     omnEl.answerBtns.forEach(b => b.disabled = true);
 
     const isCorrect = btn.dataset.correct === "true";
@@ -767,16 +777,16 @@ function spawnFloatingPoints(pts) {
 
 function endOmnGame() {
     omnState.isActive = false;
-    clearInterval(omnState.timerInterval);
+    cancelAnimationFrame(omnState.timerInterval);
     cancelAnimationFrame(omnState.animationId);
 
     if (omnState.score > omnState.hsScore) {
         omnState.hsScore = omnState.score;
-        localStorage.setItem("omnHsScore", omnState.score);
+        appStorage.setItem("omnHsScore", omnState.score);
     }
     if (omnState.level > omnState.hsLevel) {
         omnState.hsLevel = omnState.level;
-        localStorage.setItem("omnHsLevel", omnState.level);
+        appStorage.setItem("omnHsLevel", omnState.level);
     }
 
     omnEl.goScore.textContent = omnState.score;
@@ -815,12 +825,12 @@ document.addEventListener("DOMContentLoaded", () => {
     omnEl.answerBtns.forEach(btn => btn.addEventListener("click", handleOmnAnswer));
 
     document.getElementById("back-to-hub-omniscient")?.addEventListener("click", () => {
-        omnState.isActive = false;
-        clearInterval(omnState.timerInterval);
-        cancelAnimationFrame(omnState.animationId);
+        document.body.classList.remove("game-active");
+        omnEl.gameView.classList.add("hidden");
+        omnEl.hubView.classList.remove("hidden");
+        const nb = document.querySelector(".nav-bar"); if (nb) nb.style.display = "";
+        if (omnState.isActive) endOmnGame();
         if (omnState.scene) destroyOmn3D();
-        document.getElementById("omniscient-game-view").classList.add("hidden");
-        document.getElementById("games-hub-view").classList.remove("hidden");
     });
 
     document.getElementById("omn-play-again")?.addEventListener("click", (e) => {
@@ -833,3 +843,4 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("omn-time-btn")?.addEventListener("click", useExtraTime);
     document.getElementById("omn-skip-btn")?.addEventListener("click", useSkip);
 });
+

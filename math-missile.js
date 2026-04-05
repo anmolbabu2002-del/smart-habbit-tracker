@@ -32,18 +32,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!mathMissileCard) return;
 
     // --- High Score ---
-    let highScore = parseInt(localStorage.getItem('mathMissileHighScore') || '0', 10);
+    let highScore = parseInt(appStorage.getItem('mathMissileHighScore') || '0', 10);
 
     // --- Navigation ---
     mathMissileCard.addEventListener('click', () => {
         gamesHubView.classList.add('hidden');
         mathMissileView.classList.remove('hidden');
+        const nb = document.querySelector(".nav-bar"); if (nb) nb.style.display = "none";
         initThreeJS();
     });
 
     backBtn.addEventListener('click', () => {
         mathMissileView.classList.add('hidden');
         gamesHubView.classList.remove('hidden');
+        const nb = document.querySelector(".nav-bar"); if (nb) nb.style.display = "";
         stopGame();
         cleanupThreeJS();
     });
@@ -524,7 +526,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isNewRecord = score > highScore;
         if (isNewRecord) {
             highScore = score;
-            localStorage.setItem('mathMissileHighScore', highScore.toString());
+            appStorage.setItem('mathMissileHighScore', highScore.toString());
         }
         if (newRecordBadge) newRecordBadge.style.display = isNewRecord ? 'block' : 'none';
         if (goHighScoreDisplay) goHighScoreDisplay.textContent = highScore;
@@ -1108,4 +1110,5 @@ document.addEventListener('DOMContentLoaded', () => {
         threeInitialized = false;
     }
 });
+
 

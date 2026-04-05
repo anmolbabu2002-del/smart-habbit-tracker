@@ -1,5 +1,5 @@
 /* =========================================================================
-   PATTERN PROPHET — Addictive Sequence Prediction Game (V3 100% Logic)
+   PATTERN PROPHET — Addictive Sequence Prediction Game (V3 - IQ Challenge)
    ========================================================================= */
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -10,10 +10,14 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("card-pattern-prophet")?.addEventListener("click", () => {
         if (hubView) hubView.classList.add("hidden");
         if (ppView) ppView.classList.remove("hidden");
+        document.body.classList.add("game-active");
+        const nb = document.querySelector(".nav-bar"); if (nb) nb.style.display = "none";
     });
     document.getElementById("back-to-hub-pattern")?.addEventListener("click", () => {
         if (ppView) ppView.classList.add("hidden");
         if (hubView) hubView.classList.remove("hidden");
+        document.body.classList.remove("game-active");
+        const nb = document.querySelector(".nav-bar"); if (nb) nb.style.display = "";
         resetGame();
     });
 
@@ -48,14 +52,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const THEMES = [
         { name: "Shapes", emojis: ["🔴","🟦","🔺","🔶","🟢","🟣","🔲","💠"], bg: "linear-gradient(135deg, #1a0a2a, #2a1a3a)" },
         { name: "Faces", emojis: ["😀","😎","🤔","😴","🤯","🥶","😈","🤠"], bg: "linear-gradient(135deg, #0a2a3a, #1a3a4a)" },
-        { name: "Animals", emojis: ["🐱","🐶","🦊","🐼","🦁","🐸","🐵","🐰"], bg: "linear-gradient(135deg, #0a2a0a, #1a4a1a)" },
-        { name: "Sweets", emojis: ["🍬","🍭","🧁","🍩","🍰","🍫","🍪","🍦"], bg: "linear-gradient(135deg, #3a0a2a, #5a1a4a)" }
+        { name: "Animals", emojis: ["🐱","🐶","🦊","🐻","🦁","🐸","🐵","🐰"], bg: "linear-gradient(135deg, #0a2a0a, #1a4a1a)" },
+        { name: "Sweets", emojis: ["🍬","🍭","🍫","🍩","🍰","🧁","🍪","🍦"], bg: "linear-gradient(135deg, #3a0a2a, #5a1a4a)" }
     ];
 
     // ─── Real-World Logical Progressions ───
     const LOGIC_POOLS = {
         numbers: ["0️⃣","1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟"],
-        clocks: ["🕛","🕐","🕑","🕒","🕓","🕔","🕕","🕖","🕗","🕘","🕙","🕚"],
+        clocks: ["🕐","🕑","🕒","🕓","🕔","🕕","🕖","🕗","🕘","🕙","🕚","🕛"],
         moons: ["🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘"],
         arrows: ["⬆️","↗️","➡️","↘️","⬇️","↙️","⬅️","↖️"]
     };
@@ -63,7 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const EVOLUTIONS = [
         ["🌱","🌿","🌳","🍎"],
         ["🥚","🐣","🐥","🐔"],
-        ["☁️","🌥️","⛅","🌤️","☀️"],
+        ["☁️","🌧️","⛈️","🌤️","☀️"],
         ["👶","👦","👨","👴"]
     ];
 
@@ -79,9 +83,9 @@ document.addEventListener("DOMContentLoaded", () => {
         roundsPlayed: 0,
         isActive: false,
         currentPatternBg: "",
-        highScore: parseInt(localStorage.getItem("ppHighScore") || 0),
-        highLevel: parseInt(localStorage.getItem("ppHighLevel") || 1),
-        bestStreakEver: parseInt(localStorage.getItem("ppBestStreak") || 0),
+        highScore: parseInt(appStorage.getItem("ppHighScore") || 0),
+        highLevel: parseInt(appStorage.getItem("ppHighLevel") || 1),
+        bestStreakEver: parseInt(appStorage.getItem("ppBestStreak") || 0),
         timerRAF: null,
         timerStart: 0,
         timerDuration: 0,
@@ -91,7 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (highScoreEl) highScoreEl.textContent = state.highScore;
     if (highLevelEl) highLevelEl.textContent = state.highLevel;
 
-    // ─── Difficulty is ALWAYS based on score, never resets ───
+    // ─── Advanced IQ Difficulty Scaling ───
     function getDifficultyTier() {
         const s = state.score;
         if (s < 50)   return 1;
@@ -101,7 +105,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (s < 800)  return 5;
         if (s < 1200) return 6;
         if (s < 1800) return 7;
-        return 8;
+        if (s < 2500) return 8;
+        if (s < 3500) return 9;
+        return 10;
     }
 
     // ─── Combo Labels ───
@@ -112,6 +118,7 @@ document.addEventListener("DOMContentLoaded", () => {
         { min: 10, text: "INSANE! 🤯", color: "#e74c3c" },
         { min: 15, text: "UNSTOPPABLE! 💀", color: "#9b59b6" },
         { min: 20, text: "G O D L I K E 👑", color: "#f39c12" },
+        { min: 30, text: "IQ 200 🧠", color: "#00cec9" },
     ];
 
     function getComboData(streak) {
@@ -290,6 +297,31 @@ document.addEventListener("DOMContentLoaded", () => {
         return { sequence: seq, answer, bg: THEMES[3].bg, choices: shuffle([...choices]), label: "Fibonacci Sequence" };
     }
 
+    // Logic T9: Primes & Advanced Skipping (IQ 140+)
+    function genPrimes() {
+        const pool = LOGIC_POOLS.clocks; // Clocks to represent cyclical modular primes
+        const primes = [2, 3, 5, 7, 11];
+        const seq = [ pool[2%12], pool[3%12], pool[5%12], pool[7%12], pool[11%12] ];
+        const answer = pool[1]; // 13 is prime, 13 mod 12 = 1.
+        const choices = new Set([answer]);
+        choices.add(pool[11]); // A decoy 
+        while(choices.size < 4) choices.add(pick(pool));
+        return { sequence: seq, answer, bg: THEMES[2].bg, choices: shuffle([...choices]), label: "Prime Progression" };
+    }
+
+    // Logic T10: Additive Fusion / A+B=C (IQ 160+)
+    function genAdditive() {
+        const theme = pickTheme();
+        const [a,b,c,d] = pickN(theme.emojis, 4);
+        // Sequence: a, b, ab -> c, c, cc -> d, b, ? (answer is db)
+        // Let's do a simpler IQ pattern: A B C A B C -> we already have that.
+        // How about AB, BC, CD, DE => sliding window.
+        // E.g. A, B, B, C, C, D, D... Answer E
+        const seq = [a, b, b, c, c, d];
+        const answer = d;
+        return { sequence: seq, answer, bg: theme.bg, choices: getStructuralChoices(answer, [a,b,c,d], theme), label: "Echo Offset" };
+    }
+
     // ─── Tier Selection ───
     const GENERATORS = [
         { tier: 1, fn: genAlternating },
@@ -302,24 +334,28 @@ document.addEventListener("DOMContentLoaded", () => {
         { tier: 6, fn: genPalindrome },
         { tier: 7, fn: genStep3 },
         { tier: 8, fn: genFib },
+        { tier: 9, fn: genPrimes },
+        { tier: 10, fn: genAdditive }
     ];
 
     function getPatternForTier(tier) {
         const available = GENERATORS.filter(g => tier >= g.tier);
-        const topPicks = available.slice(-Math.min(3, available.length));
+        // Push bias towards harder questions by slicing the top available mechanisms
+        const topPicks = available.slice(-Math.min(4, available.length));
         const gen = topPicks[Math.floor(Math.random() * topPicks.length)];
         return gen.fn();
     }
 
-    // ─── Timer ───
+    // ─── Extreme Timer Engine (Determines IQ) ───
     function getTimerDuration() {
         const tier = getDifficultyTier();
-        if (tier <= 2) return 20000;
-        if (tier <= 4) return 15000;
-        if (tier <= 5) return 12000;
-        if (tier <= 6) return 10000;
-        if (tier <= 7) return 8000;
-        return Math.max(5000, 8000 - (tier - 7) * 500); // bottoms at 5s
+        if (tier <= 2) return 15000;
+        if (tier <= 4) return 12000;
+        if (tier <= 5) return 8000;
+        if (tier <= 6) return 6000;
+        if (tier <= 8) return 4000;
+        if (tier <= 9) return 3000;
+        return 1800; // Tier 10 gives literally 1.8 seconds - pure instinct / IQ testing
     }
 
     function startTimer() {
@@ -380,8 +416,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const diffEl = document.getElementById("pp-difficulty");
         if (diffEl) {
             const tier = getDifficultyTier();
-            const labels = ["", "Beginner", "Easy", "Normal", "Tricky", "Hard", "Expert", "Master", "Legendary"];
-            diffEl.textContent = labels[tier] || "Legendary";
+            const labels = ["", "Beginner", "Easy", "Normal", "Tricky", "Hard", "Expert", "Master", "Genius", "Einstein", "Godlike"];
+            diffEl.textContent = labels[tier] || "Transcendent";
             diffEl.className = "pp-difficulty-badge pp-diff-" + tier;
         }
     }
@@ -402,7 +438,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Show pattern type label
         const labelEl = document.getElementById("pp-pattern-label");
         if (labelEl) {
-            labelEl.textContent = pattern.label;
+            labelEl.textContent = tier > 4 ? "????" : pattern.label; // Hide logic labels internally at high IQ levels to increase difficulty
             labelEl.classList.remove("pp-label-anim");
             void labelEl.offsetWidth;
             labelEl.classList.add("pp-label-anim");
@@ -455,29 +491,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (state.streak > state.bestStreakEver) {
             state.bestStreakEver = state.streak;
-            localStorage.setItem("ppBestStreak", state.bestStreakEver);
+            appStorage.setItem("ppBestStreak", state.bestStreakEver);
         }
 
+        const tier = getDifficultyTier();
         const multiplier = Math.max(1, Math.floor(state.streak / 3) + 1);
-        const points = (15 + getDifficultyTier() * 8) * multiplier;
+        const points = (15 + tier * 12) * multiplier;
         state.score += points;
         state.xp += points;
 
         while (state.xp >= state.xpToNext) {
             state.xp -= state.xpToNext;
             state.level++;
-            state.xpToNext = Math.floor(state.xpToNext * 1.12);
+            state.xpToNext = Math.floor(state.xpToNext * 1.15); // Harder XP scaling 
             flashBg("#f39c12", 800);
         }
 
         if (state.score > state.highScore) {
             state.highScore = state.score;
-            localStorage.setItem("ppHighScore", state.highScore);
+            appStorage.setItem("ppHighScore", state.highScore);
             if (highScoreEl) highScoreEl.textContent = state.highScore;
         }
         if (state.level > state.highLevel) {
             state.highLevel = state.level;
-            localStorage.setItem("ppHighLevel", state.highLevel);
+            appStorage.setItem("ppHighLevel", state.highLevel);
             if (highLevelEl) highLevelEl.textContent = state.highLevel;
         }
 
@@ -530,7 +567,7 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
             state.isActive = true;
             renderRound();
-        }, 750);
+        }, tier > 7 ? 400 : 750); // Faster transitions at high IQ tiers
     }
 
     // ─── Points Popup ───
@@ -551,6 +588,10 @@ document.addEventListener("DOMContentLoaded", () => {
     function handleWrong(btn, correctAnswer) {
         state.lives--;
         state.streak = 0; // Streak resets, difficulty stays tied to score
+        // Give a slight score penalty on higher tiers to punish guessing
+        if (getDifficultyTier() > 5) {
+             state.score = Math.max(0, state.score - 50);
+        }
         updateUI();
 
         if (btn) btn.classList.add("pp-choice-wrong");
