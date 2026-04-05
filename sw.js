@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ultradian-v13';
+const CACHE_NAME = 'ultradian-v16';
 const urlsToCache = [
   '/',
   '/index.html',

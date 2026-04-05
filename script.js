@@ -4450,24 +4450,23 @@ function markTextInElement(root, searchText, targetOffset = -1) {
   }
 }
 
-function handleTextSelection() {
-  if (!highlightMode || !currentBookId) return;
+function handleTextSelection(overrideRange = null) {
+  if (!currentBookId) return;
   const selection = window.getSelection();
-  if (!selection || selection.isCollapsed) return;
+  if (!overrideRange && (!selection || selection.isCollapsed)) return;
 
-  const selectedText = selection.toString().trim();
+  const range = overrideRange || selection.getRangeAt(0);
+  const selectedText = range.toString().trim();
   if (selectedText.length < 2) return;
 
   // Check that the selection is inside the reader
   const pageEl = document.getElementById('reader-text');
   if (!pageEl) return;
-  const anchorNode = selection.anchorNode;
-  if (!pageEl.contains(anchorNode)) return;
+  if (!pageEl.contains(range.startContainer)) return;
 
   // Calculate precise global text offset to prevent duplicate cross-highlighting
   let offset = -1;
   try {
-    const range = selection.getRangeAt(0);
     const preSelectionRange = range.cloneRange();
     preSelectionRange.selectNodeContents(pageEl);
     preSelectionRange.setEnd(range.startContainer, range.startOffset);
@@ -4477,7 +4476,7 @@ function handleTextSelection() {
   }
 
   saveHighlight(currentBookId, bookPageIndex, selectedText, offset);
-  selection.removeAllRanges();
+  if (!overrideRange && selection) selection.removeAllRanges();
 
   // Re-render page with precisely tracked highlight applied
   showBookPage(bookPageIndex, 'none');
@@ -5736,27 +5735,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const hlBtn = document.getElementById('reader-highlight-btn');
   if (hlBtn) {
-    // CRITICAL FIX: Running logic directly on touchstart/mousedown since preventing default kills click!
+    // CRITICAL FIX: The Ghost Memory system passes the range natively, skipping volatile window.getSelection() bugs!
     const handleHlBtnTouch = (e) => {
-      let selection = window.getSelection();
-      
-      // If the selection evaporated (e.g., they hit cancel on the mobile copy popup)
-      // but we have a ghost selection stored in memory, temporarily restore it so we can save it!
-      if (highlightMode && lastValidSelectionRange && (!selection || selection.isCollapsed)) {
-          selection.removeAllRanges();
-          selection.addRange(lastValidSelectionRange);
-          selection = window.getSelection(); // Refresh reference
-      }
-
-      // If text is actively highlighted and we tap the button, save the highlight!
-      if (highlightMode && selection && !selection.isCollapsed) {
-        handleTextSelection();
+      // If we have a ghost selection stored in memory, save it directly without toggling modes!
+      if (lastValidSelectionRange) {
+        handleTextSelection(lastValidSelectionRange);
         if (typeof showNotification === 'function') showNotification('✨ Highlight saved!');
-        lastValidSelectionRange = null; // Clear memory after save
-        return; // Do not toggle mode off
+        
+        // Clean up text selection
+        const sel = window.getSelection();
+        if (sel) sel.removeAllRanges();
+        lastValidSelectionRange = null; 
+        return; 
       }
 
-      // Otherwise, toggle the mode
+      // Otherwise, assume they tapped to toggle the visible mode instructions
       highlightMode = !highlightMode;
       const modal = document.getElementById('reader-modal');
       if (highlightMode) {
@@ -5767,8 +5760,9 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     };
 
-    hlBtn.addEventListener('mousedown', e => { e.preventDefault(); handleHlBtnTouch(e); });
-    hlBtn.addEventListener('touchstart', e => { e.preventDefault(); handleHlBtnTouch(e); }, { passive: false });
+    // The Ghost Memory system means we no longer need to violently block native touchstart routines,
+    // thereby allowing the smartphone to naturally register the tap, fire the :active CSS, and trigger a clean click!
+    hlBtn.addEventListener('click', handleHlBtnTouch);
   }
 
   // (Aggressive 'mouseup' and 'touchend' auto-capture listeners removed for frictionless native mobile dragging UX)
@@ -6114,7 +6108,7 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // Reset buttons and Menu
-  const menuBtn = document.getElementById("menuBtn");
+  const menuBtn = document.getElementById("taskMenuBtn");
   const menuDropdown = document.getElementById("menuDropdown");
 
   if (menuBtn && menuDropdown) {
@@ -6367,6 +6361,8 @@ function saveMood(moodStr) {
   renderMoodHistory();
   renderMoodHeatmap();
   generateMoodInsights();
+  if (typeof updateVitalityUI === 'function') updateVitalityUI();
+  if (typeof tryVitalityStreak === 'function') tryVitalityStreak();
   saveState();
   if (typeof tryVitalityStreak === "function") tryVitalityStreak();
 

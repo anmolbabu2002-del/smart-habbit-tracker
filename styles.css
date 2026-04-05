@@ -8181,20 +8181,20 @@ body {
 
 /* --- All Done Button --- */
 #alldone {
-    width: 100%;
-    padding: 16px;
-    border: none;
-    border-radius: 16px;
-    background: linear-gradient(135deg, #f59e0b, #ea580c);
-    color: white;
-    font-size: 1.1rem;
-    font-weight: 800;
+    display: none;
+    margin-top: 5px;
+    padding: 6px 14px;
+    width: auto;
+    background: transparent;
+    border: 1px solid rgba(0, 255, 136, 0.3);
+    color: #00ff88;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
     cursor: pointer;
-    margin-top: 20px;
-    transition: all 0.3s ease;
-    box-shadow: 0 6px 25px rgba(245, 158, 11, 0.35);
-    font-family: inherit;
-    animation: allDonePulseOrange 2s ease-in-out infinite;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 #alldone:hover {
@@ -14317,6 +14317,11 @@ body {
     display: flex;
     align-items: center;
     min-width: 0; /* Prevents flex children from strictly expanding the container */
+    pointer-events: none; /* Let parent intercept clicks! */
+}
+.bloom-tasks-card:not(.expanded) #task li *,
+.bloom-tasks-card:not(.expanded) #habits-list li * {
+    pointer-events: none; /* Prevent input elements stealing clicks when closed! */
 }
 
 /* Make Empty State completely proportional in compact mode */
@@ -16559,7 +16564,7 @@ body.theme-zen .bloom-hero {
     }
 
     /* Keep items in their natural DOM order */
-    .bloom-tasks-card.expanded #task li > input[type="checkbox"],
+    .bloom-tasks-card.expanded #task li > input[type="checkbox"]:not(.task-select-cb),
     .bloom-tasks-card.expanded #habits-list li .habit-checkbox,
     .bloom-tasks-card.expanded .task-emoji,
     .bloom-tasks-card.expanded .habit-emoji,
@@ -16574,7 +16579,7 @@ body.theme-zen .bloom-hero {
         display: inline-flex !important;
     }
 
-    .bloom-tasks-card.expanded #task li > input[type="checkbox"],
+    .bloom-tasks-card.expanded #task li > input[type="checkbox"]:not(.task-select-cb),
     .bloom-tasks-card.expanded #habits-list li .habit-checkbox { width: 18px !important; height: 18px !important; }
     
     /* Text bubble expands vertically while staying in the row */
