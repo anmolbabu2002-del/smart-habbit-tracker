@@ -17,7 +17,7 @@
       fog: new THREE.Color(0xFFE8CC),
       ambient: new THREE.Color(0xfff5e6),
       sunColor: new THREE.Color(0xFFD54F),
-      sunPos: { x: 3, y: 5.5, z: -13 },
+      sunPos: { x: 11, y: 7.5, z: -15 },
       sunIntensity: 2.0,
       mountainFar: new THREE.Color(0xB8A9C9),
       mountainMid: new THREE.Color(0x8FBC8F),
@@ -39,7 +39,7 @@
       fog: new THREE.Color(0xDDEEFF),
       ambient: new THREE.Color(0xffffff),
       sunColor: new THREE.Color(0xFFF9C4),
-      sunPos: { x: 3, y: 5.5, z: -13 },
+      sunPos: { x: 11, y: 7.5, z: -15 },
       sunIntensity: 2.5,
       mountainFar: new THREE.Color(0x9DB5CC),
       mountainMid: new THREE.Color(0x5DAF6A),
@@ -61,7 +61,7 @@
       fog: new THREE.Color(0xD4A8C8),
       ambient: new THREE.Color(0xffccaa),
       sunColor: new THREE.Color(0xFF5722),
-      sunPos: { x: 3, y: 5.5, z: -13 },
+      sunPos: { x: 11, y: 7.5, z: -15 },
       sunIntensity: 1.8,
       mountainFar: new THREE.Color(0x7B68AE),
       mountainMid: new THREE.Color(0x5C4D8C),
@@ -83,7 +83,7 @@
       fog: new THREE.Color(0x0C1445),
       ambient: new THREE.Color(0x334488),
       sunColor: new THREE.Color(0xC5CAE9),
-      sunPos: { x: 3, y: 5.5, z: -13 },
+      sunPos: { x: 11, y: 7.5, z: -15 },
       sunIntensity: 0.6,
       mountainFar: new THREE.Color(0x1A2744),
       mountainMid: new THREE.Color(0x0F1B33),
@@ -147,7 +147,8 @@
   renderer.domElement.style.width = '100%';
   renderer.domElement.style.height = '100%';
   renderer.domElement.style.borderRadius = 'inherit';
-  landscapeDiv.insertBefore(renderer.domElement, landscapeDiv.firstChild);
+  landscapeDiv.innerHTML = ''; // Wipe out old 2D CSS elements so they don't overlay
+  landscapeDiv.appendChild(renderer.domElement);
 
   // ═══════════════════════════════════════════════════════
   //  SKY GRADIENT BACKGROUND
@@ -466,7 +467,7 @@
   moonGlow.scale.set(3, 3, 1);
   moonGroup.add(moonGlow);
 
-  moonGroup.position.set(3, 5.5, -13);
+  moonGroup.position.set(11, 7.5, -15);
   moonGroup.visible = false;
   scene.add(moonGroup);
 

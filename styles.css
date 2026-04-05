@@ -17246,5 +17246,5 @@ body.theme-zen .bloom-hero {
     display: none !important;
 }
 .bloom-tasks-card:not(.expanded) #habits-list li .habit-emoji {
-    display: none !important;
+    display: flex !important;
 }

@@ -101,8 +101,9 @@ function getVitalityFactorScore(factorId) {
     }
     case "mood": {
       if (typeof moodHistory !== "undefined" && moodHistory.length > 0) {
-        const latest = moodHistory[moodHistory.length - 1];
-        const latestDate = new Date(latest.date || latest.timestamp).toDateString();
+        const latest = moodHistory[0];
+        const safeDateVal = latest.timestamp || latest.dateISO || latest.date;
+        const latestDate = new Date(safeDateVal).toDateString();
         return (latestDate === todayStr) ? 1 : 0;
       }
       return 0;
@@ -5735,11 +5736,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const hlBtn = document.getElementById('reader-highlight-btn');
   if (hlBtn) {
-    // CRITICAL FIX: Prevent mobile/desktop button taps from instantly destroying the native text selection!
-    hlBtn.addEventListener('mousedown', e => e.preventDefault());
-    hlBtn.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
-
-    hlBtn.addEventListener('click', () => {
+    // CRITICAL FIX: Running logic directly on touchstart/mousedown since preventing default kills click!
+    const handleHlBtnTouch = (e) => {
       let selection = window.getSelection();
       
       // If the selection evaporated (e.g., they hit cancel on the mobile copy popup)
@@ -5747,6 +5745,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (highlightMode && lastValidSelectionRange && (!selection || selection.isCollapsed)) {
           selection.removeAllRanges();
           selection.addRange(lastValidSelectionRange);
+          selection = window.getSelection(); // Refresh reference
       }
 
       // If text is actively highlighted and we tap the button, save the highlight!
@@ -5766,7 +5765,10 @@ document.addEventListener("DOMContentLoaded", function () {
       } else {
         modal?.classList.remove('highlight-mode-active');
       }
-    });
+    };
+
+    hlBtn.addEventListener('mousedown', e => { e.preventDefault(); handleHlBtnTouch(e); });
+    hlBtn.addEventListener('touchstart', e => { e.preventDefault(); handleHlBtnTouch(e); }, { passive: false });
   }
 
   // (Aggressive 'mouseup' and 'touchend' auto-capture listeners removed for frictionless native mobile dragging UX)
@@ -6316,9 +6318,9 @@ function saveMood(moodStr) {
   const noteInput = /** @type {HTMLInputElement} */ (document.getElementById("mood-note"));
   const note = noteInput ? noteInput.value.trim() : "";
 
-  // Enforce daily limit (max 2 entries per day)
-  const today = new Date().toISOString().split('T')[0];
-  const todayCount = moodHistory.filter(m => m.dateISO === today).length;
+  // Enforce daily limit (max 2 entries per day locally)
+  const todayLocal = new Date().toLocaleDateString();
+  const todayCount = moodHistory.filter(m => m.date === todayLocal).length;
   if (todayCount >= 2) {
     showNotification("⚠️ Daily limit reached: You can only log a maximum of 2 moods per day!");
     return;
@@ -6340,6 +6342,7 @@ function saveMood(moodStr) {
   const entry = {
     date: now.toLocaleDateString(),
     dateISO: now.toISOString().split('T')[0],
+    timestamp: Date.now(),
     mood: moodStr,
     note: note,
     tags: selectedTags,
