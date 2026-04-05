@@ -14294,13 +14294,15 @@ body {
     display: none !important;
 }
 
-/* Hide task items beyond the third one when not expanded */
-.bloom-tasks-card:not(.expanded) #task li:nth-child(n+4) {
+/* Hide task/habit items beyond the third one when not expanded */
+.bloom-tasks-card:not(.expanded) #task li:nth-child(n+4),
+.bloom-tasks-card:not(.expanded) #habits-list li:nth-child(n+4) {
     display: none !important;
 }
 
-/* Minimal styling for tasks in unexpanded state to match mockup */
-.bloom-tasks-card:not(.expanded) #task li {
+/* Minimal styling for tasks/habits in unexpanded state to match mockup */
+.bloom-tasks-card:not(.expanded) #task li,
+.bloom-tasks-card:not(.expanded) #habits-list li {
     padding: 6px 4px;
     margin: 0 0 4px 0;
     background: transparent;
@@ -14340,15 +14342,40 @@ body {
 }
 
 /* Ensure text children truncate properly without pushing the container */
-.bloom-tasks-card:not(.expanded) #task li > * {
+.bloom-tasks-card:not(.expanded) #task li > *,
+.bloom-tasks-card:not(.expanded) #habits-list li > * {
     max-width: 100%;
 }
 .bloom-tasks-card:not(.expanded) #task li span,
-.bloom-tasks-card:not(.expanded) #task li label {
+.bloom-tasks-card:not(.expanded) #task li label,
+.bloom-tasks-card:not(.expanded) #habits-list li .habit-content,
+.bloom-tasks-card:not(.expanded) #habits-list li .habit-text {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     flex: 1;
+}
+
+/* Hide bulky habit/task child elements in compact view */
+.bloom-tasks-card:not(.expanded) #habits-list li .habit-streak,
+.bloom-tasks-card:not(.expanded) #habits-list li .habit-delete-btn {
+    display: none !important;
+}
+
+.bloom-tasks-card:not(.expanded) #habits-list li .habit-emoji {
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+    border-radius: 6px;
+    box-shadow: none;
+}
+
+.bloom-tasks-card:not(.expanded) #habits-list li .habit-checkbox {
+    width: 16px;
+    height: 16px;
+}
+.bloom-tasks-card:not(.expanded) #habits-list li .habit-checkbox:checked::after {
+    font-size: 10px;
 }
 
 /* Hide task menu wrapper if the card is not expanded */
@@ -16475,7 +16502,8 @@ body.theme-zen .bloom-hero {
     }
 
     /* In expanded: SHOW emoji badges again */
-    .bloom-tasks-card.expanded .task-emoji {
+    .bloom-tasks-card.expanded .task-emoji,
+    .bloom-tasks-card.expanded .habit-emoji {
         display: inline-flex !important;
         width: 36px !important;
         height: 36px !important;
@@ -16515,7 +16543,9 @@ body.theme-zen .bloom-hero {
 
     /* In expanded: Clean horizontal flex layout matching the desktop view */
     .bloom-tasks-card.expanded .task-item,
-    .bloom-tasks-card.expanded #task li {
+    .bloom-tasks-card.expanded #task li,
+    .bloom-tasks-card.expanded .habit-item,
+    .bloom-tasks-card.expanded #habits-list li {
         display: flex !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;
@@ -16523,24 +16553,35 @@ body.theme-zen .bloom-hero {
         gap: 6px !important;
         padding: 8px 10px !important;
         border-radius: 12px !important;
+        background: var(--bg-card) !important;
+        border: 1.5px dashed var(--border) !important;
+        margin-bottom: 8px !important;
     }
 
     /* Keep items in their natural DOM order */
     .bloom-tasks-card.expanded #task li > input[type="checkbox"],
+    .bloom-tasks-card.expanded #habits-list li .habit-checkbox,
     .bloom-tasks-card.expanded .task-emoji,
+    .bloom-tasks-card.expanded .habit-emoji,
     .bloom-tasks-card.expanded .task-priority-badge,
+    .bloom-tasks-card.expanded .habit-streak,
     .bloom-tasks-card.expanded .task-priority-set-btn,
+    .bloom-tasks-card.expanded .habit-delete-btn,
     .bloom-tasks-card.expanded .task-focus-btn {
         flex-shrink: 0 !important;
         margin: 0 !important;
         align-self: center !important;
+        display: inline-flex !important;
     }
 
-    .bloom-tasks-card.expanded #task li > input[type="checkbox"] { width: 18px !important; height: 18px !important; }
+    .bloom-tasks-card.expanded #task li > input[type="checkbox"],
+    .bloom-tasks-card.expanded #habits-list li .habit-checkbox { width: 18px !important; height: 18px !important; }
     
     /* Text bubble expands vertically while staying in the row */
     .bloom-tasks-card.expanded #task li span.task-text,
-    .bloom-tasks-card.expanded #task li span[style*="white-space"] {
+    .bloom-tasks-card.expanded #task li span[style*="white-space"],
+    .bloom-tasks-card.expanded .habit-content,
+    .bloom-tasks-card.expanded .habit-text {
         flex: 1 1 0 !important;
         min-width: 0 !important; /* Extremely important to prevent text blowout in flex rows */
         width: auto !important;

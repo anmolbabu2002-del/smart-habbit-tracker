@@ -74,7 +74,9 @@ function getVitalityFactorScore(factorId) {
     case "sleep": {
       if (typeof sleepLogs !== "undefined" && sleepLogs.length > 0) {
         const recent = sleepLogs[0];
-        const recentDateStr = new Date(recent.date).toDateString();
+        // Safely fallback to timestamp if the localized date string fails to parse
+        const safeDateVal = recent.timestamp ? recent.timestamp : recent.date;
+        const recentDateStr = new Date(safeDateVal).toDateString();
         const yesterdayStr = new Date(Date.now() - 86400000).toDateString();
         if (recentDateStr === todayStr || recentDateStr === yesterdayStr) return 1;
       }
@@ -5720,25 +5722,52 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // ======== HIGHLIGHTER EVENTS ========
-  document.getElementById('reader-highlight-btn')?.addEventListener('click', () => {
-    const selection = window.getSelection();
-    // If text is actively highlighted and we tap the button, save the highlight!
-    if (highlightMode && selection && !selection.isCollapsed) {
-      handleTextSelection();
-      if (typeof showNotification === 'function') showNotification('✨ Highlight saved!');
-      return; // Do not toggle mode off
-    }
+  let lastValidSelectionRange = null;
 
-    // Otherwise, toggle the mode
-    highlightMode = !highlightMode;
-    const modal = document.getElementById('reader-modal');
-    if (highlightMode) {
-      modal?.classList.add('highlight-mode-active');
-      if (typeof showNotification === 'function') showNotification('🖍️ Highlight mode ON — select text natively with handles, then tap this 🖍️ button to save!');
-    } else {
-      modal?.classList.remove('highlight-mode-active');
+  // Constantly track the latest valid text selection in the background 
+  // (solves the issue of mobile text selections "evaporating" when natives menus close)
+  document.addEventListener('selectionchange', () => {
+    const sel = window.getSelection();
+    if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
+      lastValidSelectionRange = sel.getRangeAt(0).cloneRange();
     }
   });
+
+  const hlBtn = document.getElementById('reader-highlight-btn');
+  if (hlBtn) {
+    // CRITICAL FIX: Prevent mobile/desktop button taps from instantly destroying the native text selection!
+    hlBtn.addEventListener('mousedown', e => e.preventDefault());
+    hlBtn.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+
+    hlBtn.addEventListener('click', () => {
+      let selection = window.getSelection();
+      
+      // If the selection evaporated (e.g., they hit cancel on the mobile copy popup)
+      // but we have a ghost selection stored in memory, temporarily restore it so we can save it!
+      if (highlightMode && lastValidSelectionRange && (!selection || selection.isCollapsed)) {
+          selection.removeAllRanges();
+          selection.addRange(lastValidSelectionRange);
+      }
+
+      // If text is actively highlighted and we tap the button, save the highlight!
+      if (highlightMode && selection && !selection.isCollapsed) {
+        handleTextSelection();
+        if (typeof showNotification === 'function') showNotification('✨ Highlight saved!');
+        lastValidSelectionRange = null; // Clear memory after save
+        return; // Do not toggle mode off
+      }
+
+      // Otherwise, toggle the mode
+      highlightMode = !highlightMode;
+      const modal = document.getElementById('reader-modal');
+      if (highlightMode) {
+        modal?.classList.add('highlight-mode-active');
+        if (typeof showNotification === 'function') showNotification('🖍️ Highlight mode ON — select text natively with handles, then tap this 🖍️ button to save!');
+      } else {
+        modal?.classList.remove('highlight-mode-active');
+      }
+    });
+  }
 
   // (Aggressive 'mouseup' and 'touchend' auto-capture listeners removed for frictionless native mobile dragging UX)
 
@@ -6596,6 +6625,8 @@ function saveSleepEntry() {
   updateSleepStats();
   saveState();
   if (typeof updateBloomWidgets === "function") updateBloomWidgets();
+  if (typeof tryVitalityStreak === "function") tryVitalityStreak();
+  if (typeof updateVitalityUI === "function") updateVitalityUI();
   if (typeof tryVitalityStreak === "function") tryVitalityStreak();
 
   // Reset UI
