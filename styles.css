@@ -14726,6 +14726,13 @@ body {
     margin-bottom: 0;
     padding-bottom: 0;
     border-bottom: none;
+    list-style: none;
+}
+.bloom-progress-quote p,
+.dashboard-quote-text,
+.dashboard-quote-author {
+    list-style: none;
+    display: block;
 }
 
 /* ── Daily Quote Strip ── */
@@ -17919,13 +17926,13 @@ body.theme-zen .bloom-hero {
 }
 .dc-mini-title {
     font-size: 0.82rem; font-weight: 800; color: var(--text-main); line-height: 1.25;
-    display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 1; line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
 }
 
 /* Description */
 .dc-mini-desc {
     font-size: 0.7rem; color: var(--text-muted); margin: 0 0 5px; line-height: 1.35;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 
 /* Meta Tags */
@@ -17997,8 +18004,8 @@ input:checked + .toggle-slider::before { transform: translateX(22px); }
     .dc-mini-emoji { font-size: 0.9rem; }
     .dc-mini-label { font-size: 0.48rem; }
     .dc-mini-streak { font-size: 0.52rem; padding: 0px 4px; }
-    .dc-mini-title { font-size: 0.78rem; -webkit-line-clamp: unset; overflow: visible; }
-    .dc-mini-desc { font-size: 0.68rem; margin-bottom: 5px; -webkit-line-clamp: unset; overflow: visible; display: block; }
+    .dc-mini-title { font-size: 0.78rem; -webkit-line-clamp: unset; line-clamp: unset; overflow: visible; }
+    .dc-mini-desc { font-size: 0.68rem; margin-bottom: 5px; -webkit-line-clamp: unset; line-clamp: unset; overflow: visible; display: block; }
     .dc-mini-meta { gap: 3px; margin-bottom: 4px; }
     .dc-tag { font-size: 0.5rem; padding: 1px 5px; }
     .dc-mini-tip { font-size: 0.6rem; padding: 4px 7px; margin-bottom: 6px; }
@@ -18012,8 +18019,8 @@ input:checked + .toggle-slider::before { transform: translateX(22px); }
     .dc-mini-content { padding: 6px 8px 8px; }
     .dc-mini-icon-box { width: 24px; height: 24px; border-radius: 7px; }
     .dc-mini-emoji { font-size: 0.8rem; }
-    .dc-mini-title { font-size: 0.72rem; -webkit-line-clamp: unset; overflow: visible; }
-    .dc-mini-desc { font-size: 0.62rem; -webkit-line-clamp: unset; overflow: visible; display: block; }
+    .dc-mini-title { font-size: 0.72rem; -webkit-line-clamp: unset; line-clamp: unset; overflow: visible; }
+    .dc-mini-desc { font-size: 0.62rem; -webkit-line-clamp: unset; line-clamp: unset; overflow: visible; display: block; }
     .dc-mini-tip { font-size: 0.56rem; padding: 3px 6px; }
     .dc-btn-done { font-size: 0.65rem; min-height: 26px; padding: 5px 8px; }
 }
