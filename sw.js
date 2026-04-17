@@ -1,38 +1,104 @@
-const CACHE_NAME = 'ultradian-v16';
-const urlsToCache = [
+const CACHE_NAME = 'ultradian-v18';
+
+// ═══ CORE APP SHELL (HTML, CSS, JS) ═══
+const CORE_ASSETS = [
   '/',
   '/index.html',
-  '/styles.css?v=3.0',
+  '/styles.css?v=4.0',
   '/script.js?v=4.0',
   '/storage.js',
-  '/castle-3d.js?v=3.0',
+  '/quotes.js',
+  '/tips.js',
+  '/tts.js?v=1.0',
+  '/advanced_dashboard.js',
+  '/daily-challenge.js',
+  '/manifest.json'
+];
+
+// ═══ 3D, GAMES & FEATURE JS ═══
+const FEATURE_ASSETS = [
+  '/welcome-3d.js',
+  '/castle-3d.js?v=4.5',
+  '/hero-landscape-3d.js',
   '/math-missile.js',
   '/pattern-prophet.js',
   '/omniscient.js',
   '/cross-zero.js',
-  '/quotes.js',
-  '/tips.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/ultradian_app_icon_1774120827802.png',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700&family=Playfair+Display:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap'
+  '/neuro-link.js',
+  '/test-proxies.js',
+  '/bundle.js'
 ];
 
-// Install: cache all core files
+// ═══ ICONS & APP IMAGES ═══
+const IMAGE_ASSETS = [
+  '/icon-192.png',
+  '/icon-512.png',
+  '/icon_512.png',
+  '/ultradian_app_icon_1774120827802.png',
+  '/anmol-ai-avatar.jpeg',
+  '/welcome-character.png',
+  // Hub / Knowledge content images
+  '/file_00000000164871fa8242a2f408db55dc.png',
+  '/file_000000005c3871fab43858a38fc3b6a8.png',
+  '/file_0000000074b4720899d764b82548f222.png',
+  '/file_00000000ca207208bab30f2ec889c89f.png'
+];
+
+// ═══ MEDITATION & FOCUS AUDIO/VIDEO ═══
+const MEDIA_ASSETS = [
+  '/nature.mp3',
+  '/deepfocus.mp3',
+  '/videoplayback.mp4',
+  '/videoplayback.1773901315901.publer.com.mp4'
+];
+
+// ═══ CDN LIBRARIES (needed for offline) ═══
+const CDN_ASSETS = [
+  'https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js',
+  'https://unpkg.com/react@18/umd/react.production.min.js',
+  'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
+  'https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700&family=Playfair+Display:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&family=Cormorant+Garamond:wght@400;600;700&display=swap'
+];
+
+// Combine all except media (media cached lazily to avoid blocking install)
+const INSTALL_CACHE = [...CORE_ASSETS, ...FEATURE_ASSETS, ...IMAGE_ASSETS, ...CDN_ASSETS];
+
+// ═══════ INSTALL ═══════
+// Cache core assets immediately. Large media files are cached in background
+// so the SW installs fast and doesn't time out.
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('[SW] Caching core files');
-        return cache.addAll(urlsToCache);
-      })
+    caches.open(CACHE_NAME).then(async cache => {
+      console.log('[SW] Caching core assets…');
+      // Cache core + CDN (small files) – fail gracefully per-item
+      await Promise.allSettled(
+        INSTALL_CACHE.map(url =>
+          cache.add(url).catch(err => console.warn('[SW] Skip:', url, err.message))
+        )
+      );
+
+      // Cache large media files individually so one failure doesn't break install
+      console.log('[SW] Caching media assets in background…');
+      await Promise.allSettled(
+        MEDIA_ASSETS.map(url =>
+          cache.add(url).catch(err => console.warn('[SW] Media skip:', url, err.message))
+        )
+      );
+
+      console.log('[SW] Install complete ✅');
+    })
   );
 });
 
-// Activate: clean up old caches and take over immediately
+// ═══════ ACTIVATE ═══════
+// Clean up ALL old caches and claim clients immediately
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => {
@@ -44,15 +110,15 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Fetch: serve from cache first, fall back to network
+// ═══════ FETCH ═══════
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Never cache API calls (AI chatbot needs internet)
+  // ── 1. API / Netlify Functions: Network-only (AI chatbot needs internet) ──
   if (url.pathname.startsWith('/api') || url.pathname.startsWith('/.netlify/functions')) {
     event.respondWith(
       fetch(event.request).catch(() => {
-        return new Response(JSON.stringify({ error: 'You are offline' }), {
+        return new Response(JSON.stringify({ error: 'You are offline. AI features need internet.' }), {
           headers: { 'Content-Type': 'application/json' }
         });
       })
@@ -60,50 +126,83 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request)
-      .then(cachedResponse => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-
-        // Try without query string as fallback
-        const urlWithoutQuery = event.request.url.split('?')[0];
-        return caches.match(urlWithoutQuery).then(fallbackResponse => {
-          if (fallbackResponse) {
-            return fallbackResponse;
+  // ── 2. External CDN/fonts: Cache-first (they rarely change) ──
+  if (url.origin !== location.origin) {
+    event.respondWith(
+      caches.match(event.request).then(cached => {
+        if (cached) return cached;
+        return fetch(event.request).then(response => {
+          if (!response || response.status !== 200) return response;
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          return response;
+        }).catch(() => {
+          // For font CSS, return an empty response so the app doesn't break
+          if (event.request.url.includes('fonts.googleapis.com')) {
+            return new Response('', { headers: { 'Content-Type': 'text/css' } });
           }
+          return new Response('', { status: 503 });
+        });
+      })
+    );
+    return;
+  }
 
-          // Not in cache at all - fetch from network and cache it
+  // ── 3. Media files (mp3/mp4): Cache-first, stream-friendly ──
+  if (/\.(mp3|mp4|ogg|wav|webm)(\?.*)?$/i.test(url.pathname)) {
+    event.respondWith(
+      caches.match(event.request).then(cached => {
+        if (cached) return cached;
+        // Also try without query string
+        return caches.match(url.pathname).then(fallback => {
+          if (fallback) return fallback;
+          // Not cached yet — fetch and cache for next time
           return fetch(event.request).then(response => {
-            if (!response || response.status !== 200) {
-              return response;
-            }
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME).then(cache => {
-              cache.put(event.request, responseToCache);
-            });
+            if (!response || response.status !== 200) return response;
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
             return response;
           });
         });
-      })
-      .catch(() => {
-        // If everything fails and it's an HTML request, serve index.html
-        if (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html')) {
-          return caches.match('/index.html');
-        }
-      })
+      }).catch(() => new Response('', { status: 503, statusText: 'Offline' }))
+    );
+    return;
+  }
+
+  // ── 4. All other local assets: Cache-first, network fallback ──
+  event.respondWith(
+    caches.match(event.request).then(cached => {
+      if (cached) return cached;
+
+      // Try without query string as fallback
+      const bareUrl = event.request.url.split('?')[0];
+      return caches.match(bareUrl).then(fallback => {
+        if (fallback) return fallback;
+
+        // Not in cache — fetch from network and cache it
+        return fetch(event.request).then(response => {
+          if (!response || response.status !== 200) return response;
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          return response;
+        });
+      });
+    }).catch(() => {
+      // Last resort: serve index.html for HTML navigation requests
+      if (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html')) {
+        return caches.match('/index.html');
+      }
+    })
   );
 });
 
-// Notification click behavior: focus window or open start URL
+// ═══════ NOTIFICATION CLICK ═══════
 self.addEventListener('notificationclick', event => {
   event.notification.close();
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then(windowClients => {
-        // If the app is already open, focus the tab
         for (let i = 0; i < windowClients.length; i++) {
           const client = windowClients[i];
           const clientUrl = new URL(client.url);
@@ -111,7 +210,6 @@ self.addEventListener('notificationclick', event => {
             if ('focus' in client) return client.focus();
           }
         }
-        // If not open, open a new window at the start URL
         if (clients.openWindow) {
           return clients.openWindow('/');
         }

@@ -19,6 +19,7 @@ let currentFocusHabitIndex = null; // Store reference to currently focused habit
 
 // ==================== VITALITY SCORE SYSTEM ====================
 const VITALITY_FACTOR_POOL = [
+  { id: "challenge",  emoji: "🎯", label: "Challenge",  desc: "Complete today's daily challenge", locked: true },
   { id: "tasks",      emoji: "📝", label: "Tasks",      desc: "Complete your daily tasks" },
   { id: "water",      emoji: "💧", label: "Water",      desc: "Hit your daily water goal" },
   { id: "meditation", emoji: "🪷", label: "Meditation", desc: "Complete a meditation session" },
@@ -29,7 +30,7 @@ const VITALITY_FACTOR_POOL = [
   { id: "mood",       emoji: "🎭", label: "Mood",       desc: "Log your mood today" }
 ];
 
-const DEFAULT_VITALITY_FACTORS = ["tasks", "water", "meditation", "sleep", "reading"];
+const DEFAULT_VITALITY_FACTORS = ["challenge", "tasks", "water", "meditation", "sleep"];
 
 function loadVitalityConfig() {
   const raw = appStorage.getItem("vitalityConfig");
@@ -108,6 +109,10 @@ function getVitalityFactorScore(factorId) {
       }
       return 0;
     }
+    case "challenge": {
+      // Check if today's daily challenge was completed (via localforage async, use cached flag)
+      return window._dcCompletedToday ? 1 : 0;
+    }
     default: return 0;
   }
 }
@@ -135,6 +140,12 @@ function tryVitalityStreak() {
 
   const score = getVitalityScore();
   if (score >= 80) {
+    // If streak was paused, resume it
+    if (streakPaused) {
+      streakPaused = false;
+      showNotification(`⚡ Streak RESUMED! Welcome back!`);
+    }
+
     // ✅ INCREMENT STREAK
     appStorage.setItem("lastCompletionTime", Date.now().toString());
     appStorage.removeItem("lastStreakPenaltyTime");
@@ -147,6 +158,9 @@ function tryVitalityStreak() {
 
     showNotification(`🔥 Vitality ${score}%! Streak extended to ${count} days!`);
 
+    // Check if user earned a shield
+    earnShield();
+
     // Update vitality UI
     updateVitalityUI();
 
@@ -155,8 +169,9 @@ function tryVitalityStreak() {
     }, 1500);
   }
 
-  // Always refresh the vitality display
+  // Always refresh the vitality display and pause overlay
   updateVitalityUI();
+  if (typeof updatePauseOverlay === 'function') updatePauseOverlay();
 }
 
 function updateVitalityUI() {
@@ -1234,12 +1249,12 @@ const taskContainer = document.getElementById("task");
 const plus = document.getElementById("plus");
 let count = 0;
 
-// ==================== DAILY STREAK CHECK (DUOLINGO-STYLE) ====================
+// ==================== DAILY STREAK CHECK (PAUSE SYSTEM) ====================
 function checkDailyStreak() {
-  if (count <= 0) return; // Nothing to lose
+  if (count <= 0) return; // Nothing to protect
 
   const lastCompletion = appStorage.getItem("lastCompletionTime");
-  if (!lastCompletion) return; // Never completed — nothing to lose
+  if (!lastCompletion) return; // Never completed — nothing to protect
 
   const lastTime = parseInt(lastCompletion, 10);
   const lastDate = new Date(lastTime);
@@ -1249,46 +1264,62 @@ function checkDailyStreak() {
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
 
-  // If last completion was today or yesterday, streak is safe
+  // If last completion was today or yesterday, streak is safe — unpause
   const lastDateStr = lastDate.toDateString();
   if (lastDateStr === today.toDateString() || lastDateStr === yesterday.toDateString()) {
+    if (streakPaused) {
+      streakPaused = false;
+      saveState();
+      updateStreakDisplay();
+    }
     return; // Streak is safe
   }
 
-  // Check we haven't already penalized for this gap
+  // Check we haven't already applied pause for this gap
   const lastPenalty = appStorage.getItem("lastStreakPenaltyTime");
   if (lastPenalty) {
     const lastPenaltyTime = parseInt(lastPenalty, 10);
-    if (lastPenaltyTime > lastTime) return;
+    if (lastPenaltyTime > lastTime) {
+      // Already handled — but keep paused state if it was set
+      if (streakPaused) updatePauseOverlay();
+      return;
+    }
   }
 
-  // Missed a day — Duolingo style: streak resets to 0 💀
-  const lostCount = count;
-  count = 0;
+  // Missed a day — Try Shield first!
+  if (streakShields > 0) {
+    useShield();
+    appStorage.setItem("lastStreakPenaltyTime", Date.now().toString());
+    // Shield protects streak — pretend yesterday was completed
+    appStorage.setItem("lastCompletionTime", (Date.now() - 86400000).toString());
+    return;
+  }
 
-  // Hard Reset: Re-lock all milestones
-  unlockedMilestones = [];
-  if (typeof updateOrbUI === 'function') updateOrbUI();
-
-  // Wipe completion dates history
-  completionDates = [];
-  if (typeof renderStreakCalendar === 'function') renderStreakCalendar();
-
-  // Reset 3D Castle to foundation
-  if (typeof resetCastleToFoundation === 'function') resetCastleToFoundation();
+  // No shield — PAUSE the streak (NOT reset!)
+  streakPaused = true;
 
   saveState();
   updateStreakDisplay();
   if (document.getElementById("streak-page")?.classList.contains("active")) {
     renderStreakPage();
   }
-  showStreakLossAnimation(lostCount);
+  showStreakPausedNotification();
 
-  // Mark penalty as applied, clear tracking
+  // Mark penalty as applied
   appStorage.setItem("lastStreakPenaltyTime", Date.now().toString());
-  appStorage.removeItem("lastCompletionTime");
-  appStorage.removeItem("tasksCompletedDate");
-  appStorage.removeItem("meditationCompletedDate");
+}
+
+function showStreakPausedNotification() {
+  showNotification("⏸️ Streak paused! Complete your vitality factors to resume.");
+  const streakEl = document.getElementById("streak");
+  const streakNumber = document.getElementById("streak-number");
+
+  // Shake animation
+  [streakEl, streakNumber?.closest(".streak-count-display")].forEach(el => {
+    if (!el) return;
+    el.classList.add("streak-loss-shake");
+    setTimeout(() => el.classList.remove("streak-loss-shake"), 800);
+  });
 }
 
 function showStreakLossAnimation(lostCount) {
@@ -1439,46 +1470,71 @@ function renderVitalityConfigCards() {
   const cfg = loadVitalityConfig();
   grid.innerHTML = "";
 
+  // Check if DC is enabled (sync check from localStorage cache)
+  const dcEnabled = window._dcEnabledCache !== false;
+
+  // Ensure 'challenge' is in factors when DC is on, removed when off
+  if (dcEnabled && !cfg.factors.includes("challenge")) {
+    cfg.factors.unshift("challenge");
+    if (cfg.factors.length > 5) cfg.factors = cfg.factors.slice(0, 5);
+    saveVitalityConfig(cfg);
+  } else if (!dcEnabled && cfg.factors.includes("challenge")) {
+    cfg.factors = cfg.factors.filter(f => f !== "challenge");
+    saveVitalityConfig(cfg);
+  }
+
   VITALITY_FACTOR_POOL.forEach(factor => {
+    // Hide challenge factor when DC is disabled
+    if (factor.id === "challenge" && !dcEnabled) return;
+
     const isActive = cfg.factors.includes(factor.id);
+    const isLocked = factor.id === "challenge" && dcEnabled;
     const card = document.createElement("div");
-    card.className = `vitality-factor-card ${isActive ? "active" : ""}`;
+    card.className = `vitality-factor-card ${isActive ? "active" : ""}${isLocked ? " vf-locked" : ""}`;
     card.innerHTML = `
       <div class="vf-icon">${factor.emoji}</div>
       <div class="vf-info">
-        <span class="vf-label">${factor.label}</span>
+        <span class="vf-label">${factor.label}${isLocked ? " 🔒" : ""}</span>
         <span class="vf-desc">${factor.desc}</span>
       </div>
       <div class="vf-toggle-indicator">${isActive ? "✓" : ""}</div>
     `;
 
-    card.addEventListener("click", () => {
-      const currentCfg = loadVitalityConfig();
-      const idx = currentCfg.factors.indexOf(factor.id);
-      if (idx > -1) {
-        // Removing
-        if (currentCfg.factors.length <= 3) {
-          showNotification("⚠️ Minimum 3 factors required!");
-          card.classList.add("vf-shake");
-          setTimeout(() => card.classList.remove("vf-shake"), 500);
-          return;
+    if (isLocked) {
+      card.addEventListener("click", () => {
+        showNotification("🔒 Daily Challenge is a mandatory factor! Disable it in Settings to remove.");
+        card.classList.add("vf-shake");
+        setTimeout(() => card.classList.remove("vf-shake"), 500);
+      });
+    } else {
+      card.addEventListener("click", () => {
+        const currentCfg = loadVitalityConfig();
+        const idx = currentCfg.factors.indexOf(factor.id);
+        if (idx > -1) {
+          // Removing — count non-locked factors
+          if (currentCfg.factors.length <= 3) {
+            showNotification("⚠️ Minimum 3 factors required!");
+            card.classList.add("vf-shake");
+            setTimeout(() => card.classList.remove("vf-shake"), 500);
+            return;
+          }
+          currentCfg.factors.splice(idx, 1);
+        } else {
+          // Adding
+          if (currentCfg.factors.length >= 5) {
+            showNotification("⚠️ Maximum 5 factors allowed!");
+            card.classList.add("vf-shake");
+            setTimeout(() => card.classList.remove("vf-shake"), 500);
+            return;
+          }
+          currentCfg.factors.push(factor.id);
         }
-        currentCfg.factors.splice(idx, 1);
-      } else {
-        // Adding
-        if (currentCfg.factors.length >= 5) {
-          showNotification("⚠️ Maximum 5 factors allowed!");
-          card.classList.add("vf-shake");
-          setTimeout(() => card.classList.remove("vf-shake"), 500);
-          return;
-        }
-        currentCfg.factors.push(factor.id);
-      }
-      saveVitalityConfig(currentCfg);
-      renderVitalityConfigCards();
-      updateVitalityUI();
-      if (typeof updateBloomWidgets === "function") updateBloomWidgets();
-    });
+        saveVitalityConfig(currentCfg);
+        renderVitalityConfigCards();
+        updateVitalityUI();
+        if (typeof updateBloomWidgets === "function") updateBloomWidgets();
+      });
+    }
 
     grid.appendChild(card);
   });
@@ -2148,61 +2204,266 @@ function updateStreakDisplay() {
   updateMilestones();
 }
 
-// Orb Achievements Logic
-const orbStages = [
-  { days: 0, name: "Ember", class: "stage-ember", emoji: "🌑" },
-  { days: 4, name: "Spark", class: "stage-spark", emoji: "✨" },
-  { days: 10, name: "Flame", class: "stage-flame", emoji: "🔥" },
-  { days: 20, name: "Blaze", class: "stage-blaze", emoji: "💥" },
-  { days: 35, name: "Inferno", class: "stage-inferno", emoji: "🌋" },
-  { days: 60, name: "Phoenix", class: "stage-phoenix", emoji: "🦅" },
-  { days: 100, name: "Supernova", class: "stage-supernova", emoji: "💫" },
-  { days: 200, name: "Eternal", class: "stage-eternal", emoji: "👑" }
+// Premium Sports Medal Achievement System
+const ACHIEVEMENT_TIERS = [
+  { days: 0,   name: "Participant",   tier: "participant", emoji: "🎗️", tagline: "The journey begins" },
+  { days: 4,   name: "Bronze",        tier: "bronze",      emoji: "🥉", tagline: "First real victory" },
+  { days: 10,  name: "Silver",        tier: "silver",      emoji: "🥈", tagline: "Serious contender" },
+  { days: 20,  name: "Gold",          tier: "gold",        emoji: "🥇", tagline: "Champion mindset" },
+  { days: 35,  name: "Platinum",      tier: "platinum",    emoji: "🏆", tagline: "Elite performer" },
+  { days: 60,  name: "Diamond Cup",   tier: "diamond",     emoji: "💎", tagline: "Unbreakable willpower" },
+  { days: 100, name: "Hall of Fame",  tier: "halloffame",  emoji: "⭐", tagline: "Written in history" },
+  { days: 200, name: "G.O.A.T.",      tier: "goat",        emoji: "👑", tagline: "Greatest Of All Time" }
 ];
 
+// Rank Title System
+const RANK_TITLES = [
+  { min: 0,   title: "Newcomer",     icon: "🌱" },
+  { min: 3,   title: "Apprentice",   icon: "🌿" },
+  { min: 7,   title: "Dedicated",    icon: "⚡" },
+  { min: 14,  title: "Warrior",      icon: "⚔️" },
+  { min: 30,  title: "Legend",       icon: "🏛️" },
+  { min: 60,  title: "Master",       icon: "🔱" },
+  { min: 100, title: "Grandmaster",  icon: "💎" },
+  { min: 200, title: "Mythic",       icon: "👑" }
+];
+
+let personalBest = 0;
+let streakShields = 0;
+let streakPaused = false;
+
 function updateMilestones() {
-  updateOrbAchievements();
+  updateAchievementCards();
+  updateEngagementUI();
 }
 
-function updateOrbAchievements() {
+// ==================== ACHIEVEMENT CARDS ====================
+function updateAchievementCards() {
   const currentStreak = count;
-  const cards = document.querySelectorAll(".reward-card");
+  const cards = document.querySelectorAll(".achievement-card");
   let changed = false;
 
-  cards.forEach((card, index) => {
+  cards.forEach((card) => {
     const requiredDays = parseInt(card.getAttribute("data-days") || "0");
-    const statusSpan = card.querySelector(".reward-status");
 
     if (currentStreak >= requiredDays || unlockedMilestones.includes(requiredDays)) {
       if (!card.classList.contains("unlocked")) {
         card.classList.remove("locked");
         card.classList.add("unlocked");
-        if (statusSpan) statusSpan.textContent = "⭐ Unlocked!";
 
-        // If it's a new unlock
+        // New unlock celebration
         if (!unlockedMilestones.includes(requiredDays)) {
           unlockedMilestones.push(requiredDays);
           changed = true;
           if (requiredDays > 0) {
-            celebrateOrbLevelUp(orbStages[index]);
+            const tier = ACHIEVEMENT_TIERS.find(t => t.days === requiredDays);
+            if (tier) celebrateAchievementUnlock(tier, card);
           }
         }
       }
     } else {
       card.classList.add("locked");
       card.classList.remove("unlocked");
-      if (statusSpan) statusSpan.textContent = "🔒 Locked";
+    }
+
+    // Pause state
+    if (streakPaused) {
+      card.classList.add("paused");
+    } else {
+      card.classList.remove("paused");
     }
   });
 
   if (changed) saveState();
 }
 
-function celebrateOrbLevelUp(stage) {
-  setTimeout(() => {
-    alert(`🎉 REWARD UNLOCKED! Your streak has reached the ${stage.name} stage ${stage.emoji}`);
-  }, 500);
+function celebrateAchievementUnlock(tier, cardEl) {
+  // Add dramatic "just-unlocked" class for burst animation
+  cardEl.classList.add("just-unlocked");
+  setTimeout(() => cardEl.classList.remove("just-unlocked"), 1500);
+
+  // Spawn floating particles around the card
+  spawnAchievementParticles(cardEl, tier);
+
+  // Show notification
+  showNotification(`🏆 ${tier.emoji} ${tier.name} Unlocked! "${tier.tagline}"`);
 }
+
+function spawnAchievementParticles(cardEl, tier) {
+  const particleContainer = cardEl.querySelector(".achievement-particles");
+  if (!particleContainer) return;
+
+  const emojis = ['✨', '⭐', '💫', tier.emoji, '🎉', '🌟'];
+  for (let i = 0; i < 12; i++) {
+    const p = document.createElement("div");
+    p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    p.style.cssText = `
+      position: absolute;
+      font-size: ${8 + Math.random() * 12}px;
+      left: ${Math.random() * 90}%;
+      top: ${Math.random() * 90}%;
+      opacity: 0;
+      pointer-events: none;
+      animation: achieveParticleFly ${1 + Math.random() * 1.5}s ease-out ${Math.random() * 0.4}s forwards;
+    `;
+    particleContainer.appendChild(p);
+    setTimeout(() => { if (p.parentNode) p.remove(); }, 3000);
+  }
+}
+
+// Add particle animation keyframes dynamically
+if (!document.getElementById("achieve-particle-style")) {
+  const style = document.createElement("style");
+  style.id = "achieve-particle-style";
+  style.textContent = `
+    @keyframes achieveParticleFly {
+      0% { opacity: 0; transform: translate(0,0) scale(0); }
+      30% { opacity: 1; transform: translate(${Math.random()>0.5?'':'-'}10px, -15px) scale(1.2); }
+      100% { opacity: 0; transform: translate(${Math.random()>0.5?'':'-'}30px, -60px) scale(0.3); }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// ==================== ENGAGEMENT UI ====================
+function updateEngagementUI() {
+  updateRankTitle();
+  updatePersonalBestDisplay();
+  updateShieldDisplay();
+  updateMilestoneCountdown();
+  updatePauseOverlay();
+}
+
+// --- Rank Title ---
+function getRankForStreak(streakCount) {
+  for (let i = RANK_TITLES.length - 1; i >= 0; i--) {
+    if (streakCount >= RANK_TITLES[i].min) return RANK_TITLES[i];
+  }
+  return RANK_TITLES[0];
+}
+
+function updateRankTitle() {
+  const rank = getRankForStreak(count);
+  const titleEl = document.getElementById("streak-rank-title");
+  const iconEl = document.querySelector(".rank-icon");
+  if (titleEl) titleEl.textContent = rank.title;
+  if (iconEl) iconEl.textContent = rank.icon;
+}
+
+// --- Personal Best ---
+function updatePersonalBestDisplay() {
+  // Track personal best
+  if (count > personalBest) {
+    const wasBest = personalBest;
+    personalBest = count;
+    if (wasBest > 0 && count > wasBest) {
+      showNotification(`🏆 NEW PERSONAL BEST! ${count} days! 🎉`);
+    }
+  }
+  const pbEl = document.getElementById("streak-pb-value");
+  if (pbEl) pbEl.textContent = personalBest;
+}
+
+// --- Shield System ---
+function updateShieldDisplay() {
+  const shieldCountEl = document.getElementById("streak-shield-count");
+  if (shieldCountEl) shieldCountEl.textContent = streakShields;
+}
+
+function earnShield() {
+  // Earn 1 shield every 7 consecutive days (max 3)
+  if (count > 0 && count % 7 === 0 && streakShields < 3) {
+    streakShields++;
+    updateShieldDisplay();
+    showNotification(`🛡️ Streak Shield earned! You now have ${streakShields} shield(s).`);
+    saveState();
+  }
+}
+
+function useShield() {
+  if (streakShields > 0) {
+    streakShields--;
+    updateShieldDisplay();
+    showNotification("🛡️ Shield activated! Your streak is protected for today.");
+    saveState();
+    return true;
+  }
+  return false;
+}
+
+// --- Milestone Countdown ---
+function updateMilestoneCountdown() {
+  const textEl = document.getElementById("milestone-countdown-text");
+  const fillEl = document.getElementById("milestone-countdown-fill");
+  if (!textEl || !fillEl) return;
+
+  // Find next achievement tier
+  let nextTier = null;
+  let prevMin = 0;
+  for (const tier of ACHIEVEMENT_TIERS) {
+    if (count < tier.days) {
+      nextTier = tier;
+      break;
+    }
+    prevMin = tier.days;
+  }
+
+  if (nextTier) {
+    const remaining = nextTier.days - count;
+    const progress = ((count - prevMin) / (nextTier.days - prevMin)) * 100;
+    textEl.textContent = `${remaining} day${remaining !== 1 ? 's' : ''} until ${nextTier.name} ${nextTier.emoji}`;
+    fillEl.style.width = `${Math.min(progress, 100)}%`;
+  } else {
+    textEl.textContent = "🏆 All achievements unlocked!";
+    fillEl.style.width = "100%";
+  }
+}
+
+// --- Pause Overlay ---
+function updatePauseOverlay() {
+  const overlay = document.getElementById("streak-paused-overlay");
+  const factorsContainer = document.getElementById("streak-paused-factors");
+  if (!overlay) return;
+
+  if (streakPaused) {
+    overlay.classList.remove("hidden");
+
+    // Show factor status
+    if (factorsContainer) {
+      factorsContainer.innerHTML = "";
+      const cfg = loadVitalityConfig();
+      cfg.factors.forEach(fId => {
+        const pool = VITALITY_FACTOR_POOL.find(p => p.id === fId);
+        if (!pool) return;
+        const score = getVitalityFactorScore(fId);
+        const complete = score >= 1;
+        const div = document.createElement("div");
+        div.className = `streak-paused-factor ${complete ? 'complete' : 'incomplete'}`;
+        div.innerHTML = `<span>${pool.emoji}</span> <span>${pool.label}</span> <span>${complete ? '✅' : '❌'}</span>`;
+        factorsContainer.appendChild(div);
+      });
+    }
+
+    // Apply paused state to castle and day boxes
+    const castle = document.getElementById("castle-container");
+    if (castle) castle.classList.add("paused");
+  } else {
+    overlay.classList.add("hidden");
+    const castle = document.getElementById("castle-container");
+    if (castle) castle.classList.remove("paused");
+  }
+}
+
+// ==================== VITALITY FACTOR COMPLETION CHECK ====================
+function areAllVitalityFactorsComplete() {
+  const cfg = loadVitalityConfig();
+  for (const fId of cfg.factors) {
+    const score = getVitalityFactorScore(fId);
+    if (score < 1) return false;
+  }
+  return true;
+}
+
 
 donebtn.addEventListener("click", function () {
   // Mark tasks as completed today
@@ -2328,6 +2589,10 @@ function saveState() {
     sleepLogs: sleepLogs,
     completionDates: getCompletionDates(),
     unlockedMilestones: unlockedMilestones,
+    // Engagement
+    personalBest: personalBest,
+    streakShields: streakShields,
+    streakPaused: streakPaused,
     // Preferences
     breathingMode: currentBreathingMode,
     pomodoroWork: workDuration,
@@ -2425,6 +2690,10 @@ function loadState() {
     if (Array.isArray(state.completionDates)) {
       appStorage.setItem("completionDates", JSON.stringify(state.completionDates));
     }
+    // Restore engagement state
+    if (typeof state.personalBest === "number") personalBest = state.personalBest;
+    if (typeof state.streakShields === "number") streakShields = state.streakShields;
+    if (typeof state.streakPaused === "boolean") streakPaused = state.streakPaused;
 
     // Restore preferences
     if (typeof state.breathingMode === "string" && breathingModes[state.breathingMode]) {
@@ -2643,6 +2912,7 @@ setInterval(updateBloomWidgets, 60000);
 function showStreakPage() {
   showPage('streak-page');
   renderStreakPage();
+  updateMilestones(); // Update achievement cards, rank, shields, countdown, pause overlay
 }
 
 function hideStreakPage() {
@@ -2668,10 +2938,9 @@ function renderStreakPage() {
 
     container.innerHTML = "";
 
-    // Show boxes in batches of 50 up to exactly 1000 days
+    // Show boxes in batches of 50 — infinitely expandable, always showing future runway
     const batchSize = 50;
-    const totalMaxDays = 1000;
-    const daysToShow = Math.min(totalMaxDays, Math.ceil((count + 1) / batchSize) * batchSize);
+    const daysToShow = Math.max(batchSize, Math.ceil((count + 20) / batchSize) * batchSize);
     const startDay = 1;
 
     for (let i = startDay; i <= daysToShow; i++) {
@@ -2685,6 +2954,10 @@ function renderStreakPage() {
       } else if (i === count + 1) {
         day.classList.add("current");
         day.classList.add("unlocked");
+        // Show paused state on the current/next day box
+        if (streakPaused) {
+          day.classList.add("paused");
+        }
       } else {
         day.classList.add("locked");
       }
@@ -7321,6 +7594,20 @@ async function updateDailyQuote() {
   const quoteAuthorEl = document.getElementById("dashboard-quote-author");
   if (!quoteTextEl || !quoteAuthorEl) return;
 
+  // ---- Check if user has set a custom quote ----
+  const quoteMode = appStorage.getItem("quoteMode") || "default";
+  if (quoteMode === "custom") {
+    const customText = appStorage.getItem("customQuoteText");
+    const customAuthor = appStorage.getItem("customQuoteAuthor");
+    if (customText) {
+      quoteTextEl.textContent = `"${customText}"`;
+      quoteAuthorEl.textContent = customAuthor ? `- ${customAuthor}` : "";
+      return;
+    }
+    // If custom is set but no text saved, fall through to default
+  }
+
+  // ---- Default daily quote logic (unchanged) ----
   const today = new Date().toDateString();
   const storedDate = appStorage.getItem("quoteLastFetchedDate");
   const storedQuoteText = appStorage.getItem("dailyQuoteText");
@@ -7377,6 +7664,357 @@ async function updateDailyQuote() {
     appStorage.setItem("dailyQuoteAuthor", cleanAuthor);
   }
 }
+
+// ==================== QUOTE MODE MODAL (double-tap) ====================
+(function initQuoteModeFeature() {
+  // Inject CSS for the quote mode modal
+  const quoteModalCSS = document.createElement('style');
+  quoteModalCSS.textContent = `
+    .bloom-progress-quote {
+      cursor: pointer;
+      position: relative;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .bloom-progress-quote::after {
+      content: '••';
+      position: absolute;
+      bottom: -2px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.4rem;
+      color: var(--primary);
+      opacity: 0.4;
+      letter-spacing: 3px;
+      transition: opacity 0.3s;
+    }
+    .bloom-progress-quote:active::after {
+      opacity: 0.8;
+    }
+    .quote-mode-modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      animation: qmFadeIn 0.25s ease;
+    }
+    .quote-mode-modal.hidden { display: none !important; }
+    @keyframes qmFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes qmSlideUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .quote-mode-card {
+      background: var(--card-bg, #fff);
+      border-radius: 24px;
+      padding: 28px 24px 20px;
+      max-width: 380px;
+      width: 100%;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,140,66,0.1);
+      animation: qmSlideUp 0.3s ease;
+    }
+    .quote-mode-header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .quote-mode-icon {
+      font-size: 2rem;
+      display: block;
+      margin-bottom: 8px;
+    }
+    .quote-mode-header h3 {
+      margin: 0 0 4px;
+      font-size: 1.15rem;
+      color: var(--text-main, #1e293b);
+      font-weight: 700;
+    }
+    .quote-mode-sub {
+      margin: 0;
+      font-size: 0.75rem;
+      color: var(--text-muted, #94a3b8);
+    }
+    .quote-mode-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .quote-mode-option {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 2px solid var(--border, #e2e8f0);
+      background: var(--bg-input, #f8fafc);
+      cursor: pointer;
+      transition: all 0.25s ease;
+      text-align: left;
+      color: var(--text-main, #1e293b);
+      font-family: inherit;
+    }
+    .quote-mode-option:hover {
+      border-color: rgba(255,140,66,0.3);
+      background: rgba(255,140,66,0.04);
+    }
+    .quote-mode-option.active {
+      border-color: var(--primary, #FF8C42);
+      background: rgba(255,140,66,0.08);
+      box-shadow: 0 0 0 3px rgba(255,140,66,0.1);
+    }
+    .quote-mode-option-icon {
+      font-size: 1.6rem;
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      background: rgba(255,140,66,0.08);
+    }
+    .quote-mode-option-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .quote-mode-option-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+    .quote-mode-option-desc {
+      font-size: 0.72rem;
+      color: var(--text-muted, #94a3b8);
+    }
+    .quote-mode-check {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      border: 2px solid var(--border, #e2e8f0);
+      flex-shrink: 0;
+      position: relative;
+      transition: all 0.25s;
+    }
+    .quote-mode-option.active .quote-mode-check {
+      border-color: var(--primary, #FF8C42);
+      background: var(--primary, #FF8C42);
+    }
+    .quote-mode-option.active .quote-mode-check::after {
+      content: '✓';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 800;
+    }
+    .custom-quote-editor {
+      margin-bottom: 14px;
+      animation: qmSlideUp 0.25s ease;
+    }
+    .custom-quote-editor.hidden { display: none !important; }
+    .custom-quote-editor textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 2px solid var(--border, #e2e8f0);
+      background: var(--bg-input, #f8fafc);
+      color: var(--text-main, #1e293b);
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-style: italic;
+      resize: none;
+      outline: none;
+      box-sizing: border-box;
+      transition: border-color 0.3s;
+      line-height: 1.5;
+    }
+    .custom-quote-editor textarea:focus {
+      border-color: var(--primary, #FF8C42);
+      box-shadow: 0 0 0 3px rgba(255,140,66,0.08);
+    }
+    .custom-quote-editor input[type="text"] {
+      width: 100%;
+      padding: 10px 14px;
+      margin-top: 8px;
+      border-radius: 12px;
+      border: 2px solid var(--border, #e2e8f0);
+      background: var(--bg-input, #f8fafc);
+      color: var(--text-main, #1e293b);
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      outline: none;
+      box-sizing: border-box;
+      transition: border-color 0.3s;
+    }
+    .custom-quote-editor input[type="text"]:focus {
+      border-color: var(--primary, #FF8C42);
+    }
+    .save-custom-quote-btn {
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 14px;
+      border: none;
+      background: linear-gradient(135deg, #FF8C42, #FF6B35);
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.25s;
+      box-shadow: 0 6px 20px rgba(255,140,66,0.25);
+    }
+    .save-custom-quote-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 25px rgba(255,140,66,0.35);
+    }
+    .save-custom-quote-btn:active {
+      transform: scale(0.98);
+    }
+    .quote-mode-close-btn {
+      width: 100%;
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid var(--border, #e2e8f0);
+      background: transparent;
+      color: var(--text-muted, #94a3b8);
+      font-size: 0.9rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .quote-mode-close-btn:hover {
+      background: var(--bg-input, #f8fafc);
+      color: var(--text-main, #1e293b);
+    }
+  `;
+  document.head.appendChild(quoteModalCSS);
+
+  // ---- Double-tap detection (works on touch + mouse) ----
+  let lastTapTime = 0;
+  const DOUBLE_TAP_THRESHOLD = 400; // ms
+
+  function handleQuoteDoubleTap(e) {
+    const now = Date.now();
+    if (now - lastTapTime < DOUBLE_TAP_THRESHOLD) {
+      e.preventDefault();
+      e.stopPropagation();
+      showQuoteModeModal();
+      lastTapTime = 0;
+    } else {
+      lastTapTime = now;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const quoteBar = document.querySelector('.bloom-progress-quote');
+    if (!quoteBar) return;
+
+    // Touch double-tap
+    quoteBar.addEventListener('touchend', handleQuoteDoubleTap, { passive: false });
+    // Mouse double-click fallback
+    quoteBar.addEventListener('dblclick', function(e) {
+      e.preventDefault();
+      showQuoteModeModal();
+    });
+  });
+})();
+
+function showQuoteModeModal() {
+  const modal = document.getElementById('quote-mode-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+
+  const currentMode = appStorage.getItem('quoteMode') || 'default';
+  const customBtn = document.getElementById('quote-mode-custom');
+  const defaultBtn = document.getElementById('quote-mode-default');
+  const editor = document.getElementById('custom-quote-editor');
+
+  // Set active state
+  customBtn.classList.toggle('active', currentMode === 'custom');
+  defaultBtn.classList.toggle('active', currentMode !== 'custom');
+  editor.classList.toggle('hidden', currentMode !== 'custom');
+
+  // Pre-fill editor if custom quote exists
+  if (currentMode === 'custom') {
+    const savedText = appStorage.getItem('customQuoteText') || '';
+    const savedAuthor = appStorage.getItem('customQuoteAuthor') || '';
+    document.getElementById('custom-quote-input').value = savedText;
+    document.getElementById('custom-quote-author').value = savedAuthor;
+  }
+
+  // ---- Event listeners (use onclick to avoid stacking) ----
+  customBtn.onclick = function() {
+    customBtn.classList.add('active');
+    defaultBtn.classList.remove('active');
+    editor.classList.remove('hidden');
+    // Pre-fill
+    const savedText = appStorage.getItem('customQuoteText') || '';
+    const savedAuthor = appStorage.getItem('customQuoteAuthor') || '';
+    document.getElementById('custom-quote-input').value = savedText;
+    document.getElementById('custom-quote-author').value = savedAuthor;
+    setTimeout(() => document.getElementById('custom-quote-input').focus(), 100);
+  };
+
+  defaultBtn.onclick = function() {
+    defaultBtn.classList.add('active');
+    customBtn.classList.remove('active');
+    editor.classList.add('hidden');
+    appStorage.setItem('quoteMode', 'default');
+    // Clear the stored date to force a fresh fetch
+    appStorage.removeItem('quoteLastFetchedDate');
+    updateDailyQuote();
+  };
+
+  document.getElementById('save-custom-quote-btn').onclick = function() {
+    const text = document.getElementById('custom-quote-input').value.trim();
+    const author = document.getElementById('custom-quote-author').value.trim();
+    if (!text) {
+      document.getElementById('custom-quote-input').style.borderColor = '#ef4444';
+      setTimeout(() => { document.getElementById('custom-quote-input').style.borderColor = ''; }, 1500);
+      return;
+    }
+    appStorage.setItem('quoteMode', 'custom');
+    appStorage.setItem('customQuoteText', text);
+    appStorage.setItem('customQuoteAuthor', author);
+    updateDailyQuote();
+    // Brief visual feedback
+    const btn = document.getElementById('save-custom-quote-btn');
+    btn.textContent = '✅ Saved!';
+    btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+    setTimeout(() => {
+      btn.textContent = '💾 Save Quote';
+      btn.style.background = '';
+    }, 1200);
+  };
+
+  document.getElementById('quote-mode-close').onclick = function() {
+    hideQuoteModeModal();
+  };
+
+  // Close on backdrop click
+  modal.onclick = function(e) {
+    if (e.target === modal) hideQuoteModeModal();
+  };
+}
+
+function hideQuoteModeModal() {
+  const modal = document.getElementById('quote-mode-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
 
 function renderDashboard() {
   // Update Greeting

@@ -21,7 +21,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700&family=Playfair+Display:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700&family=Playfair+Display:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&family=Cormorant+Garamond:wght@400;600;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=4.0">
     <style>
@@ -382,6 +382,8 @@
                     0 4px 6px rgba(0, 0, 0, 0.02),
                     0 20px 50px rgba(79, 70, 229, 0.1),
                     0 50px 100px rgba(0, 0, 0, 0.05);
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
                 transform: translateY(40px) scale(0.96);
                 transition: transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
             }
@@ -408,8 +410,8 @@
             }
 
             @keyframes premiumGlowBorder {
-                0% { box-shadow: 0 0 10px rgba(255,140,66,0.2), inset 0 0 5px rgba(255,140,66,0.1); }
-                100% { box-shadow: 0 0 25px rgba(255,140,66,0.6), inset 0 0 15px rgba(255,140,66,0.3); border-color: rgba(255,140,66,0.5); }
+                0% { box-shadow: 0 0 10px rgba(255, 140, 66, 0.2), inset 0 0 5px rgba(255, 140, 66, 0.1); }
+                100% { box-shadow: 0 0 25px rgba(255, 140, 66, 0.6), inset 0 0 15px rgba(255, 140, 66, 0.3); border-color: rgba(255, 140, 66, 0.5); }
             }
 
             .welcome-glass-card .wg-sub {
@@ -429,13 +431,11 @@
             }
 
             @media (max-width: 380px) {
-                .wg-features {
-                    grid-template-columns: 1fr;
-                }
+                .wg-features { grid-template-columns: 1fr; }
             }
 
             .wg-feat {
-                background: linear-gradient(145deg, rgba(255,255,255,0.9), rgba(255,243,224,0.6));
+                background: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(255, 243, 224, 0.6));
                 border: 1px solid rgba(255, 140, 66, 0.2);
                 padding: clamp(12px, 3vw, 16px);
                 border-radius: 18px;
@@ -449,23 +449,20 @@
             .wg-feat::before {
                 content: '';
                 position: absolute;
-                top: 0; left: 0; right: 0;
-                height: 2px;
+                top: 0; left: 0; right: 0; height: 2px;
                 background: linear-gradient(90deg, transparent, #FF8C42, #FBBF24, transparent);
-                opacity: 0.5;
+                opacity: 0;
                 transition: opacity 0.4s ease;
             }
 
             .wg-feat:hover {
                 transform: translateY(-4px) scale(1.02);
                 animation: premiumGlowBorder 1.5s ease-in-out infinite alternate;
-                border-color: rgba(255,140,66,0.5);
+                border-color: rgba(255, 140, 66, 0.5);
                 z-index: 10;
             }
 
-            .wg-feat:hover::before {
-                opacity: 1;
-            }
+            .wg-feat:hover::before { opacity: 1; }
 
             .wg-feat h4 {
                 color: #0f172a;
@@ -484,12 +481,9 @@
             }
 
             .wg-feat .wg-icon {
-                width: 32px;
-                height: 32px;
+                width: 32px; height: 32px;
                 border-radius: 10px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+                display: flex; align-items: center; justify-content: center;
                 font-size: 1rem;
                 margin-bottom: 8px;
                 box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
@@ -500,25 +494,10 @@
                 transform: scale(1.1) rotate(5deg);
             }
 
-            .wg-icon-habits {
-                background: linear-gradient(135deg, #e0f2fe, #7dd3fc);
-                box-shadow: 0 2px 12px rgba(14, 165, 233, 0.2);
-            }
-
-            .wg-icon-streak {
-                background: linear-gradient(135deg, #fef3c7, #fde047);
-                box-shadow: 0 2px 12px rgba(234, 179, 8, 0.2);
-            }
-
-            .wg-icon-library {
-                background: linear-gradient(135deg, #dcfce7, #86efac);
-                box-shadow: 0 2px 12px rgba(34, 197, 94, 0.2);
-            }
-
-            .wg-icon-ai {
-                background: linear-gradient(135deg, #f3e8ff, #d8b4fe);
-                box-shadow: 0 2px 12px rgba(168, 85, 247, 0.2);
-            }
+            .wg-icon-habits { background: linear-gradient(135deg, #e0f2fe, #7dd3fc); box-shadow: 0 2px 12px rgba(14, 165, 233, 0.2); }
+            .wg-icon-streak { background: linear-gradient(135deg, #fef3c7, #fde047); box-shadow: 0 2px 12px rgba(234, 179, 8, 0.2); }
+            .wg-icon-library { background: linear-gradient(135deg, #dcfce7, #86efac); box-shadow: 0 2px 12px rgba(34, 197, 94, 0.2); }
+            .wg-icon-ai { background: linear-gradient(135deg, #f3e8ff, #d8b4fe); box-shadow: 0 2px 12px rgba(168, 85, 247, 0.2); }
 
             .wg-extra-features {
                 margin: 0 auto 22px;
@@ -532,6 +511,7 @@
                 font-weight: 600;
                 box-shadow: inset 0 2px 10px rgba(255, 140, 66, 0.03);
             }
+
             .wg-extra-features span {
                 color: #FF8C42;
                 font-weight: 700;
@@ -564,9 +544,7 @@
                 box-shadow: 0 0 0 4px rgba(255, 140, 66, 0.1);
             }
 
-            #overlay-name-input::placeholder {
-                color: #94a3b8;
-            }
+            #overlay-name-input::placeholder { color: #94a3b8; }
 
             #overlay-save-name-btn {
                 display: block;
@@ -597,61 +575,112 @@
             }
 
             /* Mobile scrollbar */
-            .welcome-glass-card::-webkit-scrollbar {
-                width: 4px;
-            }
-
-            .welcome-glass-card::-webkit-scrollbar-track {
-                background: transparent;
-            }
-
+            .welcome-glass-card::-webkit-scrollbar { width: 4px; }
+            .welcome-glass-card::-webkit-scrollbar-track { background: transparent; }
             .welcome-glass-card::-webkit-scrollbar-thumb {
                 background: rgba(255, 140, 66, 0.2);
                 border-radius: 4px;
             }
+
+            /* ═══ LOGO ═══ */
+            .wg-logo-wrap {
+                width: 88px; height: 88px;
+                margin: 0 auto 14px;
+                filter: drop-shadow(0 10px 30px rgba(255,140,66,0.35)) drop-shadow(0 4px 12px rgba(139,92,246,0.2));
+                position: relative;
+            }
+            .wg-logo-wrap::after {
+                content: '';
+                position: absolute;
+                inset: -12px;
+                border-radius: 50%;
+                background: radial-gradient(circle, rgba(255,140,66,0.08) 0%, transparent 70%);
+                animation: wgAuraBreath 4s ease-in-out infinite alternate;
+                pointer-events: none;
+            }
+            @keyframes wgAuraBreath { 0% { transform: scale(0.9); opacity: 0.4; } 100% { transform: scale(1.15); opacity: 0.9; } }
+            .wg-logo-svg { width: 100%; height: 100%; overflow: visible; }
+            .wg-orbit1 { animation: wgOrbitSpin 18s linear infinite; transform-origin: 100px 100px; }
+            .wg-orbit2 { animation: wgOrbitSpin 12s linear infinite reverse; transform-origin: 100px 100px; }
+            .wg-orbit3 { animation: wgOrbitSpin 25s linear infinite; transform-origin: 100px 100px; }
+            .wg-logo-glow { animation: wgPulseGlow 3s ease-in-out infinite alternate; }
+            .wg-dot1 { animation: wgDot1 10s linear infinite; transform-origin: 100px 100px; }
+            .wg-dot2 { animation: wgDot2 7s linear infinite; transform-origin: 100px 100px; }
+            .wg-dot3 { animation: wgDot3 15s linear infinite; transform-origin: 100px 100px; }
+            .wg-pulse-line { animation: wgPulseDash 3s ease-in-out infinite; }
+            .wg-core-rotate { animation: wgCoreSpin 30s linear infinite; transform-origin: 100px 100px; }
+            .wg-inner-shimmer { animation: wgShimmer 4s ease-in-out infinite alternate; }
+            @keyframes wgOrbitSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+            @keyframes wgPulseGlow { 0% { opacity: 0.4; } 100% { opacity: 1; } }
+            @keyframes wgDot1 { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+            @keyframes wgDot2 { from { transform: rotate(120deg); } to { transform: rotate(480deg); } }
+            @keyframes wgDot3 { from { transform: rotate(240deg); } to { transform: rotate(600deg); } }
+            @keyframes wgPulseDash { 0% { stroke-dashoffset: 120; opacity: 0.6; } 50% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: -120; opacity: 0.6; } }
+            @keyframes wgCoreSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+            @keyframes wgShimmer { 0% { opacity: 0.05; } 100% { opacity: 0.18; } }
+
+            /* ═══ BENEFITS ═══ */
+            .wg-benefits { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+            .wg-benefit {
+                display: flex; align-items: center; gap: 12px;
+                padding: 10px 14px; border-radius: 14px;
+                background: rgba(255,255,255,0.7);
+                border: 1px solid rgba(0,0,0,0.04);
+                border-left: 3px solid var(--accent, #FF8C42);
+                text-align: left;
+                opacity: 0; transform: translateX(-20px);
+                animation: wgBenefitIn 0.5s ease forwards;
+                animation-delay: var(--delay, 0s);
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+            }
+            .wg-benefit:hover {
+                transform: translateY(-2px) perspective(400px) rotateY(-2deg);
+                box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            }
+            @keyframes wgBenefitIn { to { opacity: 1; transform: translateX(0); } }
+            .wg-b-icon {
+                width: 36px; height: 36px; min-width: 36px;
+                border-radius: 10px;
+                background: linear-gradient(135deg, rgba(255,140,66,0.1), rgba(139,92,246,0.1));
+                display: flex; align-items: center; justify-content: center;
+                color: var(--accent, #FF8C42);
+            }
+            .wg-b-icon svg { width: 18px; height: 18px; }
+            .wg-b-text { display: flex; flex-direction: column; }
+            .wg-b-text strong { font-size: 0.82rem; color: #0f172a; font-weight: 700; }
+            .wg-b-text span { font-size: 0.7rem; color: #64748b; line-height: 1.3; }
+
         </style>
 
-        <!-- UI overlay (premium light card, appears after 3D animation) -->
+        <!-- UI overlay — Mind-Blowing Welcome Card -->
         <div id="welcome-ui-overlay">
             <div class="welcome-glass-card">
-                <svg viewBox="0 0 120 120"
-                    style="width:44px;height:44px;margin:0 auto 10px;filter:drop-shadow(0 6px 12px rgba(255,140,66,0.25));display:block;">
-                    <defs>
-                        <linearGradient id="logoGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stop-color="#FF8C42" />
-                            <stop offset="100%" stop-color="#FFB366" />
-                        </linearGradient>
-                    </defs>
-                    <rect x="10" y="10" width="100" height="100" rx="30" fill="url(#logoGrad2)" />
-                    <path d="M40 38v24c0 12 8 20 20 20s20-8 20-20V38" fill="none" stroke="#fff" stroke-width="12"
-                        stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
+                <!-- HYPER-DETAILED SVG LOGO -->
+                <div class="wg-logo-wrap" style="animation: wgPulseGlow 3s ease-in-out infinite alternate;">
+                    <img src="icon-512.png" alt="Ultradian Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 20px; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.1));" />
+                </div>
                 <h1>Ultradian</h1>
-                <p class="wg-sub">A productivity app that deserves to be in your device.</p>
-                <div class="wg-features">
-                    <div class="wg-feat">
-                        <div class="wg-icon wg-icon-habits">📊</div>
-                        <h4>Insightful Habits</h4>
-                        <p>Track your daily life dynamically.</p>
+                <p class="wg-sub">Master your habits. Elevate your life.</p>
+                <div class="wg-benefits">
+                    <div class="wg-benefit" style="--delay:0.1s;--accent:#38bdf8">
+                        <div class="wg-b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+                        <div class="wg-b-text"><strong>Vitality Engine</strong><span>Track habits that compound your health</span></div>
                     </div>
-                    <div class="wg-feat">
-                        <div class="wg-icon wg-icon-streak">🏆</div>
-                        <h4>Global Streaks</h4>
-                        <p>Level up your consistency.</p>
+                    <div class="wg-benefit" style="--delay:0.2s;--accent:#facc15">
+                        <div class="wg-b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+                        <div class="wg-b-text"><strong>Streak Kingdoms</strong><span>Build your castle, earn achievements</span></div>
                     </div>
-                    <div class="wg-feat">
-                        <div class="wg-icon wg-icon-library">📚</div>
-                        <h4>Deep E-Library</h4>
-                        <p>Advanced reading & highlighting.</p>
+                    <div class="wg-benefit" style="--delay:0.3s;--accent:#4ade80">
+                        <div class="wg-b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+                        <div class="wg-b-text"><strong>Infinite Library</strong><span>AI reading with pro TTS highlighting</span></div>
                     </div>
-                    <div class="wg-feat">
-                        <div class="wg-icon wg-icon-ai">🤖</div>
-                        <h4>AI-Powered Help</h4>
-                        <p>Your brilliant private coach.</p>
+                    <div class="wg-benefit" style="--delay:0.4s;--accent:#c084fc">
+                        <div class="wg-b-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div>
+                        <div class="wg-b-text"><strong>AI Life Coach</strong><span>Your personal guide to peak performance</span></div>
                     </div>
                 </div>
                 <div class="wg-extra-features">
-                    ✨ <span>Plus:</span> Bloom Analytics • Mood Logging • Circadian Sleep Tracking • Smart Brain Games • Advanced Pomodoro Timers • Meditation & more...
+                    ✨ <span>Plus:</span> Bloom Analytics • Mood Logging • Circadian Sleep • Brain Games • Pomodoro • Meditation
                 </div>
                 <p class="wg-label">What should we call you?</p>
                 <input type="text" id="overlay-name-input" placeholder="Enter your name (3-10 letters)" minlength="3"
@@ -660,6 +689,7 @@
                 <button id="overlay-save-name-btn">Enter Ultradian →</button>
             </div>
         </div>
+
 
         <!-- 3D Scene Scripts -->
         <script src="welcome-3d.js"></script>
@@ -913,7 +943,7 @@
         <!-- 3D Landscape Engine -->
         <script src="hero-landscape-3d.js"></script>
 
-        <!-- ========== TASK PROGRESS STRIP (with daily quote) ========== -->
+        <!-- ========== DAILY QUOTE STRIP ========== -->
         <div class="bloom-progress-strip">
             <div class="bloom-progress-quote">
                 <p id="dashboard-quote-text" class="dashboard-quote-text"
@@ -922,12 +952,87 @@
                 <p id="dashboard-quote-author" class="dashboard-quote-author"
                     style="color: var(--primary); font-size: 0.68rem; font-weight: 700; margin: 0;"></p>
             </div>
-            <div class="bloom-progress-info">
-                <span class="bloom-progress-label" id="bloom-progress-label">Tasks: 0/0</span>
-                <span class="bloom-progress-pct" id="bloom-progress-pct">0%</span>
+        </div>
+
+        <!-- ========== QUOTE MODE MODAL (double-tap to toggle) ========== -->
+        <div id="quote-mode-modal" class="quote-mode-modal hidden">
+            <div class="quote-mode-card">
+                <div class="quote-mode-header">
+                    <span class="quote-mode-icon">💬</span>
+                    <h3>Quote Settings</h3>
+                    <p class="quote-mode-sub">Double-tap the quote bar anytime to change</p>
+                </div>
+                <div class="quote-mode-options">
+                    <button id="quote-mode-custom" class="quote-mode-option">
+                        <div class="quote-mode-option-icon">✍️</div>
+                        <div class="quote-mode-option-info">
+                            <span class="quote-mode-option-title">Custom Quote</span>
+                            <span class="quote-mode-option-desc">Write your own personal motivation</span>
+                        </div>
+                        <div class="quote-mode-check" id="quote-check-custom"></div>
+                    </button>
+                    <button id="quote-mode-default" class="quote-mode-option">
+                        <div class="quote-mode-option-icon">📖</div>
+                        <div class="quote-mode-option-info">
+                            <span class="quote-mode-option-title">Daily Quote</span>
+                            <span class="quote-mode-option-desc">A new inspiring quote every day</span>
+                        </div>
+                        <div class="quote-mode-check" id="quote-check-default"></div>
+                    </button>
+                </div>
+                <div id="custom-quote-editor" class="custom-quote-editor hidden">
+                    <textarea id="custom-quote-input" placeholder="Write your quote here..." maxlength="200"
+                        rows="3"></textarea>
+                    <input type="text" id="custom-quote-author" placeholder="— Author (optional)" maxlength="40">
+                    <button id="save-custom-quote-btn" class="save-custom-quote-btn">💾 Save Quote</button>
+                </div>
+                <button id="quote-mode-close" class="quote-mode-close-btn">Done</button>
             </div>
-            <div class="bloom-progress-bar">
-                <div class="bloom-progress-fill" id="bloom-progress-fill"></div>
+        </div>
+
+        <!-- ========== DAILY CHALLENGE: COMPACT CARD ========== -->
+        <div id="dc-mini-container" class="dc-mini-container">
+            <!-- Loading -->
+            <div id="dc-loading" class="dc-mini-loading"></div>
+
+            <!-- Content -->
+            <div id="dc-content" class="dc-mini-content hidden">
+                <!-- Top Row: Emoji + Title + Streak -->
+                <div class="dc-mini-top-row">
+                    <div class="dc-mini-icon-box">
+                        <span id="dc-emoji" class="dc-mini-emoji">⚡</span>
+                    </div>
+                    <div class="dc-mini-info">
+                        <div class="dc-mini-header">
+                            <span class="dc-mini-label">DAILY CHALLENGE</span>
+                            <span class="dc-mini-streak" id="dc-streak-badge">🔥 <span id="dc-streak-count">0</span></span>
+                        </div>
+                        <span id="dc-title" class="dc-mini-title">Loading...</span>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <p id="dc-description" class="dc-mini-desc">Loading description...</p>
+
+                <!-- Meta Tags: Category + Difficulty -->
+                <div class="dc-mini-meta">
+                    <span id="dc-category" class="dc-tag dc-tag-cat">productivity</span>
+                    <span id="dc-difficulty" class="dc-tag dc-tag-diff">easy</span>
+                </div>
+
+                <!-- Tip -->
+                <p id="dc-tip" class="dc-mini-tip">💡 Loading tip...</p>
+
+                <!-- Active State: DONE button (mandatory challenge, always active) -->
+                <div id="dc-actions" class="dc-mini-actions">
+                    <button id="dc-complete-btn" class="dc-btn-done">✅ Mark as Done</button>
+                </div>
+
+                <!-- Completed state -->
+                <div id="dc-completed" class="dc-mini-done-state hidden">
+                    <span class="dc-done-icon">🏆</span>
+                    <span class="dc-done-text">Challenge Conquered!</span>
+                </div>
             </div>
         </div>
 
@@ -1435,209 +1540,297 @@
 
         <div id="streak-fire-animation" class="streak-fire" style="display: none;">🔥</div>
 
-        <!-- Premium Achievement Badges -->
+        <!-- Streak Engagement Bar: Rank + Shield + Personal Best -->
+        <div class="streak-engagement-bar">
+            <div class="streak-rank-badge" id="streak-rank-badge">
+                <span class="rank-icon">🌱</span>
+                <span class="rank-title" id="streak-rank-title">Newcomer</span>
+            </div>
+            <div class="streak-shield-indicator" id="streak-shield-indicator">
+                <span class="shield-icon">🛡️</span>
+                <span class="shield-count" id="streak-shield-count">0</span>
+            </div>
+            <div class="streak-personal-best" id="streak-personal-best">
+                <span class="pb-label">Best</span>
+                <span class="pb-value" id="streak-pb-value">0</span>
+                <span class="pb-icon">👑</span>
+            </div>
+        </div>
+
+        <!-- Milestone Countdown -->
+        <div class="milestone-countdown" id="milestone-countdown">
+            <div class="milestone-countdown-info">
+                <span class="milestone-countdown-text" id="milestone-countdown-text">4 days until Spark ✨</span>
+            </div>
+            <div class="milestone-countdown-track">
+                <div class="milestone-countdown-fill" id="milestone-countdown-fill" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- STREAK PAUSED OVERLAY -->
+        <div id="streak-paused-overlay" class="streak-paused-overlay hidden">
+            <div class="streak-paused-content">
+                <div class="streak-paused-icon">⏸️</div>
+                <h2 class="streak-paused-title">Streak Paused</h2>
+                <p class="streak-paused-desc">Complete your vitality factors to resume your streak</p>
+                <div class="streak-paused-factors" id="streak-paused-factors">
+                    <!-- Dynamically populated -->
+                </div>
+                <div class="streak-paused-cta">Complete all factors to unpause ⚡</div>
+            </div>
+        </div>
+
+        <!-- Ultra-Premium Sports Medal Achievement Cards -->
         <div class="rewards-container">
-            <h3>🏆 Achievement Badges</h3>
-            <div class="rewards-grid">
-                <div class="reward-card tier-stone locked" data-days="0">
-                    <div class="badge-ribbon">STONE</div>
-                    <div class="badge-shield">
-                        <span class="reward-icon">
-                            <svg width="36" height="36" viewBox="0 0 36 36">
-                                <defs>
-                                    <linearGradient id="g-stone" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stop-color="#9E9E9E" />
-                                        <stop offset="100%" stop-color="#616161" />
-                                    </linearGradient>
-                                </defs>
-                                <circle cx="18" cy="18" r="14" fill="url(#g-stone)" opacity="0.9" />
-                                <circle cx="18" cy="18" r="9" fill="none" stroke="#BDBDBD" stroke-width="1.5" />
-                                <circle cx="18" cy="18" r="4" fill="#E0E0E0" />
-                            </svg>
-                        </span>
+            <h3>🏆 Achievement Medals</h3>
+            <div class="rewards-grid" id="rewards-grid">
+
+                <!-- PARTICIPANT -->
+                <div class="achievement-card locked" data-days="0" data-tier="participant">
+                    <div class="medal-glow"></div>
+                    <div class="medal-ribbon participant-ribbon"></div>
+                    <!-- SVG Background Pattern -->
+                    <svg class="card-svg-bg" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="100" cy="90" r="55" fill="none" stroke="rgba(113,128,150,0.15)" stroke-width="1.5"/>
+                        <circle cx="100" cy="90" r="40" fill="none" stroke="rgba(113,128,150,0.1)" stroke-width="1" stroke-dasharray="4 4"/>
+                        <line x1="30" y1="200" x2="170" y2="200" stroke="rgba(113,128,150,0.08)" stroke-width="1"/>
+                        <line x1="50" y1="215" x2="150" y2="215" stroke="rgba(113,128,150,0.05)" stroke-width="1"/>
+                    </svg>
+                    <div class="medal-3d-ring ring-participant"></div>
+                    <div class="medal-icon">🎗️</div>
+                    <div class="medal-info">
+                        <span class="medal-name">Participant</span>
+                        <span class="medal-days">Day 0</span>
+                        <span class="medal-tagline">The journey begins</span>
                     </div>
-                    <span class="reward-label">Ember</span>
-                    <span class="reward-days">Day 0</span>
-                    <span class="reward-status">🔒 Locked</span>
+                    <div class="achievement-particles"></div>
                 </div>
-                <div class="reward-card tier-bronze locked" data-days="4">
-                    <div class="badge-ribbon">BRONZE</div>
-                    <div class="badge-shield">
-                        <span class="reward-icon">
-                            <svg width="36" height="36" viewBox="0 0 36 36">
-                                <defs>
-                                    <linearGradient id="g-bronze" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stop-color="#CD7F32" />
-                                        <stop offset="100%" stop-color="#8B5E3C" />
-                                    </linearGradient>
-                                </defs>
-                                <polygon points="18,2 22,13 34,13 24,21 28,33 18,25 8,33 12,21 2,13 14,13"
-                                    fill="url(#g-bronze)" />
-                                <circle cx="18" cy="17" r="5" fill="#FFE0B2" opacity="0.6" />
-                            </svg>
-                        </span>
+
+                <!-- BRONZE -->
+                <div class="achievement-card locked" data-days="4" data-tier="bronze">
+                    <div class="medal-glow"></div>
+                    <div class="medal-ribbon bronze-ribbon"></div>
+                    <svg class="card-svg-bg" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="100" cy="85" r="58" fill="none" stroke="rgba(205,127,50,0.2)" stroke-width="2"/>
+                        <circle cx="100" cy="85" r="45" fill="none" stroke="rgba(205,127,50,0.12)" stroke-width="1.5" stroke-dasharray="8 4"/>
+                        <path d="M60 85 L100 50 L140 85 L120 130 L80 130 Z" fill="none" stroke="rgba(205,127,50,0.1)" stroke-width="1"/>
+                        <!-- Shield shape -->
+                        <path d="M100 160 L130 175 L130 200 Q100 220 70 200 L70 175 Z" fill="none" stroke="rgba(205,127,50,0.08)" stroke-width="1"/>
+                    </svg>
+                    <div class="medal-3d-ring ring-bronze"></div>
+                    <div class="medal-icon">🥉</div>
+                    <div class="medal-info">
+                        <span class="medal-name">Bronze</span>
+                        <span class="medal-days">Day 4</span>
+                        <span class="medal-tagline">First real victory</span>
                     </div>
-                    <span class="reward-label">Spark</span>
-                    <span class="reward-days">Day 4</span>
-                    <span class="reward-status">🔒 Locked</span>
+                    <div class="achievement-particles"></div>
                 </div>
-                <div class="reward-card tier-silver locked" data-days="10">
-                    <div class="badge-ribbon">SILVER</div>
-                    <div class="badge-shield">
-                        <span class="reward-icon">
-                            <svg width="36" height="36" viewBox="0 0 36 36">
-                                <defs>
-                                    <linearGradient id="g-silver" x1="0%" y1="100%" x2="100%" y2="0%">
-                                        <stop offset="0%" stop-color="#FF6D00" />
-                                        <stop offset="50%" stop-color="#FF9100" />
-                                        <stop offset="100%" stop-color="#FFAB00" />
-                                    </linearGradient>
-                                </defs>
-                                <path
-                                    d="M18 4 C18 4 24 14 24 20 C24 24 21 28 18 32 C15 28 12 24 12 20 C12 14 18 4 18 4Z"
-                                    fill="url(#g-silver)" />
-                                <ellipse cx="18" cy="20" rx="4" ry="6" fill="#FFF3E0" opacity="0.5" />
-                            </svg>
-                        </span>
+
+                <!-- SILVER -->
+                <div class="achievement-card locked" data-days="10" data-tier="silver">
+                    <div class="medal-glow"></div>
+                    <div class="medal-ribbon silver-ribbon"></div>
+                    <svg class="card-svg-bg" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="100" cy="85" r="60" fill="none" stroke="rgba(192,192,192,0.2)" stroke-width="2"/>
+                        <circle cx="100" cy="85" r="48" fill="none" stroke="rgba(192,192,192,0.12)" stroke-width="1" stroke-dasharray="3 6"/>
+                        <!-- Hexagon -->
+                        <polygon points="100,30 145,55 145,115 100,140 55,115 55,55" fill="none" stroke="rgba(192,192,192,0.1)" stroke-width="1.5"/>
+                        <!-- Stars -->
+                        <circle cx="40" cy="40" r="2" fill="rgba(192,192,192,0.15)"/>
+                        <circle cx="160" cy="50" r="1.5" fill="rgba(192,192,192,0.12)"/>
+                        <circle cx="30" cy="150" r="1.5" fill="rgba(192,192,192,0.1)"/>
+                        <circle cx="170" cy="180" r="2" fill="rgba(192,192,192,0.08)"/>
+                    </svg>
+                    <div class="medal-3d-ring ring-silver"></div>
+                    <div class="orbiting-dot silver-dot"></div>
+                    <div class="medal-icon">🥈</div>
+                    <div class="medal-info">
+                        <span class="medal-name">Silver</span>
+                        <span class="medal-days">Day 10</span>
+                        <span class="medal-tagline">Serious contender</span>
                     </div>
-                    <span class="reward-label">Flame</span>
-                    <span class="reward-days">Day 10</span>
-                    <span class="reward-status">🔒 Locked</span>
+                    <div class="achievement-particles"></div>
                 </div>
-                <div class="reward-card tier-gold locked" data-days="20">
-                    <div class="badge-ribbon">GOLD</div>
-                    <div class="badge-shield">
-                        <span class="reward-icon">
-                            <svg width="36" height="36" viewBox="0 0 36 36">
-                                <defs>
-                                    <linearGradient id="g-gold" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stop-color="#FFD700" />
-                                        <stop offset="50%" stop-color="#FFA000" />
-                                        <stop offset="100%" stop-color="#FF6F00" />
-                                    </linearGradient>
-                                </defs>
-                                <circle cx="18" cy="18" r="10" fill="url(#g-gold)" />
-                                <line x1="18" y1="3" x2="18" y2="9" stroke="#FFD700" stroke-width="2.5"
-                                    stroke-linecap="round" />
-                                <line x1="18" y1="27" x2="18" y2="33" stroke="#FFD700" stroke-width="2.5"
-                                    stroke-linecap="round" />
-                                <line x1="3" y1="18" x2="9" y2="18" stroke="#FFD700" stroke-width="2.5"
-                                    stroke-linecap="round" />
-                                <line x1="27" y1="18" x2="33" y2="18" stroke="#FFD700" stroke-width="2.5"
-                                    stroke-linecap="round" />
-                                <line x1="7" y1="7" x2="11" y2="11" stroke="#FFA000" stroke-width="2"
-                                    stroke-linecap="round" />
-                                <line x1="25" y1="7" x2="29" y2="3" stroke="#FFA000" stroke-width="2"
-                                    stroke-linecap="round" />
-                                <line x1="7" y1="29" x2="11" y2="25" stroke="#FFA000" stroke-width="2"
-                                    stroke-linecap="round" />
-                                <line x1="25" y1="25" x2="29" y2="29" stroke="#FFA000" stroke-width="2"
-                                    stroke-linecap="round" />
-                                <circle cx="18" cy="18" r="5" fill="#FFF8E1" />
-                            </svg>
-                        </span>
+
+                <!-- GOLD -->
+                <div class="achievement-card locked" data-days="20" data-tier="gold">
+                    <div class="medal-glow"></div>
+                    <div class="medal-ribbon gold-ribbon"></div>
+                    <svg class="card-svg-bg" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="100" cy="85" r="62" fill="none" stroke="rgba(255,215,0,0.2)" stroke-width="2.5"/>
+                        <circle cx="100" cy="85" r="50" fill="none" stroke="rgba(255,215,0,0.12)" stroke-width="1" stroke-dasharray="6 3"/>
+                        <!-- Crown SVG -->
+                        <path d="M60 180 L75 155 L100 170 L125 155 L140 180 Z" fill="none" stroke="rgba(255,215,0,0.15)" stroke-width="1.5"/>
+                        <line x1="60" y1="180" x2="140" y2="180" stroke="rgba(255,215,0,0.15)" stroke-width="1.5"/>
+                        <!-- Star bursts -->
+                        <path d="M100 25 L103 35 L113 35 L105 41 L108 51 L100 45 L92 51 L95 41 L87 35 L97 35 Z" fill="rgba(255,215,0,0.12)"/>
+                        <circle cx="35" cy="65" r="2" fill="rgba(255,215,0,0.1)"/>
+                        <circle cx="165" cy="70" r="2.5" fill="rgba(255,215,0,0.1)"/>
+                    </svg>
+                    <div class="medal-3d-ring ring-gold"></div>
+                    <div class="medal-3d-ring ring-gold-inner"></div>
+                    <div class="orbiting-dot gold-dot"></div>
+                    <div class="medal-icon">🥇</div>
+                    <div class="medal-info">
+                        <span class="medal-name">Gold</span>
+                        <span class="medal-days">Day 20</span>
+                        <span class="medal-tagline">Champion mindset</span>
                     </div>
-                    <span class="reward-label">Blaze</span>
-                    <span class="reward-days">Day 20</span>
-                    <span class="reward-status">🔒 Locked</span>
+                    <div class="achievement-particles"></div>
                 </div>
-                <div class="reward-card tier-platinum locked" data-days="35">
-                    <div class="badge-ribbon">PLATINUM</div>
-                    <div class="badge-shield">
-                        <span class="reward-icon">
-                            <svg width="36" height="36" viewBox="0 0 36 36">
-                                <defs>
-                                    <linearGradient id="g-plat" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stop-color="#78909C" />
-                                        <stop offset="50%" stop-color="#B0BEC5" />
-                                        <stop offset="100%" stop-color="#546E7A" />
-                                    </linearGradient>
-                                </defs>
-                                <path d="M18 3 L24 14 L34 14 L26 22 L30 33 L18 26 L6 33 L10 22 L2 14 L12 14Z"
-                                    fill="url(#g-plat)" stroke="#90A4AE" stroke-width="1" />
-                                <path d="M18 3 L24 14 L34 14 L26 22 L30 33 L18 26 L6 33 L10 22 L2 14 L12 14Z"
-                                    fill="none" stroke="white" stroke-width="0.5" opacity="0.3" />
-                                <circle cx="18" cy="18" r="5" fill="#CFD8DC" opacity="0.7" />
-                            </svg>
-                        </span>
+
+                <!-- PLATINUM -->
+                <div class="achievement-card locked" data-days="35" data-tier="platinum">
+                    <div class="medal-glow"></div>
+                    <div class="medal-ribbon platinum-ribbon"></div>
+                    <svg class="card-svg-bg" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="100" cy="85" r="65" fill="none" stroke="rgba(229,228,226,0.2)" stroke-width="2.5"/>
+                        <circle cx="100" cy="85" r="52" fill="none" stroke="rgba(229,228,226,0.1)" stroke-width="1" stroke-dasharray="2 5"/>
+                        <!-- Diamond lattice -->
+                        <rect x="70" y="55" width="60" height="60" fill="none" stroke="rgba(229,228,226,0.08)" stroke-width="1" transform="rotate(45 100 85)"/>
+                        <rect x="80" y="65" width="40" height="40" fill="none" stroke="rgba(229,228,226,0.06)" stroke-width="1" transform="rotate(45 100 85)"/>
+                        <!-- Sparkle dots -->
+                        <circle cx="25" cy="30" r="1.5" fill="rgba(229,228,226,0.15)"><animate attributeName="opacity" values="0.05;0.2;0.05" dur="3s" repeatCount="indefinite"/></circle>
+                        <circle cx="175" cy="45" r="2" fill="rgba(229,228,226,0.12)"><animate attributeName="opacity" values="0.1;0.25;0.1" dur="2.5s" repeatCount="indefinite"/></circle>
+                        <circle cx="20" cy="200" r="1" fill="rgba(229,228,226,0.1)"><animate attributeName="opacity" values="0.05;0.15;0.05" dur="4s" repeatCount="indefinite"/></circle>
+                        <circle cx="180" cy="220" r="1.5" fill="rgba(229,228,226,0.08)"><animate attributeName="opacity" values="0.05;0.2;0.05" dur="3.5s" repeatCount="indefinite"/></circle>
+                    </svg>
+                    <div class="medal-3d-ring ring-platinum"></div>
+                    <div class="medal-3d-ring ring-platinum-outer"></div>
+                    <div class="orbiting-dot platinum-dot"></div>
+                    <div class="orbiting-dot platinum-dot-2"></div>
+                    <div class="medal-icon">🏆</div>
+                    <div class="medal-info">
+                        <span class="medal-name">Platinum</span>
+                        <span class="medal-days">Day 35</span>
+                        <span class="medal-tagline">Elite performer</span>
                     </div>
-                    <span class="reward-label">Inferno</span>
-                    <span class="reward-days">Day 35</span>
-                    <span class="reward-status">🔒 Locked</span>
+                    <div class="achievement-particles"></div>
                 </div>
-                <div class="reward-card tier-diamond locked" data-days="60">
-                    <div class="badge-ribbon">DIAMOND</div>
-                    <div class="badge-shield">
-                        <span class="reward-icon">
-                            <svg width="36" height="36" viewBox="0 0 36 36">
-                                <defs>
-                                    <linearGradient id="g-dia" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stop-color="#4DD0E1" />
-                                        <stop offset="50%" stop-color="#00BCD4" />
-                                        <stop offset="100%" stop-color="#0097A7" />
-                                    </linearGradient>
-                                </defs>
-                                <polygon points="18,2 28,14 18,34 8,14" fill="url(#g-dia)" />
-                                <polygon points="18,2 23,14 18,10 13,14" fill="#E0F7FA" opacity="0.5" />
-                                <line x1="18" y1="10" x2="18" y2="34" stroke="#B2EBF2" stroke-width="0.6"
-                                    opacity="0.5" />
-                            </svg>
-                        </span>
+
+                <!-- DIAMOND CUP -->
+                <div class="achievement-card locked" data-days="60" data-tier="diamond">
+                    <div class="medal-glow"></div>
+                    <div class="medal-ribbon diamond-ribbon"></div>
+                    <svg class="card-svg-bg" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="100" cy="85" r="68" fill="none" stroke="rgba(0,229,255,0.2)" stroke-width="2.5"/>
+                        <circle cx="100" cy="85" r="55" fill="none" stroke="rgba(0,229,255,0.12)" stroke-width="1.5" stroke-dasharray="5 3"/>
+                        <!-- Diamond gem shape -->
+                        <polygon points="100,30 135,65 100,140 65,65" fill="none" stroke="rgba(0,229,255,0.15)" stroke-width="1.5"/>
+                        <line x1="65" y1="65" x2="135" y2="65" stroke="rgba(0,229,255,0.12)" stroke-width="1"/>
+                        <line x1="100" y1="30" x2="100" y2="140" stroke="rgba(0,229,255,0.08)" stroke-width="1"/>
+                        <!-- Electric arcs -->
+                        <path d="M30 100 Q50 80 40 60" fill="none" stroke="rgba(0,229,255,0.1)" stroke-width="0.8"><animate attributeName="d" values="M30 100 Q50 80 40 60;M30 100 Q55 75 45 55;M30 100 Q50 80 40 60" dur="3s" repeatCount="indefinite"/></path>
+                        <path d="M170 100 Q150 80 160 60" fill="none" stroke="rgba(0,229,255,0.1)" stroke-width="0.8"><animate attributeName="d" values="M170 100 Q150 80 160 60;M170 100 Q145 75 155 55;M170 100 Q150 80 160 60" dur="2.5s" repeatCount="indefinite"/></path>
+                        <!-- Sparkle dots -->
+                        <circle cx="30" cy="40" r="2" fill="rgba(0,229,255,0.2)"><animate attributeName="r" values="1;3;1" dur="2s" repeatCount="indefinite"/></circle>
+                        <circle cx="170" cy="35" r="1.5" fill="rgba(0,229,255,0.15)"><animate attributeName="r" values="0.5;2.5;0.5" dur="2.8s" repeatCount="indefinite"/></circle>
+                    </svg>
+                    <div class="medal-3d-ring ring-diamond"></div>
+                    <div class="medal-3d-ring ring-diamond-inner"></div>
+                    <div class="medal-3d-ring ring-diamond-micro"></div>
+                    <div class="orbiting-dot diamond-dot"></div>
+                    <div class="orbiting-dot diamond-dot-2"></div>
+                    <div class="medal-icon">💎</div>
+                    <div class="medal-info">
+                        <span class="medal-name">Diamond Cup</span>
+                        <span class="medal-days">Day 60</span>
+                        <span class="medal-tagline">Unbreakable willpower</span>
                     </div>
-                    <span class="reward-label">Phoenix</span>
-                    <span class="reward-days">Day 60</span>
-                    <span class="reward-status">🔒 Locked</span>
+                    <div class="achievement-particles"></div>
                 </div>
-                <div class="reward-card tier-mythic locked" data-days="100">
-                    <div class="badge-ribbon">MYTHIC</div>
-                    <div class="badge-shield">
-                        <span class="reward-icon">
-                            <svg width="36" height="36" viewBox="0 0 36 36">
-                                <defs>
-                                    <linearGradient id="g-myth" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stop-color="#CE93D8" />
-                                        <stop offset="50%" stop-color="#AB47BC" />
-                                        <stop offset="100%" stop-color="#7B1FA2" />
-                                    </linearGradient>
-                                </defs>
-                                <circle cx="18" cy="18" r="12" fill="url(#g-myth)" />
-                                <circle cx="18" cy="18" r="12" fill="none" stroke="#E1BEE7" stroke-width="1.5"
-                                    stroke-dasharray="3 2" />
-                                <polygon points="18,6 20,15 29,15 22,20 24,29 18,24 12,29 14,20 7,15 16,15"
-                                    fill="#F3E5F5" opacity="0.7" />
-                                <circle cx="18" cy="18" r="3" fill="#EDE7F6" />
-                            </svg>
-                        </span>
+
+                <!-- HALL OF FAME -->
+                <div class="achievement-card locked" data-days="100" data-tier="halloffame">
+                    <div class="medal-glow"></div>
+                    <div class="medal-ribbon hof-ribbon"></div>
+                    <svg class="card-svg-bg" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="100" cy="85" r="70" fill="none" stroke="rgba(224,64,251,0.2)" stroke-width="3"/>
+                        <circle cx="100" cy="85" r="58" fill="none" stroke="rgba(224,64,251,0.12)" stroke-width="1.5" stroke-dasharray="4 4"/>
+                        <!-- Star constellation -->
+                        <path d="M100 20 L106 38 L125 38 L110 50 L116 68 L100 56 L84 68 L90 50 L75 38 L94 38 Z" fill="rgba(224,64,251,0.1)" stroke="rgba(224,64,251,0.15)" stroke-width="1"/>
+                        <!-- Pillars -->
+                        <rect x="40" y="170" width="12" height="50" rx="3" fill="none" stroke="rgba(224,64,251,0.08)" stroke-width="1"/>
+                        <rect x="94" y="160" width="12" height="60" rx="3" fill="none" stroke="rgba(224,64,251,0.1)" stroke-width="1"/>
+                        <rect x="148" y="170" width="12" height="50" rx="3" fill="none" stroke="rgba(224,64,251,0.08)" stroke-width="1"/>
+                        <line x1="35" y1="170" x2="165" y2="170" stroke="rgba(224,64,251,0.06)" stroke-width="1"/>
+                        <!-- Floating sparkles -->
+                        <circle cx="20" cy="25" r="2.5" fill="rgba(224,64,251,0.2)"><animate attributeName="opacity" values="0.1;0.3;0.1" dur="2s" repeatCount="indefinite"/></circle>
+                        <circle cx="180" cy="30" r="2" fill="rgba(224,64,251,0.15)"><animate attributeName="opacity" values="0.05;0.25;0.05" dur="2.5s" repeatCount="indefinite"/></circle>
+                        <circle cx="15" cy="130" r="1.5" fill="rgba(224,64,251,0.12)"><animate attributeName="opacity" values="0.1;0.2;0.1" dur="3s" repeatCount="indefinite"/></circle>
+                        <circle cx="185" cy="140" r="2" fill="rgba(224,64,251,0.1)"><animate attributeName="opacity" values="0.05;0.2;0.05" dur="3.2s" repeatCount="indefinite"/></circle>
+                    </svg>
+                    <div class="medal-3d-ring ring-hof"></div>
+                    <div class="medal-3d-ring ring-hof-inner"></div>
+                    <div class="medal-3d-ring ring-hof-micro"></div>
+                    <div class="orbiting-dot hof-dot"></div>
+                    <div class="orbiting-dot hof-dot-2"></div>
+                    <div class="orbiting-dot hof-dot-3"></div>
+                    <div class="medal-icon">⭐</div>
+                    <div class="medal-info">
+                        <span class="medal-name">Hall of Fame</span>
+                        <span class="medal-days">Day 100</span>
+                        <span class="medal-tagline">Written in history</span>
                     </div>
-                    <span class="reward-label">Supernova</span>
-                    <span class="reward-days">Day 100</span>
-                    <span class="reward-status">🔒 Locked</span>
+                    <div class="achievement-particles"></div>
                 </div>
-                <div class="reward-card tier-legendary locked" data-days="200">
-                    <div class="badge-ribbon">LEGENDARY</div>
-                    <div class="badge-shield">
-                        <span class="reward-icon">
-                            <svg width="36" height="36" viewBox="0 0 36 36">
-                                <defs>
-                                    <linearGradient id="g-legend" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stop-color="#FFD700" />
-                                        <stop offset="30%" stop-color="#FFA000" />
-                                        <stop offset="70%" stop-color="#FF6F00" />
-                                        <stop offset="100%" stop-color="#E65100" />
-                                    </linearGradient>
-                                </defs>
-                                <path d="M18 4 L22 12 L14 12 Z" fill="url(#g-legend)" />
-                                <path d="M10 12 L26 12 L30 20 L18 32 L6 20 Z" fill="url(#g-legend)" />
-                                <circle cx="18" cy="19" r="4" fill="#FFF8E1" opacity="0.6" />
-                                <path d="M18 4 L22 12 L14 12 Z" fill="none" stroke="#FFD54F" stroke-width="0.8"
-                                    opacity="0.5" />
-                            </svg>
-                        </span>
+
+                <!-- G.O.A.T. -->
+                <div class="achievement-card locked" data-days="200" data-tier="goat">
+                    <div class="medal-glow"></div>
+                    <div class="medal-ribbon goat-ribbon"></div>
+                    <svg class="card-svg-bg" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="100" cy="85" r="72" fill="none" stroke="url(#goat-grad)" stroke-width="3">
+                            <animateTransform attributeName="transform" type="rotate" from="0 100 85" to="360 100 85" dur="20s" repeatCount="indefinite"/>
+                        </circle>
+                        <circle cx="100" cy="85" r="60" fill="none" stroke="url(#goat-grad2)" stroke-width="2" stroke-dasharray="6 4">
+                            <animateTransform attributeName="transform" type="rotate" from="360 100 85" to="0 100 85" dur="15s" repeatCount="indefinite"/>
+                        </circle>
+                        <!-- Crown SVG -->
+                        <path d="M55 175 L70 145 L85 160 L100 140 L115 160 L130 145 L145 175 Z" fill="none" stroke="url(#goat-grad)" stroke-width="2"/>
+                        <rect x="55" y="175" width="90" height="12" rx="3" fill="none" stroke="url(#goat-grad)" stroke-width="1.5"/>
+                        <!-- Orbital paths -->
+                        <ellipse cx="100" cy="85" rx="80" ry="25" fill="none" stroke="rgba(255,215,0,0.08)" stroke-width="0.8" transform="rotate(30 100 85)"/>
+                        <ellipse cx="100" cy="85" rx="80" ry="25" fill="none" stroke="rgba(255,0,255,0.06)" stroke-width="0.8" transform="rotate(-30 100 85)"/>
+                        <ellipse cx="100" cy="85" rx="80" ry="25" fill="none" stroke="rgba(0,255,255,0.05)" stroke-width="0.8" transform="rotate(90 100 85)"/>
+                        <!-- Stars everywhere -->
+                        <circle cx="15" cy="15" r="2.5" fill="rgba(255,215,0,0.2)"><animate attributeName="r" values="1.5;3;1.5" dur="1.8s" repeatCount="indefinite"/></circle>
+                        <circle cx="185" cy="20" r="2" fill="rgba(255,0,255,0.2)"><animate attributeName="r" values="1;2.5;1" dur="2.2s" repeatCount="indefinite"/></circle>
+                        <circle cx="10" cy="260" r="2" fill="rgba(0,255,255,0.2)"><animate attributeName="r" values="1;2.5;1" dur="2.5s" repeatCount="indefinite"/></circle>
+                        <circle cx="190" cy="265" r="2.5" fill="rgba(255,215,0,0.15)"><animate attributeName="r" values="1.5;3.5;1.5" dur="2s" repeatCount="indefinite"/></circle>
+                        <circle cx="100" cy="5" r="3" fill="rgba(255,215,0,0.25)"><animate attributeName="opacity" values="0.1;0.4;0.1" dur="1.5s" repeatCount="indefinite"/></circle>
+                        <!-- Gradient defs -->
+                        <defs>
+                            <linearGradient id="goat-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#ffd700;stop-opacity:0.25"/>
+                                <stop offset="50%" style="stop-color:#ff00ff;stop-opacity:0.2"/>
+                                <stop offset="100%" style="stop-color:#00ffff;stop-opacity:0.25"/>
+                            </linearGradient>
+                            <linearGradient id="goat-grad2" x1="100%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" style="stop-color:#00ffff;stop-opacity:0.2"/>
+                                <stop offset="50%" style="stop-color:#ffd700;stop-opacity:0.15"/>
+                                <stop offset="100%" style="stop-color:#ff00ff;stop-opacity:0.2"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <div class="medal-3d-ring ring-goat"></div>
+                    <div class="medal-3d-ring ring-goat-inner"></div>
+                    <div class="medal-3d-ring ring-goat-micro"></div>
+                    <div class="medal-3d-ring ring-goat-nano"></div>
+                    <div class="orbiting-dot goat-dot"></div>
+                    <div class="orbiting-dot goat-dot-2"></div>
+                    <div class="orbiting-dot goat-dot-3"></div>
+                    <div class="orbiting-dot goat-dot-4"></div>
+                    <div class="medal-icon">👑</div>
+                    <div class="medal-info">
+                        <span class="medal-name">G.O.A.T.</span>
+                        <span class="medal-days">Day 200</span>
+                        <span class="medal-tagline">Greatest Of All Time</span>
                     </div>
-                    <span class="reward-label">Eternal</span>
-                    <span class="reward-days">Day 200</span>
-                    <span class="reward-status">🔒 Locked</span>
+                    <div class="achievement-particles"></div>
                 </div>
+
             </div>
         </div>
 
@@ -2264,6 +2457,18 @@
                 </div>
             </div>
 
+            <h3 style="margin-top: 30px;">🎯 Daily Challenge</h3>
+            <div class="settings-toggle-row" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:var(--card-bg); border-radius:12px; border:1px solid var(--border); margin-bottom:20px;">
+                <div>
+                    <span style="font-weight:700; color:var(--text-main); font-size:0.9rem;">Enable Daily Challenge</span>
+                    <p style="margin:2px 0 0; font-size:0.75rem; color:var(--text-muted);">Show a unique challenge every day with streak tracking</p>
+                </div>
+                <label class="toggle-switch" style="position:relative; display:inline-block; width:48px; height:26px;">
+                    <input type="checkbox" id="dc-toggle" checked style="opacity:0; width:0; height:0;">
+                    <span class="toggle-slider" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:rgba(148,163,184,0.3); border-radius:26px; transition:0.3s;"></span>
+                </label>
+            </div>
+
             <h3 style="margin-top: 30px;">Data Management</h3>
             <div class="backup-controls">
                 <button id="export-btn" class="settings-action-btn">📤 Export Backup (JSON)</button>
@@ -2607,738 +2812,757 @@
                         style="color: var(--text-main); font-size: 0.75rem; font-weight: 600; text-align: center; line-height: 1.1;">Gomoku</span>
                 </div>
 
+
+
+                <!-- IQ Matrix Icon -->
+                <div class="game-card" id="card-neuro-link"
+                    style="display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; background: transparent; border: none; box-shadow: none; padding: 0;">
+                    <div style="width: 75px; height: 75px; border-radius: 20px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%); box-shadow: 0 6px 15px rgba(99, 102, 241, 0.4); overflow: hidden; position: relative;">
+                        <div class="anim-iq-matrix"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+                    </div>
+                    <span style="color: var(--text-main); font-size: 0.75rem; font-weight: 600; text-align: center; line-height: 1.1;">IQ<br>Matrix</span>
+                </div>
+
             </div>
         </div>
 
-        <!-- ================= CROSS AND ZERO GAME VIEW ================= -->
-        <div id="cross-zero-game-view" class="hidden"
-            style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 50; background: #000428; overflow: hidden; display: flex; flex-direction: column;">
-            <!-- Stars background (optional subtle styling handled in css) -->
-            <div id="cz-bg"
-                style="position: absolute; top:0; left:0; width:100%; height:100%; opacity: 0.3; background: radial-gradient(circle at center, #004e92 0%, #000428 100%);">
-            </div>
+    </div>
+    </div>
 
-            <div class="omn-ui-layer"
-                style="position: relative; z-index: 60; display: flex; flex-direction: column; height: 100%; padding: 20px;">
-                <!-- Top Bar -->
-                <div class="omn-header"
-                    style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 30px;">
-                    <button id="back-to-hub-cz" class="icon-btn"
-                        style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 1rem; cursor: pointer; padding: 10px 16px; border-radius: 12px; backdrop-filter: blur(6px);">←
-                        Back</button>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <div class="omn-stat-box"
-                            style="background: rgba(0,242,254,0.1); border: 1px solid rgba(0,242,254,0.3); padding: 5px 15px; border-radius: 20px; color: #00f2fe; text-shadow: 0 0 5px rgba(0,242,254,0.5);">
-                            📊 Lvl: <span id="cz-level-num">1</span></div>
-                        <div class="omn-stat-box"
-                            style="background: rgba(244,114,182,0.1); border: 1px solid rgba(244,114,182,0.3); padding: 5px 15px; border-radius: 20px; color: #f472b6; text-shadow: 0 0 5px rgba(244,114,182,0.5);">
-                            🏆 Best: Lvl <span id="cz-hs">1</span></div>
-                        <div class="omn-stat-box"
-                            style="background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); padding: 5px 15px; border-radius: 20px; color: #34d399; text-shadow: 0 0 5px rgba(52,211,153,0.5); font-weight: 700;">
-                            <span id="cz-level">Beginner 🟢</span>
-                        </div>
+
+    <!-- ================= NEURO LINK GAME VIEW ================= -->
+    <div id="neuro-link-view" class="hidden"
+        style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 50; overflow: hidden; background: #050510;">
+        <div id="neuro-link-root" style="width: 100%; height: 100%;"></div>
+    </div>
+
+    <!-- ================= CROSS AND ZERO GAME VIEW ================= -->
+    <div id="cross-zero-game-view" class="hidden"
+        style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 50; background: #000428; overflow: hidden; display: flex; flex-direction: column;">
+        <!-- Stars background (optional subtle styling handled in css) -->
+        <div id="cz-bg"
+            style="position: absolute; top:0; left:0; width:100%; height:100%; opacity: 0.3; background: radial-gradient(circle at center, #004e92 0%, #000428 100%);">
+        </div>
+
+        <div class="omn-ui-layer"
+            style="position: relative; z-index: 60; display: flex; flex-direction: column; height: 100%; padding: 20px;">
+            <!-- Top Bar -->
+            <div class="omn-header"
+                style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 30px;">
+                <button id="back-to-hub-cz" class="icon-btn"
+                    style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 1rem; cursor: pointer; padding: 10px 16px; border-radius: 12px; backdrop-filter: blur(6px);">←
+                    Back</button>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <div class="omn-stat-box"
+                        style="background: rgba(0,242,254,0.1); border: 1px solid rgba(0,242,254,0.3); padding: 5px 15px; border-radius: 20px; color: #00f2fe; text-shadow: 0 0 5px rgba(0,242,254,0.5);">
+                        📊 Lvl: <span id="cz-level-num">1</span></div>
+                    <div class="omn-stat-box"
+                        style="background: rgba(244,114,182,0.1); border: 1px solid rgba(244,114,182,0.3); padding: 5px 15px; border-radius: 20px; color: #f472b6; text-shadow: 0 0 5px rgba(244,114,182,0.5);">
+                        🏆 Best: Lvl <span id="cz-hs">1</span></div>
+                    <div class="omn-stat-box"
+                        style="background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); padding: 5px 15px; border-radius: 20px; color: #34d399; text-shadow: 0 0 5px rgba(52,211,153,0.5); font-weight: 700;">
+                        <span id="cz-level">Beginner 🟢</span>
                     </div>
                 </div>
+            </div>
 
-                <!-- Status Text -->
-                <div style="text-align: center; margin-bottom: 10px;">
-                    <h2 id="cz-status-text"
-                        style="color: #fff; font-size: 1.3rem; font-weight: 600; text-shadow: 0 2px 10px rgba(255,255,255,0.2);">
-                        Starting...</h2>
+            <!-- Status Text -->
+            <div style="text-align: center; margin-bottom: 10px;">
+                <h2 id="cz-status-text"
+                    style="color: #fff; font-size: 1.3rem; font-weight: 600; text-shadow: 0 2px 10px rgba(255,255,255,0.2);">
+                    Starting...</h2>
+            </div>
+
+            <!-- Game Board (cells generated dynamically by JS) -->
+            <div style="flex: 1; display: flex; justify-content: center; align-items: center;">
+                <div id="cz-board" class="cz-board"></div>
+            </div>
+        </div>
+
+        <!-- Game Over Modal -->
+        <div id="cz-end-modal" class="hidden"
+            style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 100; display: flex; justify-content: center; align-items: center; flex-direction: column;">
+            <h1 id="cz-modal-title" style="font-size: 3rem; margin-bottom: 20px; text-shadow: 0 0 20px currentColor;">
+                You Win!</h1>
+            <p id="cz-modal-msg" style="color: #aaa; font-size: 1.2rem; margin-bottom: 40px; text-align: center;">
+                You outsmarted the AI.</p>
+            <div style="display: flex; gap: 20px;">
+                <button id="cz-play-again"
+                    style="background: linear-gradient(135deg, #00f2fe, #4facfe); border: none; padding: 15px 30px; border-radius: 30px; font-weight: bold; font-size: 1.1rem; color: #000; cursor: pointer; transform: scale(1); transition: transform 0.2s;">Play
+                    Again</button>
+                <button id="cz-exit-btn"
+                    style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 15px 30px; border-radius: 30px; font-weight: bold; font-size: 1.1rem; color: #fff; cursor: pointer;">Exit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= OMNISCIENT GAME VIEW (V2) ================= -->
+    <div id="omniscient-game-view" class="hidden"
+        style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 50; background: #050510; overflow: hidden;">
+        <div id="omn-canvas-container" style="position: absolute; top:0; left:0; width:100%; height:100%;"></div>
+
+        <div class="omn-ui-layer">
+            <!-- Top Bar -->
+            <div class="omn-header">
+                <button id="back-to-hub-omniscient" class="icon-btn"
+                    style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 1rem; cursor: pointer; padding: 10px 16px; border-radius: 12px; backdrop-filter: blur(6px); z-index: 60;">←
+                    Back</button>
+                <div class="omn-stats">
+                    <div class="omn-stat-box">🏆 <span id="omn-level">1</span></div>
+                    <div class="omn-stat-box">💎 <span id="omn-score">0</span></div>
+                    <div class="omn-stat-box" style="color: #ff4757;"><span id="omn-lives">❤️❤️❤️</span></div>
+                </div>
+            </div>
+
+            <!-- Streak Display (hidden until streak >= 2) -->
+            <div id="omn-streak"
+                style="display: none; text-align: center; font-size: 1.8rem; font-weight: 900; color: #fbbf24; text-shadow: 0 0 20px rgba(251,191,36,0.6); animation: omnPulse 0.6s ease infinite alternate;">
+                🔥 2x</div>
+
+            <!-- Question + Answers Area -->
+            <div class="omn-question-container">
+                <!-- Category Badge + Question Counter -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span id="omn-category-badge" class="omn-category-badge" style="display: none;">🌐
+                        General</span>
+                    <span id="omn-q-counter"
+                        style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; letter-spacing: 1px;">Q1</span>
                 </div>
 
-                <!-- Game Board (cells generated dynamically by JS) -->
-                <div style="flex: 1; display: flex; justify-content: center; align-items: center;">
-                    <div id="cz-board" class="cz-board"></div>
+                <!-- Timer Bar -->
+                <div class="omn-timer-track">
+                    <div id="omn-timer-bar" class="omn-timer-fill"></div>
+                </div>
+
+                <h2 id="omn-question-text" class="omn-glass-panel"
+                    style="color: #ffffff !important; text-shadow: 0 2px 10px rgba(0,0,0,0.8) !important; transition: opacity 0.3s ease, transform 0.3s ease;">
+                    Loading question...</h2>
+
+                <div class="omn-answers-grid">
+                    <button class="omn-answer-btn omn-glass-panel" data-index="0"><span class="omn-letter">A</span>
+                        <span class="omn-answer-text">—</span></button>
+                    <button class="omn-answer-btn omn-glass-panel" data-index="1"><span class="omn-letter">B</span>
+                        <span class="omn-answer-text">—</span></button>
+                    <button class="omn-answer-btn omn-glass-panel" data-index="2"><span class="omn-letter">C</span>
+                        <span class="omn-answer-text">—</span></button>
+                    <button class="omn-answer-btn omn-glass-panel" data-index="3"><span class="omn-letter">D</span>
+                        <span class="omn-answer-text">—</span></button>
+                </div>
+
+                <!-- Lifeline Bar (3 powerups) -->
+                <div class="omn-lifeline-bar">
+                    <button id="omn-fifty-btn" class="omn-lifeline-btn" title="Remove 2 wrong answers">
+                        <span class="omn-lifeline-icon">✂️</span>
+                        <span class="omn-lifeline-label">50/50</span>
+                    </button>
+                    <button id="omn-time-btn" class="omn-lifeline-btn" title="Add 10 extra seconds">
+                        <span class="omn-lifeline-icon">⏰</span>
+                        <span class="omn-lifeline-label">+10s</span>
+                    </button>
+                    <button id="omn-skip-btn" class="omn-lifeline-btn" title="Skip this question (no penalty)">
+                        <span class="omn-lifeline-icon">⏭️</span>
+                        <span class="omn-lifeline-label">Skip</span>
+                    </button>
                 </div>
             </div>
 
             <!-- Game Over Modal -->
-            <div id="cz-end-modal" class="hidden"
-                style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 100; display: flex; justify-content: center; align-items: center; flex-direction: column;">
-                <h1 id="cz-modal-title"
-                    style="font-size: 3rem; margin-bottom: 20px; text-shadow: 0 0 20px currentColor;">You Win!</h1>
-                <p id="cz-modal-msg" style="color: #aaa; font-size: 1.2rem; margin-bottom: 40px; text-align: center;">
-                    You outsmarted the AI.</p>
-                <div style="display: flex; gap: 20px;">
-                    <button id="cz-play-again"
-                        style="background: linear-gradient(135deg, #00f2fe, #4facfe); border: none; padding: 15px 30px; border-radius: 30px; font-weight: bold; font-size: 1.1rem; color: #000; cursor: pointer; transform: scale(1); transition: transform 0.2s;">Play
-                        Again</button>
-                    <button id="cz-exit-btn"
-                        style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 15px 30px; border-radius: 30px; font-weight: bold; font-size: 1.1rem; color: #fff; cursor: pointer;">Exit</button>
+            <div id="omn-gameover-overlay" class="omn-glass-panel hidden"
+                style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; padding: 40px 50px; min-width: 340px; z-index: 100; border-color: rgba(255,71,87,0.4);">
+                <h1
+                    style="color: #ff4757; margin-bottom: 15px; font-size: 2.8rem; text-shadow: 0 0 20px rgba(255,71,87,0.5);">
+                    💀 GAME OVER</h1>
+                <div style="display: flex; justify-content: center; gap: 30px; margin-bottom: 25px;">
+                    <div>
+                        <div
+                            style="font-size: 0.8rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px;">
+                            Score</div>
+                        <div id="omn-go-score" style="font-size: 2.5rem; font-weight: 900; color: #0ff;">0</div>
+                    </div>
+                    <div>
+                        <div
+                            style="font-size: 0.8rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px;">
+                            Level</div>
+                        <div id="omn-go-level" style="font-size: 2.5rem; font-weight: 900; color: #eccc68;">1</div>
+                    </div>
+                    <div>
+                        <div
+                            style="font-size: 0.8rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px;">
+                            Best Streak</div>
+                        <div id="omn-go-streak" style="font-size: 2.5rem; font-weight: 900; color: #fbbf24;">0</div>
+                    </div>
                 </div>
+                <button id="omn-play-again"
+                    style="padding: 16px 50px; font-size: 1.2rem; background: linear-gradient(135deg, #8b5cf6, #3b82f6); border: none; border-radius: 30px; color: white; cursor: pointer; font-weight: 800; box-shadow: 0 8px 25px rgba(139,92,246,0.5); letter-spacing: 0.5px; transition: transform 0.2s;">🔄
+                    TRY AGAIN</button>
             </div>
         </div>
+    </div>
 
-        <!-- ================= OMNISCIENT GAME VIEW (V2) ================= -->
-        <div id="omniscient-game-view" class="hidden"
-            style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 50; background: #050510; overflow: hidden;">
-            <div id="omn-canvas-container" style="position: absolute; top:0; left:0; width:100%; height:100%;"></div>
-
-            <div class="omn-ui-layer">
-                <!-- Top Bar -->
-                <div class="omn-header">
-                    <button id="back-to-hub-omniscient" class="icon-btn"
-                        style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 1rem; cursor: pointer; padding: 10px 16px; border-radius: 12px; backdrop-filter: blur(6px); z-index: 60;">←
-                        Back</button>
-                    <div class="omn-stats">
-                        <div class="omn-stat-box">🏆 <span id="omn-level">1</span></div>
-                        <div class="omn-stat-box">💎 <span id="omn-score">0</span></div>
-                        <div class="omn-stat-box" style="color: #ff4757;"><span id="omn-lives">❤️❤️❤️</span></div>
-                    </div>
-                </div>
-
-                <!-- Streak Display (hidden until streak >= 2) -->
-                <div id="omn-streak"
-                    style="display: none; text-align: center; font-size: 1.8rem; font-weight: 900; color: #fbbf24; text-shadow: 0 0 20px rgba(251,191,36,0.6); animation: omnPulse 0.6s ease infinite alternate;">
-                    🔥 2x</div>
-
-                <!-- Question + Answers Area -->
-                <div class="omn-question-container">
-                    <!-- Category Badge + Question Counter -->
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <span id="omn-category-badge" class="omn-category-badge" style="display: none;">🌐
-                            General</span>
-                        <span id="omn-q-counter"
-                            style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; letter-spacing: 1px;">Q1</span>
-                    </div>
-
-                    <!-- Timer Bar -->
-                    <div class="omn-timer-track">
-                        <div id="omn-timer-bar" class="omn-timer-fill"></div>
-                    </div>
-
-                    <h2 id="omn-question-text" class="omn-glass-panel"
-                        style="color: #ffffff !important; text-shadow: 0 2px 10px rgba(0,0,0,0.8) !important; transition: opacity 0.3s ease, transform 0.3s ease;">
-                        Loading question...</h2>
-
-                    <div class="omn-answers-grid">
-                        <button class="omn-answer-btn omn-glass-panel" data-index="0"><span class="omn-letter">A</span>
-                            <span class="omn-answer-text">—</span></button>
-                        <button class="omn-answer-btn omn-glass-panel" data-index="1"><span class="omn-letter">B</span>
-                            <span class="omn-answer-text">—</span></button>
-                        <button class="omn-answer-btn omn-glass-panel" data-index="2"><span class="omn-letter">C</span>
-                            <span class="omn-answer-text">—</span></button>
-                        <button class="omn-answer-btn omn-glass-panel" data-index="3"><span class="omn-letter">D</span>
-                            <span class="omn-answer-text">—</span></button>
-                    </div>
-
-                    <!-- Lifeline Bar (3 powerups) -->
-                    <div class="omn-lifeline-bar">
-                        <button id="omn-fifty-btn" class="omn-lifeline-btn" title="Remove 2 wrong answers">
-                            <span class="omn-lifeline-icon">✂️</span>
-                            <span class="omn-lifeline-label">50/50</span>
-                        </button>
-                        <button id="omn-time-btn" class="omn-lifeline-btn" title="Add 10 extra seconds">
-                            <span class="omn-lifeline-icon">⏰</span>
-                            <span class="omn-lifeline-label">+10s</span>
-                        </button>
-                        <button id="omn-skip-btn" class="omn-lifeline-btn" title="Skip this question (no penalty)">
-                            <span class="omn-lifeline-icon">⏭️</span>
-                            <span class="omn-lifeline-label">Skip</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Game Over Modal -->
-                <div id="omn-gameover-overlay" class="omn-glass-panel hidden"
-                    style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; padding: 40px 50px; min-width: 340px; z-index: 100; border-color: rgba(255,71,87,0.4);">
-                    <h1
-                        style="color: #ff4757; margin-bottom: 15px; font-size: 2.8rem; text-shadow: 0 0 20px rgba(255,71,87,0.5);">
-                        💀 GAME OVER</h1>
-                    <div style="display: flex; justify-content: center; gap: 30px; margin-bottom: 25px;">
-                        <div>
-                            <div
-                                style="font-size: 0.8rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px;">
-                                Score</div>
-                            <div id="omn-go-score" style="font-size: 2.5rem; font-weight: 900; color: #0ff;">0</div>
-                        </div>
-                        <div>
-                            <div
-                                style="font-size: 0.8rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px;">
-                                Level</div>
-                            <div id="omn-go-level" style="font-size: 2.5rem; font-weight: 900; color: #eccc68;">1</div>
-                        </div>
-                        <div>
-                            <div
-                                style="font-size: 0.8rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px;">
-                                Best Streak</div>
-                            <div id="omn-go-streak" style="font-size: 2.5rem; font-weight: 900; color: #fbbf24;">0</div>
-                        </div>
-                    </div>
-                    <button id="omn-play-again"
-                        style="padding: 16px 50px; font-size: 1.2rem; background: linear-gradient(135deg, #8b5cf6, #3b82f6); border: none; border-radius: 30px; color: white; cursor: pointer; font-weight: 800; box-shadow: 0 8px 25px rgba(139,92,246,0.5); letter-spacing: 0.5px; transition: transform 0.2s;">🔄
-                        TRY AGAIN</button>
-                </div>
-            </div>
+    <!-- ================= MEMORY MATRIX VIEW ================= -->
+    <div id="matrix-game-view" class="hidden">
+        <div style="max-width: 500px; margin: 0 auto 15px auto;">
+            <button id="back-to-hub-matrix" class="icon-btn"
+                style="background: none; border: none; color: var(--text-muted); font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 0;">
+                <span>←</span> Back to Games
+            </button>
         </div>
 
-        <!-- ================= MEMORY MATRIX VIEW ================= -->
-        <div id="matrix-game-view" class="hidden">
-            <div style="max-width: 500px; margin: 0 auto 15px auto;">
-                <button id="back-to-hub-matrix" class="icon-btn"
-                    style="background: none; border: none; color: var(--text-muted); font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 0;">
-                    <span>←</span> Back to Games
+        <h1 class="page-title"
+            style="text-align:center; font-size: 2.5rem; background: linear-gradient(135deg, #a18cd1, #fbc2eb); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 5px;">
+            Memory Matrix 🧠</h1>
+        <p style="text-align:center; color:var(--text-muted); margin-bottom: 30px;">Train your spatial working
+            memory. Remember the pattern, then tap it.</p>
+
+        <div class="brain-game-container"
+            style="background: var(--bg-card); padding: 30px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.05); border: 1px solid var(--border); max-width: 500px; margin: 0 auto; position: relative; overflow: hidden;">
+            <!-- Splash Screen Overlay -->
+            <div id="matrix-splash-overlay"
+                style="position: absolute; top:0; left:0; width:100%; height:100%; background: var(--bg-card); z-index: 50; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 20px; text-align: center; padding: 30px; transition: opacity 0.4s ease;">
+                <h2
+                    style="color: var(--primary); margin-bottom: 25px; font-size: 2rem; background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; background-clip: text; color: transparent; line-height: 1.2;">
+                    How powerful is your memory? 🧠</h2>
+                <p
+                    style="color: var(--text-main); font-size: 1.15rem; line-height: 1.6; margin-bottom: 40px; max-width: 90%;">
+                    Memorize the grid pattern before it vanishes. <br><br><span
+                        style="color: #ff4757; font-weight: 700; font-size: 1.25rem;">Reaching Level 12 makes you an
+                        absolute beast.</span></p>
+                <button id="splash-start-matrix-btn" class="primary-btn"
+                    style="padding: 18px 50px; font-size: 1.4rem; border-radius: 40px; background: linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; box-shadow: 0 15px 30px rgba(102, 126, 234, 0.4); cursor:pointer; font-weight:bold; transition: transform 0.2s, box-shadow 0.2s;">Start
+                    Challenge</button>
+            </div>
+
+            <div class="brain-stats-header"
+                style="display: flex; justify-content: space-between; margin-bottom: 25px; font-weight: 600; font-size: 1.1rem;">
+                <div class="brain-stat" style="color: var(--primary);">Lvl: <span id="matrix-level-display">1</span>
+                </div>
+                <div class="brain-stat" style="color: var(--text-main);">Score: <span id="matrix-score-display">0</span>
+                </div>
+                <div class="brain-stat" style="color: var(--text-muted); font-size: 0.9rem; align-self: flex-end;">
+                    Best: <span id="matrix-highscore-display">0</span></div>
+                <div class="brain-stat" style="color: #ff4757; letter-spacing: 2px;"><span
+                        id="matrix-lives-display">❤️❤️❤️</span></div>
+            </div>
+
+            <div id="matrix-grid-container" class="matrix-grid-container"
+                style="display: grid; gap: 10px; margin: 0 auto; width: 100%; aspect-ratio: 1; perspective: 1000px;">
+                <!-- HTML empty. Dynamic CSS grid injected via JS -->
+            </div>
+
+            <div class="brain-controls" style="text-align: center; margin-top: 35px;">
+                <button id="start-matrix-btn" class="primary-btn"
+                    style="padding: 15px 40px; font-size: 1.2rem; border-radius: 30px; background: linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3); cursor:pointer; transition: transform 0.2s, box-shadow 0.2s;">Start
+                    Training</button>
+            </div>
+
+            <div id="matrix-feedback" class="matrix-feedback"
+                style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); opacity: 0; background: rgba(255,255,255,0.9); padding: 20px 40px; border-radius: 20px; font-size: 2rem; font-weight: 800; color: var(--primary); box-shadow: 0 20px 50px rgba(0,0,0,0.2); pointer-events: none; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 100;">
+                Level Up!</div>
+        </div>
+    </div>
+
+    <!-- ================= BRAIN CLATTER (STROOP) VIEW ================= -->
+    <div id="stroop-game-view" class="hidden">
+        <div style="max-width: 500px; margin: 0 auto 15px auto;">
+            <button id="back-to-hub-stroop" class="icon-btn"
+                style="background: none; border: none; color: var(--text-muted); font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 0;">
+                <span>←</span> Back to Games
+            </button>
+        </div>
+
+        <h1 class="page-title"
+            style="text-align:center; font-size: 2.5rem; background: linear-gradient(135deg, #ff9a9e, #fecfef); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 5px;">
+            Brain Clatter 🎨</h1>
+        <p style="text-align:center; color:var(--text-muted); margin-bottom: 20px;">Tap the color of the INK, not
+            what the word says.</p>
+
+        <div class="stroop-game-container"
+            style="background: var(--bg-card); padding: 30px 20px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.05); border: 1px solid var(--border); max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; position: relative; overflow: hidden;">
+
+            <!-- Main Game Screen -->
+            <div id="stroop-play-area" class="hidden"
+                style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+                <div class="brain-stats-header"
+                    style="width: 100%; display: flex; justify-content: space-between; margin-bottom: 15px; font-weight: 600; font-size: 1.2rem; padding: 0 15px;">
+                    <div class="brain-stat" style="color: var(--primary);">Score: <span
+                            id="stroop-score-display">0</span></div>
+                    <div class="brain-stat" style="color: #ff4757;">Time: <span id="stroop-time-display">60</span>s
+                    </div>
+                </div>
+
+                <!-- Progress bar for Survival mode -->
+                <div id="stroop-timer-container"
+                    style="width: 100%; height: 8px; background: var(--border); border-radius: 4px; margin-bottom: 30px; overflow: hidden; display: none;">
+                    <div id="stroop-timer-bar"
+                        style="height: 100%; width: 100%; background: #ff4757; transition: width 0.1s linear;">
+                    </div>
+                </div>
+
+                <div id="stroop-word-container"
+                    style="height: 120px; display: flex; justify-content: center; align-items: center; margin-bottom: 30px; width: 100%;">
+                    <h1 id="stroop-word"
+                        style="font-size: 4rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin: 0; transition: transform 0.1s;">
+                        RED</h1>
+                </div>
+
+                <div class="stroop-buttons"
+                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 450px;">
+                    <button class="stroop-btn" data-color="#ff4757"
+                        style="background: #ff4757; color: white;">RED</button>
+                    <button class="stroop-btn" data-color="#3498db"
+                        style="background: #3498db; color: white;">BLUE</button>
+                    <button class="stroop-btn" data-color="#2ed573"
+                        style="background: #2ed573; color: white;">GREEN</button>
+                    <button class="stroop-btn" data-color="#eccc68"
+                        style="background: #eccc68; color: white;">YELLOW</button>
+                    <button class="stroop-btn hidden" data-color="#9b59b6"
+                        style="background: #9b59b6; color: white; padding: 18px 0; font-size: 1.1rem;">PURPLE</button>
+                    <button class="stroop-btn hidden" data-color="#e67e22"
+                        style="background: #e67e22; color: white; padding: 18px 0; font-size: 1.1rem;">ORANGE</button>
+                    <button class="stroop-btn hidden" data-color="#00cec9"
+                        style="background: #00cec9; color: white; padding: 18px 0; font-size: 1.1rem;">CYAN</button>
+                    <button class="stroop-btn hidden" data-color="#fd79a8"
+                        style="background: #fd79a8; color: white; padding: 18px 0; font-size: 1.1rem;">PINK</button>
+                </div>
+            </div>
+
+            <!-- Menu / Pre-Game Screen -->
+            <div id="stroop-menu-area"
+                style="width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 20px 0;">
+                <h2 style="font-size: 1.8rem; margin-bottom: 15px; color: var(--text-main);">Select Mode</h2>
+
+                <button id="btn-stroop-sprint" class="primary-btn"
+                    style="width: 100%; padding: 18px; font-size: 1.2rem; border-radius: 15px; background: linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; cursor:pointer; margin-bottom: 15px; font-weight:bold; box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3); transition: transform 0.2s;">
+                    ⏱️ 60-Sec Sprint<br>
+                    <span style="font-size:0.9rem; font-weight:normal; opacity:0.9;">High Score: <span
+                            id="stroop-hs-sprint">0</span></span>
+                </button>
+
+                <button id="btn-stroop-survival" class="primary-btn"
+                    style="width: 100%; padding: 18px; font-size: 1.2rem; border-radius: 15px; background: linear-gradient(135deg, #ff4757, #ff6b81); color:white; border:none; cursor:pointer; font-weight:bold; box-shadow: 0 10px 20px rgba(255, 71, 87, 0.3); transition: transform 0.2s;">
+                    💀 Survival Mode<br>
+                    <span style="font-size:0.9rem; font-weight:normal; opacity:0.9;">High Score: <span
+                            id="stroop-hs-survival">0</span></span>
                 </button>
             </div>
 
-            <h1 class="page-title"
-                style="text-align:center; font-size: 2.5rem; background: linear-gradient(135deg, #a18cd1, #fbc2eb); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 5px;">
-                Memory Matrix 🧠</h1>
-            <p style="text-align:center; color:var(--text-muted); margin-bottom: 30px;">Train your spatial working
-                memory. Remember the pattern, then tap it.</p>
+            <!-- Game Over Splash -->
+            <div id="stroop-end-modal" class="hidden"
+                style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; border-radius: 20px; backdrop-filter: blur(4px);">
+                <h2 id="stroop-end-title" style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Time's Up!
+                    🏁</h2>
+                <p style="color: #ccc; font-size: 1.2rem; margin-bottom: 10px;">Final Score: <strong
+                        id="stroop-final-score" style="color: var(--primary); font-size: 1.8rem;">0</strong></p>
+                <p id="stroop-new-hs-label" class="hidden"
+                    style="color: #eccc68; font-weight: bold; margin-bottom: 20px; animation: popIn 0.5s;">NEW HIGH
+                    SCORE!</p>
+                <button id="stroop-play-again-btn" class="primary-btn"
+                    style="padding: 15px 40px; font-size: 1.2rem; border-radius: 30px; background: linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; cursor:pointer; margin-top: 15px;">Close</button>
+            </div>
+        </div>
+    </div>
 
-            <div class="brain-game-container"
-                style="background: var(--bg-card); padding: 30px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.05); border: 1px solid var(--border); max-width: 500px; margin: 0 auto; position: relative; overflow: hidden;">
-                <!-- Splash Screen Overlay -->
-                <div id="matrix-splash-overlay"
-                    style="position: absolute; top:0; left:0; width:100%; height:100%; background: var(--bg-card); z-index: 50; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 20px; text-align: center; padding: 30px; transition: opacity 0.4s ease;">
-                    <h2
-                        style="color: var(--primary); margin-bottom: 25px; font-size: 2rem; background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; background-clip: text; color: transparent; line-height: 1.2;">
-                        How powerful is your memory? 🧠</h2>
-                    <p
-                        style="color: var(--text-main); font-size: 1.15rem; line-height: 1.6; margin-bottom: 40px; max-width: 90%;">
-                        Memorize the grid pattern before it vanishes. <br><br><span
-                            style="color: #ff4757; font-weight: 700; font-size: 1.25rem;">Reaching Level 12 makes you an
-                            absolute beast.</span></p>
-                    <button id="splash-start-matrix-btn" class="primary-btn"
-                        style="padding: 18px 50px; font-size: 1.4rem; border-radius: 40px; background: linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; box-shadow: 0 15px 30px rgba(102, 126, 234, 0.4); cursor:pointer; font-weight:bold; transition: transform 0.2s, box-shadow 0.2s;">Start
-                        Challenge</button>
+    <!-- ================= SYNAPTIC TUG OF WAR VIEW ================= -->
+    <div id="tug-game-view" class="hidden">
+        <div style="max-width: 500px; margin: 0 auto 15px auto;">
+            <button id="back-to-hub-tug" class="icon-btn"
+                style="background: none; border: none; color: var(--text-muted); font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 0;">
+                <span>←</span> Back to Games
+            </button>
+        </div>
+
+        <h1 class="page-title"
+            style="text-align:center; font-size: 2.5rem; background: linear-gradient(135deg, #f6d365, #fda085); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 5px;">
+            Tug of War 🪢</h1>
+        <p style="text-align:center; color:var(--text-muted); margin-bottom: 20px;">Solve the math faster than your
+            opponent.</p>
+
+        <div class="tug-game-container"
+            style="background: var(--bg-card); padding: 30px 20px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.05); border: 1px solid var(--border); max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; position: relative; overflow: hidden;">
+
+            <!-- Pre-Game Menu -->
+            <div id="tug-menu-area"
+                style="width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 20px 0;">
+
+                <!-- Avatar Selection -->
+                <div style="display: flex; gap: 30px; margin-bottom: 25px; align-items: flex-end;">
+                    <!-- Player Select -->
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
+                        <label style="font-size: 0.9rem; color: var(--text-main); font-weight: bold;">YOU</label>
+                        <select id="tug-player-select"
+                            style="font-size: 2.5rem; background: transparent; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; padding: 5px; outline: none;">
+                            <option value="🙎‍♂️">🙎‍♂️</option>
+                            <option value="🙎‍♀️">🙎‍♀️</option>
+                            <option value="🥷">🥷</option>
+                            <option value="🧙‍♂️">🧙‍♂️</option>
+                            <option value="🦸‍♂️">🦸‍♂️</option>
+                            <option value="🦸‍♀️">🦸‍♀️</option>
+                        </select>
+                    </div>
+
+                    <div style="font-size: 1.5rem; color: #ff4757; font-weight: 900; padding-bottom: 15px;">VS</div>
+
+                    <!-- AI Select -->
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
+                        <label style="font-size: 0.9rem; color: var(--text-main); font-weight: bold;">AI</label>
+                        <select id="tug-ai-select"
+                            style="font-size: 2.5rem; background: transparent; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; padding: 5px; outline: none;">
+                            <option value="🤖">🤖</option>
+                            <option value="👽">👽</option>
+                            <option value="👹">👹</option>
+                            <option value="🤡">🤡</option>
+                            <option value="🙎‍♀️">🙎‍♀️</option>
+                            <option value="🙎‍♂️">🙎‍♂️</option>
+                        </select>
+                    </div>
                 </div>
+
+                <button id="btn-tug-start" class="primary-btn"
+                    style="width: 100%; padding: 18px; font-size: 1.2rem; border-radius: 15px; background: linear-gradient(135deg, #f6d365, #fda085); color:white; border:none; cursor:pointer; font-weight:bold; box-shadow: 0 10px 20px rgba(253, 160, 133, 0.3); transition: transform 0.2s;">
+                    Enter Arena<br>
+                    <span style="font-size:0.9rem; font-weight:normal; opacity:0.9;">Highest Level: <span
+                            id="tug-hs-level">1</span> (Streak: <span id="tug-hs-streak">0</span>)</span>
+                </button>
+            </div>
+
+            <!-- Main Arena -->
+            <div id="tug-play-area" class="hidden"
+                style="width: 100%; display: flex; flex-direction: column; align-items: center;">
 
                 <div class="brain-stats-header"
-                    style="display: flex; justify-content: space-between; margin-bottom: 25px; font-weight: 600; font-size: 1.1rem;">
-                    <div class="brain-stat" style="color: var(--primary);">Lvl: <span id="matrix-level-display">1</span>
-                    </div>
-                    <div class="brain-stat" style="color: var(--text-main);">Score: <span
-                            id="matrix-score-display">0</span></div>
-                    <div class="brain-stat" style="color: var(--text-muted); font-size: 0.9rem; align-self: flex-end;">
-                        Best: <span id="matrix-highscore-display">0</span></div>
-                    <div class="brain-stat" style="color: #ff4757; letter-spacing: 2px;"><span
-                            id="matrix-lives-display">❤️❤️❤️</span></div>
-                </div>
-
-                <div id="matrix-grid-container" class="matrix-grid-container"
-                    style="display: grid; gap: 10px; margin: 0 auto; width: 100%; aspect-ratio: 1; perspective: 1000px;">
-                    <!-- HTML empty. Dynamic CSS grid injected via JS -->
-                </div>
-
-                <div class="brain-controls" style="text-align: center; margin-top: 35px;">
-                    <button id="start-matrix-btn" class="primary-btn"
-                        style="padding: 15px 40px; font-size: 1.2rem; border-radius: 30px; background: linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3); cursor:pointer; transition: transform 0.2s, box-shadow 0.2s;">Start
-                        Training</button>
-                </div>
-
-                <div id="matrix-feedback" class="matrix-feedback"
-                    style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); opacity: 0; background: rgba(255,255,255,0.9); padding: 20px 40px; border-radius: 20px; font-size: 2rem; font-weight: 800; color: var(--primary); box-shadow: 0 20px 50px rgba(0,0,0,0.2); pointer-events: none; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 100;">
-                    Level Up!</div>
-            </div>
-        </div>
-
-        <!-- ================= BRAIN CLATTER (STROOP) VIEW ================= -->
-        <div id="stroop-game-view" class="hidden">
-            <div style="max-width: 500px; margin: 0 auto 15px auto;">
-                <button id="back-to-hub-stroop" class="icon-btn"
-                    style="background: none; border: none; color: var(--text-muted); font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 0;">
-                    <span>←</span> Back to Games
-                </button>
-            </div>
-
-            <h1 class="page-title"
-                style="text-align:center; font-size: 2.5rem; background: linear-gradient(135deg, #ff9a9e, #fecfef); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 5px;">
-                Brain Clatter 🎨</h1>
-            <p style="text-align:center; color:var(--text-muted); margin-bottom: 20px;">Tap the color of the INK, not
-                what the word says.</p>
-
-            <div class="stroop-game-container"
-                style="background: var(--bg-card); padding: 30px 20px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.05); border: 1px solid var(--border); max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; position: relative; overflow: hidden;">
-
-                <!-- Main Game Screen -->
-                <div id="stroop-play-area" class="hidden"
-                    style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-                    <div class="brain-stats-header"
-                        style="width: 100%; display: flex; justify-content: space-between; margin-bottom: 15px; font-weight: 600; font-size: 1.2rem; padding: 0 15px;">
-                        <div class="brain-stat" style="color: var(--primary);">Score: <span
-                                id="stroop-score-display">0</span></div>
-                        <div class="brain-stat" style="color: #ff4757;">Time: <span id="stroop-time-display">60</span>s
-                        </div>
-                    </div>
-
-                    <!-- Progress bar for Survival mode -->
-                    <div id="stroop-timer-container"
-                        style="width: 100%; height: 8px; background: var(--border); border-radius: 4px; margin-bottom: 30px; overflow: hidden; display: none;">
-                        <div id="stroop-timer-bar"
-                            style="height: 100%; width: 100%; background: #ff4757; transition: width 0.1s linear;">
-                        </div>
-                    </div>
-
-                    <div id="stroop-word-container"
-                        style="height: 120px; display: flex; justify-content: center; align-items: center; margin-bottom: 30px; width: 100%;">
-                        <h1 id="stroop-word"
-                            style="font-size: 4rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin: 0; transition: transform 0.1s;">
-                            RED</h1>
-                    </div>
-
-                    <div class="stroop-buttons"
-                        style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 450px;">
-                        <button class="stroop-btn" data-color="#ff4757"
-                            style="background: #ff4757; color: white;">RED</button>
-                        <button class="stroop-btn" data-color="#3498db"
-                            style="background: #3498db; color: white;">BLUE</button>
-                        <button class="stroop-btn" data-color="#2ed573"
-                            style="background: #2ed573; color: white;">GREEN</button>
-                        <button class="stroop-btn" data-color="#eccc68"
-                            style="background: #eccc68; color: white;">YELLOW</button>
-                        <button class="stroop-btn hidden" data-color="#9b59b6"
-                            style="background: #9b59b6; color: white; padding: 18px 0; font-size: 1.1rem;">PURPLE</button>
-                        <button class="stroop-btn hidden" data-color="#e67e22"
-                            style="background: #e67e22; color: white; padding: 18px 0; font-size: 1.1rem;">ORANGE</button>
-                        <button class="stroop-btn hidden" data-color="#00cec9"
-                            style="background: #00cec9; color: white; padding: 18px 0; font-size: 1.1rem;">CYAN</button>
-                        <button class="stroop-btn hidden" data-color="#fd79a8"
-                            style="background: #fd79a8; color: white; padding: 18px 0; font-size: 1.1rem;">PINK</button>
+                    style="width: 100%; display: flex; justify-content: space-between; margin-bottom: 20px; font-weight: 600; font-size: 1.1rem; padding: 0 15px;">
+                    <div class="brain-stat" style="color: #00cec9;">Lvl: <span id="tug-level-display">1</span></div>
+                    <div class="brain-stat" style="color: #ff4757;">Streak: <span id="tug-streak-display">0</span>
                     </div>
                 </div>
 
-                <!-- Menu / Pre-Game Screen -->
-                <div id="stroop-menu-area"
-                    style="width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 20px 0;">
-                    <h2 style="font-size: 1.8rem; margin-bottom: 15px; color: var(--text-main);">Select Mode</h2>
-
-                    <button id="btn-stroop-sprint" class="primary-btn"
-                        style="width: 100%; padding: 18px; font-size: 1.2rem; border-radius: 15px; background: linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; cursor:pointer; margin-bottom: 15px; font-weight:bold; box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3); transition: transform 0.2s;">
-                        ⏱️ 60-Sec Sprint<br>
-                        <span style="font-size:0.9rem; font-weight:normal; opacity:0.9;">High Score: <span
-                                id="stroop-hs-sprint">0</span></span>
-                    </button>
-
-                    <button id="btn-stroop-survival" class="primary-btn"
-                        style="width: 100%; padding: 18px; font-size: 1.2rem; border-radius: 15px; background: linear-gradient(135deg, #ff4757, #ff6b81); color:white; border:none; cursor:pointer; font-weight:bold; box-shadow: 0 10px 20px rgba(255, 71, 87, 0.3); transition: transform 0.2s;">
-                        💀 Survival Mode<br>
-                        <span style="font-size:0.9rem; font-weight:normal; opacity:0.9;">High Score: <span
-                                id="stroop-hs-survival">0</span></span>
-                    </button>
-                </div>
-
-                <!-- Game Over Splash -->
-                <div id="stroop-end-modal" class="hidden"
-                    style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; border-radius: 20px; backdrop-filter: blur(4px);">
-                    <h2 id="stroop-end-title" style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Time's Up!
-                        🏁</h2>
-                    <p style="color: #ccc; font-size: 1.2rem; margin-bottom: 10px;">Final Score: <strong
-                            id="stroop-final-score" style="color: var(--primary); font-size: 1.8rem;">0</strong></p>
-                    <p id="stroop-new-hs-label" class="hidden"
-                        style="color: #eccc68; font-weight: bold; margin-bottom: 20px; animation: popIn 0.5s;">NEW HIGH
-                        SCORE!</p>
-                    <button id="stroop-play-again-btn" class="primary-btn"
-                        style="padding: 15px 40px; font-size: 1.2rem; border-radius: 30px; background: linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; cursor:pointer; margin-top: 15px;">Close</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ================= SYNAPTIC TUG OF WAR VIEW ================= -->
-        <div id="tug-game-view" class="hidden">
-            <div style="max-width: 500px; margin: 0 auto 15px auto;">
-                <button id="back-to-hub-tug" class="icon-btn"
-                    style="background: none; border: none; color: var(--text-muted); font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 0;">
-                    <span>←</span> Back to Games
-                </button>
-            </div>
-
-            <h1 class="page-title"
-                style="text-align:center; font-size: 2.5rem; background: linear-gradient(135deg, #f6d365, #fda085); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 5px;">
-                Tug of War 🪢</h1>
-            <p style="text-align:center; color:var(--text-muted); margin-bottom: 20px;">Solve the math faster than your
-                opponent.</p>
-
-            <div class="tug-game-container"
-                style="background: var(--bg-card); padding: 30px 20px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.05); border: 1px solid var(--border); max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; position: relative; overflow: hidden;">
-
-                <!-- Pre-Game Menu -->
-                <div id="tug-menu-area"
-                    style="width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 20px 0;">
-
-                    <!-- Avatar Selection -->
-                    <div style="display: flex; gap: 30px; margin-bottom: 25px; align-items: flex-end;">
-                        <!-- Player Select -->
-                        <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
-                            <label style="font-size: 0.9rem; color: var(--text-main); font-weight: bold;">YOU</label>
-                            <select id="tug-player-select"
-                                style="font-size: 2.5rem; background: transparent; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; padding: 5px; outline: none;">
-                                <option value="🙎‍♂️">🙎‍♂️</option>
-                                <option value="🙎‍♀️">🙎‍♀️</option>
-                                <option value="🥷">🥷</option>
-                                <option value="🧙‍♂️">🧙‍♂️</option>
-                                <option value="🦸‍♂️">🦸‍♂️</option>
-                                <option value="🦸‍♀️">🦸‍♀️</option>
-                            </select>
-                        </div>
-
-                        <div style="font-size: 1.5rem; color: #ff4757; font-weight: 900; padding-bottom: 15px;">VS</div>
-
-                        <!-- AI Select -->
-                        <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
-                            <label style="font-size: 0.9rem; color: var(--text-main); font-weight: bold;">AI</label>
-                            <select id="tug-ai-select"
-                                style="font-size: 2.5rem; background: transparent; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; padding: 5px; outline: none;">
-                                <option value="🤖">🤖</option>
-                                <option value="👽">👽</option>
-                                <option value="👹">👹</option>
-                                <option value="🤡">🤡</option>
-                                <option value="🙎‍♀️">🙎‍♀️</option>
-                                <option value="🙎‍♂️">🙎‍♂️</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <button id="btn-tug-start" class="primary-btn"
-                        style="width: 100%; padding: 18px; font-size: 1.2rem; border-radius: 15px; background: linear-gradient(135deg, #f6d365, #fda085); color:white; border:none; cursor:pointer; font-weight:bold; box-shadow: 0 10px 20px rgba(253, 160, 133, 0.3); transition: transform 0.2s;">
-                        Enter Arena<br>
-                        <span style="font-size:0.9rem; font-weight:normal; opacity:0.9;">Highest Level: <span
-                                id="tug-hs-level">1</span> (Streak: <span id="tug-hs-streak">0</span>)</span>
-                    </button>
-                </div>
-
-                <!-- Main Arena -->
-                <div id="tug-play-area" class="hidden"
-                    style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-
-                    <div class="brain-stats-header"
-                        style="width: 100%; display: flex; justify-content: space-between; margin-bottom: 20px; font-weight: 600; font-size: 1.1rem; padding: 0 15px;">
-                        <div class="brain-stat" style="color: #00cec9;">Lvl: <span id="tug-level-display">1</span></div>
-                        <div class="brain-stat" style="color: #ff4757;">Streak: <span id="tug-streak-display">0</span>
-                        </div>
-                    </div>
-
-                    <!-- The Rope -->
-                    <div class="tug-arena-wrapper"
-                        style="width: 100%; height: 110px; position: relative; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; background: transparent; overflow: visible;">
-                        <!-- Woven Rope -->
-                        <div
-                            style="position: absolute; width: 100%; height: 14px; left: 0; top: 65%; transform: translateY(-50%); background: repeating-linear-gradient(45deg, #d1bfae, #d1bfae 4px, #a88e7a 4px, #a88e7a 8px); box-shadow: 0 4px 6px rgba(0,0,0,0.3); border-radius: 6px; z-index: 5;">
-                        </div>
-
-                        <!-- Entities -->
-                        <div style="position: absolute; left: 0; top: 0; text-align: center; z-index: 10;">
-                            <div
-                                style="font-size: 0.85rem; font-weight: 800; color: var(--text-main); margin-bottom: -5px;">
-                                YOU</div>
-                            <div id="tug-player-avatar"
-                                style="font-size: 3.5rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">🙎‍♂️</div>
-                        </div>
-
-                        <div style="position: absolute; right: 0; top: 0; text-align: center; z-index: 10;">
-                            <div style="font-size: 0.85rem; font-weight: 800; color: #ff4757; margin-bottom: -5px;">AI
-                            </div>
-                            <div id="tug-ai-avatar"
-                                style="font-size: 3.5rem; transform: scaleX(-1); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
-                                🤖</div>
-                        </div>
-
-                        <!-- The Center Red Flag / Knot -->
-                        <div id="tug-knot"
-                            style="position: absolute; left: 50%; top: 65%; width: 14px; height: 40px; background: #ff4757; border-radius: 4px; transform: translate(-50%, -50%); box-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 20; transition: left 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-                        </div>
-                    </div>
-
-                    <!-- HUD Equation -->
-                    <div id="tug-equation-container"
-                        style="height: 100px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px;">
-                        <h1 id="tug-equation"
-                            style="font-size: 3.5rem; font-weight: 900; letter-spacing: 2px; margin: 0; color: var(--text-main);">
-                            14 + 8</h1>
-                    </div>
-
-                    <!-- Player Answer Tracker -->
+                <!-- The Rope -->
+                <div class="tug-arena-wrapper"
+                    style="width: 100%; height: 110px; position: relative; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; background: transparent; overflow: visible;">
+                    <!-- Woven Rope -->
                     <div
-                        style="height: 40px; margin-bottom: 20px; display: flex; align-items: center; background: var(--bg-input); padding: 5px 20px; border-radius: 10px; border: 1px solid var(--border);">
-                        <span id="tug-answer-input"
-                            style="font-size: 1.8rem; font-weight: 700; color: #00cec9; letter-spacing: 2px;"></span>
-                        <span id="tug-answer-cursor"
-                            style="font-size: 1.8rem; font-weight: 300; color: #00cec9; animation: blink 1s step-end infinite; margin-left: 5px;">|</span>
+                        style="position: absolute; width: 100%; height: 14px; left: 0; top: 65%; transform: translateY(-50%); background: repeating-linear-gradient(45deg, #d1bfae, #d1bfae 4px, #a88e7a 4px, #a88e7a 8px); box-shadow: 0 4px 6px rgba(0,0,0,0.3); border-radius: 6px; z-index: 5;">
                     </div>
 
-                    <!-- Custom Numpad -->
-                    <div class="tug-numpad"
-                        style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; max-width: 300px;">
-                        <button class="tug-num-btn">1</button>
-                        <button class="tug-num-btn">2</button>
-                        <button class="tug-num-btn">3</button>
-                        <button class="tug-num-btn">4</button>
-                        <button class="tug-num-btn">5</button>
-                        <button class="tug-num-btn">6</button>
-                        <button class="tug-num-btn">7</button>
-                        <button class="tug-num-btn">8</button>
-                        <button class="tug-num-btn">9</button>
-                        <button class="tug-num-btn tug-action-btn" data-action="clear"
-                            style="background: #ff4757; color: white; font-weight: 800;">C</button>
-                        <button class="tug-num-btn">0</button>
-                        <button class="tug-num-btn tug-action-btn" data-action="submit"
-                            style="background: #2ed573; color: white; font-weight: 800;">↵</button>
+                    <!-- Entities -->
+                    <div style="position: absolute; left: 0; top: 0; text-align: center; z-index: 10;">
+                        <div
+                            style="font-size: 0.85rem; font-weight: 800; color: var(--text-main); margin-bottom: -5px;">
+                            YOU</div>
+                        <div id="tug-player-avatar"
+                            style="font-size: 3.5rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">🙎‍♂️</div>
+                    </div>
+
+                    <div style="position: absolute; right: 0; top: 0; text-align: center; z-index: 10;">
+                        <div style="font-size: 0.85rem; font-weight: 800; color: #ff4757; margin-bottom: -5px;">AI
+                        </div>
+                        <div id="tug-ai-avatar"
+                            style="font-size: 3.5rem; transform: scaleX(-1); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
+                            🤖</div>
+                    </div>
+
+                    <!-- The Center Red Flag / Knot -->
+                    <div id="tug-knot"
+                        style="position: absolute; left: 50%; top: 65%; width: 14px; height: 40px; background: #ff4757; border-radius: 4px; transform: translate(-50%, -50%); box-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 20; transition: left 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
                     </div>
                 </div>
 
-                <!-- Match Over Overlay -->
-                <div id="tug-end-modal" class="hidden"
-                    style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; border-radius: 20px; backdrop-filter: blur(4px);">
-                    <h2 id="tug-end-title"
-                        style="color: #ff4757; font-size: 2.8rem; margin-bottom: 10px; text-transform: uppercase;">
-                        Defeat</h2>
-                    <p style="color: #ccc; font-size: 1.2rem; margin-bottom: 25px;">Survived to Level <strong
-                            id="tug-final-level" style="color: #f6d365; font-size: 1.5rem;">1</strong></p>
-                    <button id="tug-play-again-btn" class="primary-btn"
-                        style="padding: 15px 40px; font-size: 1.2rem; border-radius: 30px; background: linear-gradient(135deg, #f6d365, #fda085); color:white; border:none; cursor:pointer;">Rematch</button>
+                <!-- HUD Equation -->
+                <div id="tug-equation-container"
+                    style="height: 100px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px;">
+                    <h1 id="tug-equation"
+                        style="font-size: 3.5rem; font-weight: 900; letter-spacing: 2px; margin: 0; color: var(--text-main);">
+                        14 + 8</h1>
                 </div>
 
+                <!-- Player Answer Tracker -->
+                <div
+                    style="height: 40px; margin-bottom: 20px; display: flex; align-items: center; background: var(--bg-input); padding: 5px 20px; border-radius: 10px; border: 1px solid var(--border);">
+                    <span id="tug-answer-input"
+                        style="font-size: 1.8rem; font-weight: 700; color: #00cec9; letter-spacing: 2px;"></span>
+                    <span id="tug-answer-cursor"
+                        style="font-size: 1.8rem; font-weight: 300; color: #00cec9; animation: blink 1s step-end infinite; margin-left: 5px;">|</span>
+                </div>
+
+                <!-- Custom Numpad -->
+                <div class="tug-numpad"
+                    style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; max-width: 300px;">
+                    <button class="tug-num-btn">1</button>
+                    <button class="tug-num-btn">2</button>
+                    <button class="tug-num-btn">3</button>
+                    <button class="tug-num-btn">4</button>
+                    <button class="tug-num-btn">5</button>
+                    <button class="tug-num-btn">6</button>
+                    <button class="tug-num-btn">7</button>
+                    <button class="tug-num-btn">8</button>
+                    <button class="tug-num-btn">9</button>
+                    <button class="tug-num-btn tug-action-btn" data-action="clear"
+                        style="background: #ff4757; color: white; font-weight: 800;">C</button>
+                    <button class="tug-num-btn">0</button>
+                    <button class="tug-num-btn tug-action-btn" data-action="submit"
+                        style="background: #2ed573; color: white; font-weight: 800;">↵</button>
+                </div>
+            </div>
+
+            <!-- Match Over Overlay -->
+            <div id="tug-end-modal" class="hidden"
+                style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; border-radius: 20px; backdrop-filter: blur(4px);">
+                <h2 id="tug-end-title"
+                    style="color: #ff4757; font-size: 2.8rem; margin-bottom: 10px; text-transform: uppercase;">
+                    Defeat</h2>
+                <p style="color: #ccc; font-size: 1.2rem; margin-bottom: 25px;">Survived to Level <strong
+                        id="tug-final-level" style="color: #f6d365; font-size: 1.5rem;">1</strong></p>
+                <button id="tug-play-again-btn" class="primary-btn"
+                    style="padding: 15px 40px; font-size: 1.2rem; border-radius: 30px; background: linear-gradient(135deg, #f6d365, #fda085); color:white; border:none; cursor:pointer;">Rematch</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ================= MATH MISSILE VIEW ================= -->
+    <div id="math-missile-view" class="hidden"
+        style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; background: #000;">
+        <!-- Back Button -->
+        <button id="back-to-hub-math-missile"
+            style="position: absolute; top: 15px; left: 15px; z-index: 1000; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.3); color: #fff; font-size: 1rem; font-weight: bold; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 8px 18px; backdrop-filter: blur(5px);">
+            <span>←</span> Exit
+        </button>
+
+        <!-- Full-screen container for Three.js canvas -->
+        <div id="math-missile-container"
+            style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #87CEEB;">
+
+            <!-- HUD -->
+            <div id="mm-hud"
+                style="display: none; position: absolute; top: 15px; right: 20px; z-index: 100; pointer-events: none; text-align: right;">
+                <div
+                    style="background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); transform: scale(0.5); transform-origin: top right; padding: 6px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15);">
+                    <div
+                        style="color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 0.5rem; opacity: 0.7; margin-bottom: -2px;">
+                        SCORE</div>
+                    <div id="mm-score"
+                        style="color: #fff; font-size: 1.2rem; font-weight: 900; text-shadow: 0 1px 5px rgba(0,0,0,0.5);">
+                        0</div>
+                    <div id="mm-health" style="font-size: 0.8rem; letter-spacing: 1px; margin-top: 2px;">❤️❤️❤️❤️❤️
+                    </div>
+                    <div id="mm-combo"
+                        style="color: #ffd700; font-size: 0.6rem; font-weight: 700; margin-top: 2px; display: none;">
+                        COMBO x1</div>
+                    <div style="margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 4px;">
+                        <div
+                            style="color: rgba(255,255,255,0.5); font-family: 'JetBrains Mono', monospace; font-size: 0.45rem;">
+                            BEST</div>
+                        <div id="mm-highscore" style="color: #ffd700; font-size: 0.7rem; font-weight: 900;">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Typed Input Display — positioned above numpad on mobile -->
+            <div id="mm-input-display"
+                style="display: none; position: absolute; bottom: 250px; left: 50%; transform: translateX(-50%); z-index: 100; pointer-events: none;">
+                <div
+                    style="background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); padding: 10px 25px; border-radius: 16px; border: 2px solid rgba(0,255,100,0.5); box-shadow: 0 0 20px rgba(0,255,100,0.3);">
+                    <span id="mm-typed-text"
+                        style="font-size: 2rem; color: #0f0; font-weight: 900; letter-spacing: 5px; font-family: 'JetBrains Mono', monospace;"></span><span
+                        style="font-size: 2rem; color: rgba(0,255,100,0.4); animation: blink 1s step-end infinite;">|</span>
+                </div>
+            </div>
+
+            <!-- Hidden keyboard input -->
+            <input type="text" id="mm-hidden-input" autocomplete="off" inputmode="numeric"
+                style="position: absolute; opacity: 0; left: -9999px;">
+
+            <!-- Mobile Numpad — large touch-friendly buttons -->
+            <div id="mm-numpad"
+                style="display: none; position: absolute; bottom: 0; left: 0; right: 0; z-index: 300; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 8px; background: rgba(0,0,0,0.35); backdrop-filter: blur(8px);">
+                <button class="mm-num-btn" data-val="1"
+                    style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">1</button>
+                <button class="mm-num-btn" data-val="2"
+                    style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">2</button>
+                <button class="mm-num-btn" data-val="3"
+                    style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">3</button>
+                <button class="mm-num-btn" data-val="4"
+                    style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">4</button>
+                <button class="mm-num-btn" data-val="5"
+                    style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">5</button>
+                <button class="mm-num-btn" data-val="6"
+                    style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">6</button>
+                <button class="mm-num-btn" data-val="7"
+                    style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">7</button>
+                <button class="mm-num-btn" data-val="8"
+                    style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">8</button>
+                <button class="mm-num-btn" data-val="9"
+                    style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">9</button>
+                <button class="mm-num-btn" data-val="0"
+                    style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">0</button>
+                <button class="mm-num-btn" data-val="C"
+                    style="padding: 18px 0; font-size: 1.2rem; font-weight: 900; background: rgba(255,60,60,0.4); color: #fff; border: none; border-radius: 14px; cursor: pointer; grid-column: span 2; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">⌫
+                    CLR</button>
+            </div>
+
+
+            <!-- Start Overlay -->
+            <div id="mm-start-overlay"
+                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; backdrop-filter: blur(6px);">
+                <div style="font-size: 6rem; margin-bottom: 15px; animation: float 3s ease-in-out infinite;">🚀
+                </div>
+                <h2
+                    style="color: #fff; font-size: clamp(2rem, 6vw, 4rem); margin-bottom: 8px; text-shadow: 0 4px 20px rgba(0,0,0,0.5); text-transform: uppercase; letter-spacing: 5px; font-weight: 900;">
+                    Math Missile</h2>
+                <p
+                    style="color: rgba(255,255,255,0.8); font-size: clamp(0.9rem, 2.5vw, 1.2rem); line-height: 1.6; margin-bottom: 35px; max-width: 500px; padding: 0 20px;">
+                    Rockets are raining down! Type the answer to each equation to shoot them out of the sky before
+                    they hit the ground.
+                </p>
+                <button id="mm-start-btn"
+                    style="padding: 18px 60px; font-size: 1.5rem; border-radius: 50px; background: linear-gradient(135deg, #ff6b35, #f7c948); border: none; color: #fff; cursor: pointer; font-weight: 900; box-shadow: 0 8px 30px rgba(255,107,53,0.5); text-transform: uppercase; letter-spacing: 3px; transition: all 0.2s ease;">🚀
+                    DEFEND</button>
+                <div style="margin-top: 20px; font-size: 0.95rem; color: rgba(255,255,255,0.5);">Type numbers on
+                    keyboard • Space/Enter to clear</div>
+            </div>
+
+            <!-- Game Over Overlay -->
+            <div id="mm-gameover-overlay"
+                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(180, 0, 0, 0.4); z-index: 200; display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; backdrop-filter: blur(10px);">
+                <div style="font-size: 5rem; margin-bottom: 10px;">💥</div>
+                <h2
+                    style="color: #fff; font-size: clamp(2rem, 6vw, 3.5rem); margin-bottom: 10px; text-shadow: 0 4px 20px rgba(255,0,0,0.6); font-weight: 900; letter-spacing: 3px;">
+                    GAME OVER</h2>
+                <p style="color: rgba(255,255,255,0.7); font-size: 1.1rem; margin-bottom: 25px;">The missiles broke
+                    through!</p>
+                <div
+                    style="background: rgba(0,0,0,0.5); transform: scale(0.5); padding: 20px 50px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15); margin-bottom: 0px; margin-top: -30px;">
+                    <div
+                        style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px;">
+                        Missiles Destroyed</div>
+                    <strong id="mm-final-score" style="color: #fff; font-size: 3.5rem; font-weight: 900;">0</strong>
+                    <div id="mm-new-record"
+                        style="display: none; color: #ffd700; font-size: 1.1rem; font-weight: 900; margin-top: 8px; animation: pulse 0.6s ease-in-out infinite alternate;">
+                        🏆 NEW HIGH SCORE!</div>
+                </div>
+                <div id="mm-go-highscore" style="color: rgba(255,255,255,0.5); font-size: 1rem; margin-bottom: 20px;">
+                    Best: <span id="mm-go-best">0</span></div>
+                <button id="mm-retry-btn"
+                    style="padding: 18px 50px; font-size: 1.3rem; border-radius: 50px; background: linear-gradient(135deg, #ff4757, #ff6b81); border: none; color: #fff; cursor: pointer; font-weight: 900; box-shadow: 0 8px 30px rgba(255,71,87,0.5); letter-spacing: 2px; transition: all 0.2s ease;">🔄
+                    TRY AGAIN</button>
             </div>
         </div>
+    </div>
 
-        <!-- ================= MATH MISSILE VIEW ================= -->
-        <div id="math-missile-view" class="hidden"
-            style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; background: #000;">
+    <!-- ================= PATTERN PROPHET VIEW (V2 3D) ================= -->
+    <div id="pattern-prophet-view" class="hidden">
+        <div style="max-width: 600px; margin: 0 auto; padding: 10px 15px;">
             <!-- Back Button -->
-            <button id="back-to-hub-math-missile"
-                style="position: absolute; top: 15px; left: 15px; z-index: 1000; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.3); color: #fff; font-size: 1rem; font-weight: bold; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 8px 18px; backdrop-filter: blur(5px);">
-                <span>←</span> Exit
+            <button id="back-to-hub-pattern"
+                style="background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2); color: #fff; font-size: 1rem; font-weight: 800; border-radius: 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 10px 20px; margin-bottom: 20px; box-shadow: 0 4px 0 rgba(0,0,0,0.2); text-transform: uppercase;">
+                <span>◀</span> Hub
             </button>
 
-            <!-- Full-screen container for Three.js canvas -->
-            <div id="math-missile-container"
-                style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #87CEEB;">
+            <!-- Game Container with 3D Bevel & Glow -->
+            <div id="pp-game-container" class="pp-main-container">
 
-                <!-- HUD -->
-                <div id="mm-hud"
-                    style="display: none; position: absolute; top: 15px; right: 20px; z-index: 100; pointer-events: none; text-align: right;">
-                    <div
-                        style="background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); transform: scale(0.5); transform-origin: top right; padding: 6px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15);">
-                        <div
-                            style="color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 0.5rem; opacity: 0.7; margin-bottom: -2px;">
-                            SCORE</div>
-                        <div id="mm-score"
-                            style="color: #fff; font-size: 1.2rem; font-weight: 900; text-shadow: 0 1px 5px rgba(0,0,0,0.5);">
-                            0</div>
-                        <div id="mm-health" style="font-size: 0.8rem; letter-spacing: 1px; margin-top: 2px;">❤️❤️❤️❤️❤️
-                        </div>
-                        <div id="mm-combo"
-                            style="color: #ffd700; font-size: 0.6rem; font-weight: 700; margin-top: 2px; display: none;">
-                            COMBO x1</div>
-                        <div style="margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 4px;">
-                            <div
-                                style="color: rgba(255,255,255,0.5); font-family: 'JetBrains Mono', monospace; font-size: 0.45rem;">
-                                BEST</div>
-                            <div id="mm-highscore" style="color: #ffd700; font-size: 0.7rem; font-weight: 900;">0</div>
-                        </div>
+                <!-- Dynamic Background Glow -->
+                <div id="pp-bg-glow" class="pp-bg-layer"></div>
+                <!-- Particle Layer -->
+                <div id="pp-particles" class="pp-particle-layer"></div>
+
+                <!-- HUD Header -->
+                <div class="pp-hud-header">
+                    <div class="pp-hud-stat">
+                        <span class="pp-stat-label">LVL</span>
+                        <span id="pp-level" class="pp-stat-val">1</span>
+                    </div>
+                    <div class="pp-hud-stat pp-score-plate">
+                        <span class="pp-stat-label">SCORE</span>
+                        <span id="pp-score" class="pp-stat-val pp-score-val">0</span>
+                    </div>
+                    <div class="pp-hud-stat">
+                        <span class="pp-stat-label">STREAK</span>
+                        <span id="pp-streak" class="pp-stat-val pp-streak-val">0</span>
+                    </div>
+                    <div class="pp-hud-stat">
+                        <span class="pp-stat-label">LIVES</span>
+                        <span id="pp-lives" class="pp-lives-val"></span>
                     </div>
                 </div>
 
-                <!-- Typed Input Display — positioned above numpad on mobile -->
-                <div id="mm-input-display"
-                    style="display: none; position: absolute; bottom: 250px; left: 50%; transform: translateX(-50%); z-index: 100; pointer-events: none;">
-                    <div
-                        style="background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); padding: 10px 25px; border-radius: 16px; border: 2px solid rgba(0,255,100,0.5); box-shadow: 0 0 20px rgba(0,255,100,0.3);">
-                        <span id="mm-typed-text"
-                            style="font-size: 2rem; color: #0f0; font-weight: 900; letter-spacing: 5px; font-family: 'JetBrains Mono', monospace;"></span><span
-                            style="font-size: 2rem; color: rgba(0,255,100,0.4); animation: blink 1s step-end infinite;">|</span>
-                    </div>
+                <!-- Records Bar -->
+                <div class="pp-records-bar">
+                    <span class="pp-record-item">🏆 Best: <span id="pp-highscore">0</span></span>
+                    <div id="pp-difficulty" class="pp-difficulty-badge pp-diff-1">Beginner</div>
+                    <span class="pp-record-item">📈 Peak Lvl: <span id="pp-highlevel">1</span></span>
                 </div>
 
-                <!-- Hidden keyboard input -->
-                <input type="text" id="mm-hidden-input" autocomplete="off" inputmode="numeric"
-                    style="position: absolute; opacity: 0; left: -9999px;">
-
-                <!-- Mobile Numpad — large touch-friendly buttons -->
-                <div id="mm-numpad"
-                    style="display: none; position: absolute; bottom: 0; left: 0; right: 0; z-index: 300; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 8px; background: rgba(0,0,0,0.35); backdrop-filter: blur(8px);">
-                    <button class="mm-num-btn" data-val="1"
-                        style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">1</button>
-                    <button class="mm-num-btn" data-val="2"
-                        style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">2</button>
-                    <button class="mm-num-btn" data-val="3"
-                        style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">3</button>
-                    <button class="mm-num-btn" data-val="4"
-                        style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">4</button>
-                    <button class="mm-num-btn" data-val="5"
-                        style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">5</button>
-                    <button class="mm-num-btn" data-val="6"
-                        style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">6</button>
-                    <button class="mm-num-btn" data-val="7"
-                        style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">7</button>
-                    <button class="mm-num-btn" data-val="8"
-                        style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">8</button>
-                    <button class="mm-num-btn" data-val="9"
-                        style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">9</button>
-                    <button class="mm-num-btn" data-val="0"
-                        style="padding: 18px 0; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">0</button>
-                    <button class="mm-num-btn" data-val="C"
-                        style="padding: 18px 0; font-size: 1.2rem; font-weight: 900; background: rgba(255,60,60,0.4); color: #fff; border: none; border-radius: 14px; cursor: pointer; grid-column: span 2; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;">⌫
-                        CLR</button>
+                <!-- Timer Bar (3D) -->
+                <div class="pp-timer-track">
+                    <div id="pp-timer-fill" class="pp-timer-fill"></div>
                 </div>
 
+                <!-- XP Tracker (3D) -->
+                <div class="pp-xp-track">
+                    <div id="pp-xp-fill" class="pp-xp-fill"></div>
+                </div>
+                <div id="pp-xp-text" class="pp-xp-text">0 / 100 XP</div>
 
-                <!-- Start Overlay -->
-                <div id="mm-start-overlay"
-                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; backdrop-filter: blur(6px);">
-                    <div style="font-size: 6rem; margin-bottom: 15px; animation: float 3s ease-in-out infinite;">🚀
-                    </div>
-                    <h2
-                        style="color: #fff; font-size: clamp(2rem, 6vw, 4rem); margin-bottom: 8px; text-shadow: 0 4px 20px rgba(0,0,0,0.5); text-transform: uppercase; letter-spacing: 5px; font-weight: 900;">
-                        Math Missile</h2>
-                    <p
-                        style="color: rgba(255,255,255,0.8); font-size: clamp(0.9rem, 2.5vw, 1.2rem); line-height: 1.6; margin-bottom: 35px; max-width: 500px; padding: 0 20px;">
-                        Rockets are raining down! Type the answer to each equation to shoot them out of the sky before
-                        they hit the ground.
-                    </p>
-                    <button id="mm-start-btn"
-                        style="padding: 18px 60px; font-size: 1.5rem; border-radius: 50px; background: linear-gradient(135deg, #ff6b35, #f7c948); border: none; color: #fff; cursor: pointer; font-weight: 900; box-shadow: 0 8px 30px rgba(255,107,53,0.5); text-transform: uppercase; letter-spacing: 3px; transition: all 0.2s ease;">🚀
-                        DEFEND</button>
-                    <div style="margin-top: 20px; font-size: 0.95rem; color: rgba(255,255,255,0.5);">Type numbers on
-                        keyboard • Space/Enter to clear</div>
+                <!-- Pattern Label -->
+                <div id="pp-pattern-label" class="pp-pattern-label"></div>
+
+                <!-- Sequence Area -->
+                <div id="pp-sequence-area" class="pp-sequence-area"></div>
+
+                <!-- Combo Text -->
+                <div id="pp-combo-text" class="pp-combo-text"></div>
+
+                <!-- Choices Area -->
+                <div id="pp-choices-area" class="pp-choices-area"></div>
+
+                <!-- Start Menu Overlay -->
+                <div id="pp-menu-overlay" class="pp-overlay">
+                    <div class="pp-overlay-logo">🔮</div>
+                    <h2 class="pp-overlay-title">Pattern Prophet</h2>
+                    <p class="pp-overlay-desc">Study the sequence. Predict the next piece.<br>How deep can your
+                        brain see?</p>
+                    <button id="pp-start-btn" class="pp-btn-primary">START PREDICTING</button>
                 </div>
 
                 <!-- Game Over Overlay -->
-                <div id="mm-gameover-overlay"
-                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(180, 0, 0, 0.4); z-index: 200; display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; backdrop-filter: blur(10px);">
-                    <div style="font-size: 5rem; margin-bottom: 10px;">💥</div>
-                    <h2
-                        style="color: #fff; font-size: clamp(2rem, 6vw, 3.5rem); margin-bottom: 10px; text-shadow: 0 4px 20px rgba(255,0,0,0.6); font-weight: 900; letter-spacing: 3px;">
+                <div id="pp-gameover-overlay" class="pp-overlay"
+                    style="display: none; background: rgba(20, 0, 0, 0.85);">
+                    <div class="pp-overlay-logo" style="animation: none;">💀</div>
+                    <h2 class="pp-overlay-title" style="color: #ff4757; text-shadow: 0 4px 15px rgba(255,71,87,0.5);">
                         GAME OVER</h2>
-                    <p style="color: rgba(255,255,255,0.7); font-size: 1.1rem; margin-bottom: 25px;">The missiles broke
-                        through!</p>
-                    <div
-                        style="background: rgba(0,0,0,0.5); transform: scale(0.5); padding: 20px 50px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15); margin-bottom: 0px; margin-top: -30px;">
-                        <div
-                            style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px;">
-                            Missiles Destroyed</div>
-                        <strong id="mm-final-score" style="color: #fff; font-size: 3.5rem; font-weight: 900;">0</strong>
-                        <div id="mm-new-record"
-                            style="display: none; color: #ffd700; font-size: 1.1rem; font-weight: 900; margin-top: 8px; animation: pulse 0.6s ease-in-out infinite alternate;">
-                            🏆 NEW HIGH SCORE!</div>
+
+                    <div class="pp-go-stats-box">
+                        <div class="pp-go-stat-row">
+                            <span class="pp-go-label">Final Score</span>
+                            <span id="pp-go-score" class="pp-go-val pp-go-score-val">0</span>
+                            <div id="pp-go-newrecord" class="pp-new-record-tag" style="display: none;">🏆 NEW
+                                RECORD!</div>
+                        </div>
+                        <div class="pp-go-grid">
+                            <div>
+                                <span class="pp-go-label">Level Reached</span>
+                                <span id="pp-go-level" class="pp-go-val">1</span>
+                            </div>
+                            <div>
+                                <span class="pp-go-label">Best Streak</span>
+                                <span id="pp-go-streak" class="pp-go-val">0</span>
+                            </div>
+                        </div>
                     </div>
-                    <div id="mm-go-highscore"
-                        style="color: rgba(255,255,255,0.5); font-size: 1rem; margin-bottom: 20px;">Best: <span
-                            id="mm-go-best">0</span></div>
-                    <button id="mm-retry-btn"
-                        style="padding: 18px 50px; font-size: 1.3rem; border-radius: 50px; background: linear-gradient(135deg, #ff4757, #ff6b81); border: none; color: #fff; cursor: pointer; font-weight: 900; box-shadow: 0 8px 30px rgba(255,71,87,0.5); letter-spacing: 2px; transition: all 0.2s ease;">🔄
-                        TRY AGAIN</button>
+
+                    <div style="font-size: 0.85rem; color: rgba(255,255,255,0.4); margin-bottom: 25px;">
+                        All-Time Best Streak: <strong id="pp-go-best-streak-ever" style="color: #f39c12;">0</strong>
+                    </div>
+
+                    <button id="pp-play-again" class="pp-btn-primary"
+                        style="background: linear-gradient(135deg, #ff4757, #ff6b81); box-shadow: 0 8px 0 #c0392b, 0 15px 25px rgba(255,71,87,0.4);">
+                        TRY AGAIN
+                    </button>
                 </div>
             </div>
         </div>
-
-        <!-- ================= PATTERN PROPHET VIEW (V2 3D) ================= -->
-        <div id="pattern-prophet-view" class="hidden">
-            <div style="max-width: 600px; margin: 0 auto; padding: 10px 15px;">
-                <!-- Back Button -->
-                <button id="back-to-hub-pattern"
-                    style="background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2); color: #fff; font-size: 1rem; font-weight: 800; border-radius: 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 10px 20px; margin-bottom: 20px; box-shadow: 0 4px 0 rgba(0,0,0,0.2); text-transform: uppercase;">
-                    <span>◀</span> Hub
-                </button>
-
-                <!-- Game Container with 3D Bevel & Glow -->
-                <div id="pp-game-container" class="pp-main-container">
-
-                    <!-- Dynamic Background Glow -->
-                    <div id="pp-bg-glow" class="pp-bg-layer"></div>
-                    <!-- Particle Layer -->
-                    <div id="pp-particles" class="pp-particle-layer"></div>
-
-                    <!-- HUD Header -->
-                    <div class="pp-hud-header">
-                        <div class="pp-hud-stat">
-                            <span class="pp-stat-label">LVL</span>
-                            <span id="pp-level" class="pp-stat-val">1</span>
-                        </div>
-                        <div class="pp-hud-stat pp-score-plate">
-                            <span class="pp-stat-label">SCORE</span>
-                            <span id="pp-score" class="pp-stat-val pp-score-val">0</span>
-                        </div>
-                        <div class="pp-hud-stat">
-                            <span class="pp-stat-label">STREAK</span>
-                            <span id="pp-streak" class="pp-stat-val pp-streak-val">0</span>
-                        </div>
-                        <div class="pp-hud-stat">
-                            <span class="pp-stat-label">LIVES</span>
-                            <span id="pp-lives" class="pp-lives-val"></span>
-                        </div>
-                    </div>
-
-                    <!-- Records Bar -->
-                    <div class="pp-records-bar">
-                        <span class="pp-record-item">🏆 Best: <span id="pp-highscore">0</span></span>
-                        <div id="pp-difficulty" class="pp-difficulty-badge pp-diff-1">Beginner</div>
-                        <span class="pp-record-item">📈 Peak Lvl: <span id="pp-highlevel">1</span></span>
-                    </div>
-
-                    <!-- Timer Bar (3D) -->
-                    <div class="pp-timer-track">
-                        <div id="pp-timer-fill" class="pp-timer-fill"></div>
-                    </div>
-
-                    <!-- XP Tracker (3D) -->
-                    <div class="pp-xp-track">
-                        <div id="pp-xp-fill" class="pp-xp-fill"></div>
-                    </div>
-                    <div id="pp-xp-text" class="pp-xp-text">0 / 100 XP</div>
-
-                    <!-- Pattern Label -->
-                    <div id="pp-pattern-label" class="pp-pattern-label"></div>
-
-                    <!-- Sequence Area -->
-                    <div id="pp-sequence-area" class="pp-sequence-area"></div>
-
-                    <!-- Combo Text -->
-                    <div id="pp-combo-text" class="pp-combo-text"></div>
-
-                    <!-- Choices Area -->
-                    <div id="pp-choices-area" class="pp-choices-area"></div>
-
-                    <!-- Start Menu Overlay -->
-                    <div id="pp-menu-overlay" class="pp-overlay">
-                        <div class="pp-overlay-logo">🔮</div>
-                        <h2 class="pp-overlay-title">Pattern Prophet</h2>
-                        <p class="pp-overlay-desc">Study the sequence. Predict the next piece.<br>How deep can your
-                            brain see?</p>
-                        <button id="pp-start-btn" class="pp-btn-primary">START PREDICTING</button>
-                    </div>
-
-                    <!-- Game Over Overlay -->
-                    <div id="pp-gameover-overlay" class="pp-overlay"
-                        style="display: none; background: rgba(20, 0, 0, 0.85);">
-                        <div class="pp-overlay-logo" style="animation: none;">💀</div>
-                        <h2 class="pp-overlay-title"
-                            style="color: #ff4757; text-shadow: 0 4px 15px rgba(255,71,87,0.5);">GAME OVER</h2>
-
-                        <div class="pp-go-stats-box">
-                            <div class="pp-go-stat-row">
-                                <span class="pp-go-label">Final Score</span>
-                                <span id="pp-go-score" class="pp-go-val pp-go-score-val">0</span>
-                                <div id="pp-go-newrecord" class="pp-new-record-tag" style="display: none;">🏆 NEW
-                                    RECORD!</div>
-                            </div>
-                            <div class="pp-go-grid">
-                                <div>
-                                    <span class="pp-go-label">Level Reached</span>
-                                    <span id="pp-go-level" class="pp-go-val">1</span>
-                                </div>
-                                <div>
-                                    <span class="pp-go-label">Best Streak</span>
-                                    <span id="pp-go-streak" class="pp-go-val">0</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="font-size: 0.85rem; color: rgba(255,255,255,0.4); margin-bottom: 25px;">
-                            All-Time Best Streak: <strong id="pp-go-best-streak-ever" style="color: #f39c12;">0</strong>
-                        </div>
-
-                        <button id="pp-play-again" class="pp-btn-primary"
-                            style="background: linear-gradient(135deg, #ff4757, #ff6b81); box-shadow: 0 8px 0 #c0392b, 0 15px 25px rgba(255,71,87,0.4);">
-                            TRY AGAIN
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+    </div>
 
     </div>
 
@@ -4327,7 +4551,7 @@
 
         /* ===== HIGHLIGHTER ===== */
         .book-highlight {
-            background: rgba(255, 235, 59, 0.45);
+            background: rgba(var(--hl-color-rgb, 255, 235, 59), 0.45);
             border-radius: 2px;
             padding: 0 1px;
             cursor: pointer;
@@ -4335,7 +4559,7 @@
         }
 
         .book-highlight:hover {
-            background: rgba(255, 235, 59, 0.7);
+            filter: brightness(1.15);
         }
 
         .highlight-mode-active #reader-highlight-btn {
@@ -4360,11 +4584,11 @@
         }
 
         .highlight-mode-active .book-page-display::selection {
-            background: rgba(255, 235, 59, 0.5);
+            background: rgba(var(--hl-color-rgb, 255, 235, 59), 0.5);
         }
 
         .highlight-mode-active .book-page-display::-moz-selection {
-            background: rgba(255, 235, 59, 0.5);
+            background: rgba(var(--hl-color-rgb, 255, 235, 59), 0.5);
         }
 
         /* ===== EPUB MODE ===== */
@@ -4861,7 +5085,7 @@
 
                 <button id="reader-tts-btn" title="Play / Pause Audio"
                     style="font-size:1rem; padding:7px 10px; transition:all 0.3s;">🔊</button>
-                <button id="reader-tts-settings-btn" title="Audio Settings"
+                <button id="reader-tts-settings-btn" title="Reading Settings"
                     style="font-size:1rem; padding:7px 10px;">⚙️</button>
                 <button id="reader-highlight-btn" title="Highlighter"
                     style="font-size:1rem; padding:7px 10px;">🖍️</button>
@@ -4900,7 +5124,7 @@
             <div class="add-book-header" style="background: linear-gradient(135deg, #f0dfb5, #e6d3a0);">
                 <h2
                     style="margin:0; font-size:1.2rem; color:#5c4a2a; font-family:'Playfair Display', serif; display:flex; align-items:center; gap:8px;">
-                    ⚙️ Audio Settings</h2>
+                    ⚙️ Reading Settings</h2>
                 <button id="tts-settings-close" class="add-book-close" style="color:#5c4a2a;">✕</button>
             </div>
             <div class="add-book-body" style="background:#fcf8ef; padding: 22px;">
@@ -4930,6 +5154,33 @@
                         <input type="checkbox" id="tts-auto-turn-toggle" checked>
                         <span class="slider round" style="background-color:#ccc;"></span>
                     </label>
+                </div>
+
+                <!-- Highlight Color Picker -->
+                <div style="margin-bottom:20px;">
+                    <label class="add-book-label" style="color:#7a6b4e; margin-bottom:10px; display:block;">Highlight
+                        Color</label>
+                    <div id="highlight-color-picker" style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="hl-color-btn" data-hl-color="#FFD54F"
+                            style="width:36px;height:36px;border-radius:10px;border:3px solid transparent;background:#FFD54F;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 8px rgba(255,213,79,0.4);"
+                            title="Yellow"></button>
+                        <button class="hl-color-btn" data-hl-color="#FF8C42"
+                            style="width:36px;height:36px;border-radius:10px;border:3px solid transparent;background:#FF8C42;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 8px rgba(255,140,66,0.4);"
+                            title="Orange"></button>
+                        <button class="hl-color-btn" data-hl-color="#4FC3F7"
+                            style="width:36px;height:36px;border-radius:10px;border:3px solid transparent;background:#4FC3F7;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 8px rgba(79,195,247,0.4);"
+                            title="Blue"></button>
+                        <button class="hl-color-btn" data-hl-color="#81C784"
+                            style="width:36px;height:36px;border-radius:10px;border:3px solid transparent;background:#81C784;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 8px rgba(129,199,132,0.4);"
+                            title="Green"></button>
+                        <button class="hl-color-btn" data-hl-color="#F48FB1"
+                            style="width:36px;height:36px;border-radius:10px;border:3px solid transparent;background:#F48FB1;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 8px rgba(244,143,177,0.4);"
+                            title="Pink"></button>
+                        <button class="hl-color-btn" data-hl-color="#CE93D8"
+                            style="width:36px;height:36px;border-radius:10px;border:3px solid transparent;background:#CE93D8;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 8px rgba(206,147,216,0.4);"
+                            title="Purple"></button>
+                    </div>
+                    <p style="font-size:0.7rem; color:#a09070; margin:8px 0 0;">Applies to highlights & read-along</p>
                 </div>
 
                 <button id="tts-settings-save" class="add-book-btn primary" style="width:100%;">Apply Settings</button>
@@ -5173,8 +5424,16 @@
     <script src="pattern-prophet.js"></script>
     <script src="omniscient.js"></script>
     <script src="cross-zero.js"></script>
+    
+    <!-- React Apps -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="neuro-link.js"></script>
+
     <!-- Advanced Dash & Mood Tracker -->
     <script src="advanced_dashboard.js"></script>
+    <!-- Daily Challenge -->
+    <script src="daily-challenge.js"></script>
     <!-- Import Three.js dependencies via script tags -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="test-proxies.js"></script>
