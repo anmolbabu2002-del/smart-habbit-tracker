@@ -45,12 +45,8 @@ const IMAGE_ASSETS = [
 ];
 
 // ═══ MEDITATION & FOCUS AUDIO/VIDEO ═══
-const MEDIA_ASSETS = [
-  '/nature.mp3',
-  '/deepfocus.mp3',
-  '/videoplayback.mp4',
-  '/videoplayback.1773901315901.publer.com.mp4'
-];
+// NOT pre-cached (too large ~145MB). They play online and get cached
+// on first listen via the fetch handler for future offline use.
 
 // ═══ CDN LIBRARIES (needed for offline) ═══
 const CDN_ASSETS = [
@@ -81,14 +77,6 @@ self.addEventListener('install', event => {
       await Promise.allSettled(
         INSTALL_CACHE.map(url =>
           cache.add(url).catch(err => console.warn('[SW] Skip:', url, err.message))
-        )
-      );
-
-      // Cache large media files individually so one failure doesn't break install
-      console.log('[SW] Caching media assets in background…');
-      await Promise.allSettled(
-        MEDIA_ASSETS.map(url =>
-          cache.add(url).catch(err => console.warn('[SW] Media skip:', url, err.message))
         )
       );
 
