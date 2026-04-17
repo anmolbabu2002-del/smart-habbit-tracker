@@ -17988,20 +17988,20 @@ body.theme-zen .bloom-hero {
 input:checked + .toggle-slider { background: linear-gradient(135deg, #FF8C42, #FF6B35) !important; }
 input:checked + .toggle-slider::before { transform: translateX(22px); }
 
-/* ── Mobile: Tight & Punchy ── */
+/* ── Mobile: Fully Visible ── */
 @media (max-width: 480px) {
     .dc-mini-container { margin: 0 8px 10px; border-radius: 14px; }
-    .dc-mini-content { padding: 8px 9px 8px; }
+    .dc-mini-content { padding: 8px 10px 10px; }
     .dc-mini-top-row { gap: 6px; margin-bottom: 4px; }
     .dc-mini-icon-box { width: 28px; height: 28px; border-radius: 8px; }
     .dc-mini-emoji { font-size: 0.9rem; }
     .dc-mini-label { font-size: 0.48rem; }
     .dc-mini-streak { font-size: 0.52rem; padding: 0px 4px; }
-    .dc-mini-title { font-size: 0.75rem; }
-    .dc-mini-desc { font-size: 0.65rem; margin-bottom: 4px; -webkit-line-clamp: 1; }
+    .dc-mini-title { font-size: 0.78rem; -webkit-line-clamp: unset; overflow: visible; }
+    .dc-mini-desc { font-size: 0.68rem; margin-bottom: 5px; -webkit-line-clamp: unset; overflow: visible; display: block; }
     .dc-mini-meta { gap: 3px; margin-bottom: 4px; }
     .dc-tag { font-size: 0.5rem; padding: 1px 5px; }
-    .dc-mini-tip { font-size: 0.58rem; padding: 3px 6px; margin-bottom: 6px; }
+    .dc-mini-tip { font-size: 0.6rem; padding: 4px 7px; margin-bottom: 6px; }
     .dc-btn-done { font-size: 0.7rem; padding: 6px 10px; min-height: 30px; border-radius: 8px; }
     .dc-mini-done-state { padding: 6px; }
     .dc-done-icon { font-size: 0.9rem; }
@@ -18009,12 +18009,12 @@ input:checked + .toggle-slider::before { transform: translateX(22px); }
 }
 @media (max-width: 360px) {
     .dc-mini-container { margin: 0 6px 8px; border-radius: 12px; }
-    .dc-mini-content { padding: 6px 7px 6px; }
+    .dc-mini-content { padding: 6px 8px 8px; }
     .dc-mini-icon-box { width: 24px; height: 24px; border-radius: 7px; }
     .dc-mini-emoji { font-size: 0.8rem; }
-    .dc-mini-title { font-size: 0.7rem; }
-    .dc-mini-desc { font-size: 0.6rem; }
-    .dc-mini-tip { display: none; }
+    .dc-mini-title { font-size: 0.72rem; -webkit-line-clamp: unset; overflow: visible; }
+    .dc-mini-desc { font-size: 0.62rem; -webkit-line-clamp: unset; overflow: visible; display: block; }
+    .dc-mini-tip { font-size: 0.56rem; padding: 3px 6px; }
     .dc-btn-done { font-size: 0.65rem; min-height: 26px; padding: 5px 8px; }
 }
 
