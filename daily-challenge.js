@@ -424,6 +424,7 @@
       container: document.getElementById('dc-mini-container'),
       loading: document.getElementById('dc-loading'),
       content: document.getElementById('dc-content'),
+      topRow: document.querySelector('.dc-mini-top-row'),
       emoji: document.getElementById('dc-emoji'),
       title: document.getElementById('dc-title'),
       description: document.getElementById('dc-description'),
@@ -444,6 +445,8 @@
 
     els.loading.classList.add('hidden');
     els.content.classList.remove('hidden');
+    // Start collapsed by default
+    els.content.classList.add('dc-collapsed');
 
     els.emoji.textContent = challenge.emoji || '⚡';
     els.title.textContent = challenge.title;
@@ -580,6 +583,11 @@
 
     // Wire buttons
     if (els.completeBtn) els.completeBtn.addEventListener('click', handleComplete);
+    if (els.topRow) {
+      els.topRow.addEventListener('click', () => {
+        if (els.content) els.content.classList.toggle('dc-collapsed');
+      });
+    }
 
     // Check existing state for today
     const state = await getState();

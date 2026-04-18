@@ -17929,6 +17929,34 @@ body.theme-zen .bloom-hero {
     display: -webkit-box; -webkit-line-clamp: 1; line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
 }
 
+/* Collapsible Area */
+.dc-mini-top-row { cursor: pointer; }
+.dc-expand-chevron {
+    color: #FF8C42; font-size: 1.6rem; font-weight: 900; opacity: 1;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    margin-left: auto; text-shadow: 0 1px 3px rgba(255,140,66,0.25);
+}
+.dc-collapsed .dc-expand-chevron { transform: rotate(0deg); }
+.dc-mini-content:not(.dc-collapsed) .dc-expand-chevron { transform: rotate(90deg); color: var(--text-muted); text-shadow: none; font-size: 1.3rem; }
+
+.dc-collapsed .dc-mini-desc,
+.dc-collapsed .dc-mini-meta,
+.dc-collapsed .dc-mini-tip,
+.dc-collapsed .dc-mini-actions,
+.dc-collapsed .dc-mini-done-state {
+    display: none !important;
+}
+
+.dc-mini-completed-tick {
+    font-size: 0.6rem;
+    display: none;
+    margin-left: 3px;
+    animation: dc-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.is-completed .dc-collapsed .dc-mini-completed-tick {
+    display: inline-block;
+}
+
 /* Description */
 .dc-mini-desc {
     font-size: 0.7rem; color: var(--text-muted); margin: 0 0 5px; line-height: 1.35;

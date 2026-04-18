@@ -1,6 +1,7 @@
 // tts.js — Premium Text-to-Speech for E-Reader
 // ReadEra-style sentence-level highlighting: clean, professional, zero text corruption
 // Highlight color shared between TTS mode and manual pen highlighting
+// v2.0 — Robust rewrite: fixes stuck states, Chrome timeout, Android resume, highlight corruption
 
 const ttsState = {
     synth: window.speechSynthesis,
@@ -18,14 +19,23 @@ const ttsState = {
     // Highlighting state
     _originalHTML: '',
     _chunks: [],
-    _currentSentenceIdx: -1,
-    _activeHlSpan: null,       // the ONE highlight span currently in the DOM (text/epub)
+    _chunkPositions: [],
+    _currentChunkIdx: -1,
+    _activeHlSpan: null,
     _isTransitioning: false,
     _cloudAudio: null,
     _cloudWordTimer: null,
-    _hlCharOffset: 0,          // cumulative character offset for forward-only search
-    _pdfCharToSpan: null,      // char→span index for PDF mode
-    _pdfFullText: null         // full extracted text from PDF spans
+    _hlCharOffset: 0,
+    _pdfCharToSpan: null,
+    _pdfFullText: null,
+    // Watchdog & keepalive
+    _keepAliveTimer: null,
+    _watchdogTimer: null,
+    _lastBoundaryTime: 0,
+    _boundaryCount: 0,
+    // Resume tracking (for Android restart-on-resume)
+    _pausedAtChunk: -1,
+    _fullText: ''
 };
 
 // ===================== COOL VOICE NAMING =====================
@@ -125,12 +135,19 @@ function extractCurrentPageText() {
     const readerTextEl = document.getElementById('reader-text');
     if (!readerTextEl) return '';
 
+    // ★ TRANSLATED TEXT: Always check this FIRST — it overrides the original
+    const transDiv = readerTextEl.querySelector('.pdf-translate-replacement');
+    if (transDiv) {
+        let text = transDiv.innerText || transDiv.textContent || '';
+        text = text.replace(/\s+/g, ' ').trim();
+        if (text.length > 2) return text;
+    }
+
     // PDF mode: text lives in invisible .pdf-text-layer spans
     const pdfTextLayer = readerTextEl.querySelector('.pdf-text-layer');
     if (pdfTextLayer) {
         const spans = pdfTextLayer.querySelectorAll('span');
         if (spans.length > 0) {
-            // PDF spans are sorted by position; collect and join with spaces
             let pdfText = '';
             spans.forEach(span => {
                 const t = span.textContent;
@@ -141,35 +158,13 @@ function extractCurrentPageText() {
         }
     }
 
-    // For translated pages, check replacement div
-    const transDiv = readerTextEl.querySelector('.pdf-translate-replacement');
-    if (transDiv) {
-        let text = transDiv.innerText || transDiv.textContent || '';
-        text = text.replace(/\s+/g, ' ').trim();
-        if (text.length > 2) return text;
-    }
-
     // Standard text / EPUB mode
     let text = readerTextEl.innerText || readerTextEl.textContent || '';
     text = text.replace(/\s+/g, ' ').trim();
     return text;
 }
 
-// ===================== HIGHLIGHTING ENGINE (Complete Rewrite) =====================
-// Architecture:
-//   - TEXT/EPUB: Save original HTML, then for each sentence chunk, locate it
-//     in the DOM using character offsets. Use Range API to highlight the sentence.
-//     On native voices, use onboundary for word-level highlighting within the sentence.
-//   - PDF: Build a character-offset-to-span index from the text layer once per page.
-//     Map chunk text to span ranges. Highlight by toggling CSS classes on those spans.
-//   - Cloud voices: No onboundary available — sentence-level highlight only.
-//   - ALL modes: Strictly forward-only search. Never highlights backwards.
-
-// ── State for highlight tracking ──
-// ttsState._hlCharOffset: cumulative character position in the full page text
-// ttsState._pdfCharToSpan: array mapping each char position to a span element (PDF only)
-// ttsState._pdfFullText: the full extracted text from PDF spans (PDF only)
-// ttsState._activeHlSpan: the ONE highlight span in DOM (text/epub)
+// ===================== HIGHLIGHTING ENGINE =====================
 
 function _isPdfMode() {
     const el = document.getElementById('reader-text');
@@ -184,15 +179,14 @@ function _buildPdfCharIndex() {
     if (!pdfLayer) return;
 
     const spans = Array.from(pdfLayer.querySelectorAll('span'));
-    const charToSpan = [];  // charToSpan[i] = the span element that owns character i
+    const charToSpan = [];
     let fullText = '';
 
     for (const span of spans) {
         const t = span.textContent || '';
         if (!t.trim()) continue;
-        // Add a space separator between spans (PDF fragments)
         if (fullText.length > 0) {
-            charToSpan.push(null); // space char doesn't belong to any span
+            charToSpan.push(null);
             fullText += ' ';
         }
         for (let i = 0; i < t.length; i++) {
@@ -216,7 +210,6 @@ function _highlightPdfRange(startChar, endChar) {
             span.classList.add('tts-pdf-hl');
         }
     }
-    // Scroll to first highlighted span
     const first = ttsState._pdfCharToSpan[startChar];
     if (first) _scrollToEl(first);
 }
@@ -231,7 +224,7 @@ function _clearPdfHighlights() {
     }
 }
 
-// ── TEXT/EPUB: Get all text nodes under reader-text ──
+// ── TEXT/EPUB: Get all text nodes under an element ──
 function _getTextNodes(root) {
     const nodes = [];
     const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
@@ -256,10 +249,15 @@ function _buildTextMap(root) {
 function _unwrapActiveSpan() {
     const span = ttsState._activeHlSpan;
     if (!span || !span.parentNode) { ttsState._activeHlSpan = null; return; }
-    const parent = span.parentNode;
-    while (span.firstChild) parent.insertBefore(span.firstChild, span);
-    parent.removeChild(span);
-    parent.normalize();
+    try {
+        const parent = span.parentNode;
+        while (span.firstChild) parent.insertBefore(span.firstChild, span);
+        parent.removeChild(span);
+        parent.normalize();
+    } catch (e) {
+        // If unwrap fails, just null it out — don't crash
+        console.warn('TTS: unwrap span failed (non-fatal)', e);
+    }
     ttsState._activeHlSpan = null;
 }
 
@@ -268,7 +266,10 @@ function _highlightTextRange(startIdx, endIdx) {
     const el = document.getElementById('reader-text');
     if (!el) return;
 
+    // First remove any existing highlight
     _unwrapActiveSpan();
+    // Also remove any paragraph fallback highlights
+    el.querySelectorAll('.tts-speaking-para').forEach(p => p.classList.remove('tts-speaking-para'));
 
     const { map } = _buildTextMap(el);
     let startNode = null, startOff = 0, endNode = null, endOff = 0;
@@ -277,33 +278,50 @@ function _highlightTextRange(startIdx, endIdx) {
         const entryEnd = entry.start + entry.len;
         if (!startNode && entryEnd > startIdx) {
             startNode = entry.node;
-            startOff = startIdx - entry.start;
+            startOff = Math.max(0, startIdx - entry.start);
         }
         if (entryEnd >= endIdx) {
             endNode = entry.node;
-            endOff = endIdx - entry.start;
+            endOff = Math.min(entry.len, endIdx - entry.start);
             break;
         }
     }
     if (!startNode || !endNode) return;
 
+    // Clamp offsets to valid range
+    startOff = Math.min(startOff, startNode.textContent.length);
+    endOff = Math.min(endOff, endNode.textContent.length);
+
     try {
         const range = document.createRange();
         range.setStart(startNode, startOff);
         range.setEnd(endNode, endOff);
-        const span = document.createElement('span');
-        span.className = 'tts-hl';
-        range.surroundContents(span);
-        ttsState._activeHlSpan = span;
-        _scrollToEl(span);
-    } catch (e) {
-        // surroundContents fails across element boundaries — use paragraph fallback
-        const parent = startNode.parentElement;
-        if (parent) {
-            parent.classList.add('tts-speaking-para');
-            ttsState._activeHlSpan = null;
-            _scrollToEl(parent);
+
+        // surroundContents fails when range crosses element boundaries
+        // Check if start and end are in the same parent element
+        if (startNode.parentElement === endNode.parentElement) {
+            const span = document.createElement('span');
+            span.className = 'tts-hl';
+            range.surroundContents(span);
+            ttsState._activeHlSpan = span;
+            _scrollToEl(span);
+        } else {
+            // Cross-boundary: use paragraph-level fallback
+            const parent = startNode.parentElement;
+            if (parent) {
+                parent.classList.add('tts-speaking-para');
+                _scrollToEl(parent);
+            }
         }
+    } catch (e) {
+        // Last resort fallback — highlight the parent paragraph
+        try {
+            const parent = startNode.parentElement;
+            if (parent) {
+                parent.classList.add('tts-speaking-para');
+                _scrollToEl(parent);
+            }
+        } catch (e2) { /* give up highlighting, speech continues */ }
     }
 }
 
@@ -324,15 +342,16 @@ function _scrollToEl(el) {
 
 // ── Master clear ──
 function clearHighlighting() {
+    _stopWatchdog();
+    _stopKeepAlive();
+
     if (ttsState._cloudWordTimer) {
         clearTimeout(ttsState._cloudWordTimer);
         ttsState._cloudWordTimer = null;
     }
 
     _clearPdfHighlights();
-
     document.querySelectorAll('.tts-speaking-para').forEach(el => el.classList.remove('tts-speaking-para'));
-
     _unwrapActiveSpan();
 
     const readerTextEl = document.getElementById('reader-text');
@@ -342,24 +361,138 @@ function clearHighlighting() {
     }
 
     ttsState._chunks = [];
-    ttsState._currentSentenceIdx = -1;
+    ttsState._chunkPositions = [];
+    ttsState._currentChunkIdx = -1;
     ttsState._hlCharOffset = 0;
     ttsState._pdfCharToSpan = null;
     ttsState._pdfFullText = null;
+    ttsState._fullText = '';
+}
+
+// ===================== WATCHDOG: Detect silent speech death =====================
+// Chrome/Android can silently stop speaking without firing onend or onerror.
+// This watchdog checks every 5 seconds: if no boundary events have fired
+// and synth isn't speaking, we know it died. Auto-recover cleanly.
+
+function _startWatchdog() {
+    _stopWatchdog();
+    ttsState._lastBoundaryTime = Date.now();
+    ttsState._boundaryCount = 0;
+
+    ttsState._watchdogTimer = setInterval(() => {
+        if (!ttsState.isPlaying || ttsState.isPaused) return;
+
+        const isCloud = ttsState.selectedVoice && ttsState.selectedVoice.isCloud;
+        if (isCloud) return; // Cloud uses its own audio element, no watchdog needed
+
+        const elapsed = Date.now() - ttsState._lastBoundaryTime;
+        const synthSpeaking = ttsState.synth.speaking;
+        const synthPaused = ttsState.synth.paused;
+
+        // If synth says it's not speaking and not paused, and we think we're playing → it died
+        if (!synthSpeaking && !synthPaused && elapsed > 3000) {
+            console.warn('TTS Watchdog: Speech died silently. Auto-recovering...');
+            _forceCleanStop();
+            return;
+        }
+
+        // If synth says speaking but no boundary events for 20+ seconds → likely frozen
+        if (synthSpeaking && !synthPaused && elapsed > 20000 && ttsState._boundaryCount > 0) {
+            console.warn('TTS Watchdog: No boundary events for 20s. Force-restarting...');
+            ttsState.synth.cancel();
+            setTimeout(() => {
+                if (ttsState.isPlaying) playTTS();
+            }, 300);
+            return;
+        }
+    }, 4000);
+}
+
+function _stopWatchdog() {
+    if (ttsState._watchdogTimer) {
+        clearInterval(ttsState._watchdogTimer);
+        ttsState._watchdogTimer = null;
+    }
+}
+
+// ===================== CHROME KEEPALIVE =====================
+// Chrome has a bug where speechSynthesis stops after ~15 seconds.
+// We pause+resume every 8 seconds to keep it alive.
+// Uses OUR state (not browser's) to decide if we should keep going.
+
+function _startKeepAlive() {
+    _stopKeepAlive();
+
+    // Only needed on Chrome (not Edge)
+    if (!/Chrome/i.test(navigator.userAgent) || /Edge|Edg/i.test(navigator.userAgent)) return;
+
+    ttsState._keepAliveTimer = setInterval(() => {
+        // Check OUR state, not the browser's
+        if (!ttsState.isPlaying || ttsState.isPaused) {
+            _stopKeepAlive();
+            return;
+        }
+
+        // Only act if synth is actually speaking
+        if (ttsState.synth.speaking && !ttsState.synth.paused) {
+            try {
+                ttsState.synth.pause();
+                // Resume after a tiny delay to ensure the pause registered
+                setTimeout(() => {
+                    if (ttsState.isPlaying && !ttsState.isPaused) {
+                        ttsState.synth.resume();
+                    }
+                }, 50);
+            } catch (e) {
+                // If pause/resume throws, synth is dead
+                console.warn('TTS keepalive error:', e);
+            }
+        } else if (!ttsState.synth.speaking) {
+            // Synth stopped but we think we're playing → watchdog will handle
+            _stopKeepAlive();
+        }
+    }, 8000);
+}
+
+function _stopKeepAlive() {
+    if (ttsState._keepAliveTimer) {
+        clearInterval(ttsState._keepAliveTimer);
+        ttsState._keepAliveTimer = null;
+    }
+}
+
+// ===================== FORCE CLEAN STOP =====================
+// Guaranteed clean state reset — called when anything goes wrong
+function _forceCleanStop() {
+    try { ttsState.synth.cancel(); } catch (e) {}
+    if (ttsState._cloudAudio) {
+        try { ttsState._cloudAudio.pause(); } catch (e) {}
+        ttsState._cloudAudio = null;
+    }
+    ttsState.isPlaying = false;
+    ttsState.isPaused = false;
+    ttsState._continuousMode = false;
+    ttsState._isTransitioning = false;
+    ttsState.currentUtterance = null;
+    ttsState._pausedAtChunk = -1;
+    clearHighlighting();
+    updateTTSButton();
+    try { document.getElementById('tts-keepalive-audio')?.pause(); } catch (e) {}
 }
 
 // ===================== CHUNKING + SPEAKING =====================
 function speakTextWithChunking(text) {
-    ttsState.synth.cancel();
+    // Cancel anything currently running
+    try { ttsState.synth.cancel(); } catch (e) {}
     if (ttsState._cloudAudio) {
-        ttsState._cloudAudio.pause();
+        try { ttsState._cloudAudio.pause(); } catch (e) {}
         ttsState._cloudAudio = null;
     }
 
     const isCloud = ttsState.selectedVoice && ttsState.selectedVoice.isCloud;
     const isPdf = _isPdfMode();
 
-    // ── Build sentence chunks (1 sentence = 1 highlight) ──
+    // ── Build sentence chunks ──
     const chunks = [];
     const MAX_CHARS = isCloud ? 160 : 250;
 
@@ -376,18 +509,29 @@ function speakTextWithChunking(text) {
         }
         if (current.trim()) chunks.push(current.trim());
     } else {
-        // Split strictly by sentence for precise 1-line highlight
-        const sentences = text.match(/[^.!?]*[.!?]+[\s]*/g);
+        // Group 2-3 sentences per chunk to minimize pauses between utterances.
+        // Each utterance has ~200-500ms startup overhead, so fewer chunks = smoother flow.
+        // Max ~500 chars per chunk keeps it under Chrome's 15-second timeout.
+        const GROUP_MAX_CHARS = 500;
+        // Sentence split regex supports:
+        //   . ! ?          — English/Latin
+        //   ।  ॥           — Hindi/Nepali (purna viram, double danda)
+        //   。！？          — Chinese/Japanese
+        //   ؟              — Arabic question mark
+        const sentences = text.match(/[^.!?।॥。！？؟]*[.!?।॥。！？؟]+[\s]*/g);
         let covered = 0;
         if (sentences && sentences.length > 0) {
+            let groupBuffer = '';
             for (const sentence of sentences) {
                 const trimmed = sentence.trim();
-                if (trimmed.length > 250) {
-                    // Giant sentence — sub-split by words
+                if (trimmed.length > GROUP_MAX_CHARS) {
+                    // Flush buffer first
+                    if (groupBuffer.trim()) { chunks.push(groupBuffer.trim()); groupBuffer = ''; }
+                    // Split giant sentence by words
                     const words = trimmed.split(/\s+/);
                     let curr = '';
                     for (const w of words) {
-                        if ((curr + ' ' + w).length > 180 && curr.length > 0) {
+                        if ((curr + ' ' + w).length > 250 && curr.length > 0) {
                             chunks.push(curr.trim());
                             curr = w;
                         } else {
@@ -396,19 +540,26 @@ function speakTextWithChunking(text) {
                     }
                     if (curr.trim()) chunks.push(curr.trim());
                 } else if (trimmed.length > 0) {
-                    chunks.push(trimmed);
+                    // Would adding this sentence exceed the group limit?
+                    if ((groupBuffer + ' ' + trimmed).trim().length > GROUP_MAX_CHARS && groupBuffer.trim()) {
+                        chunks.push(groupBuffer.trim());
+                        groupBuffer = trimmed;
+                    } else {
+                        groupBuffer = (groupBuffer + ' ' + trimmed).trim();
+                    }
                 }
                 covered += sentence.length;
             }
-            // Capture trailing text without punctuation
+            // Flush remaining buffer
+            if (groupBuffer.trim()) chunks.push(groupBuffer.trim());
             const remainder = text.substring(covered).trim();
             if (remainder.length > 0) chunks.push(remainder);
         } else {
-            // No punctuation — word-split
+            // No punctuation — word-split into groups
             const words = text.split(/\s+/);
             let current = '';
             for (const word of words) {
-                if ((current + ' ' + word).trim().length > 150 && current.length > 0) {
+                if ((current + ' ' + word).trim().length > GROUP_MAX_CHARS && current.length > 0) {
                     chunks.push(current.trim());
                     current = word;
                 } else {
@@ -430,15 +581,15 @@ function speakTextWithChunking(text) {
         ttsState._originalHTML = readerTextEl.innerHTML;
     }
     ttsState._chunks = chunks;
+    ttsState._fullText = text;
     ttsState._hlCharOffset = 0;
 
-    // ── PDF: Build char→span index once ──
+    // ── PDF: Build char→span index ──
     if (isPdf) {
         _buildPdfCharIndex();
     }
 
     // ── Build chunk-to-character-offset mapping ──
-    // This maps each chunk to its exact [start, end) character position in the full text
     const chunkPositions = [];
     let searchFrom = 0;
     const refText = isPdf ? (ttsState._pdfFullText || text) : text;
@@ -449,18 +600,18 @@ function speakTextWithChunking(text) {
             chunkPositions.push({ start: idx, end: idx + chunk.length });
             searchFrom = idx + chunk.length;
         } else {
-            // Fuzzy: try first 20 chars
             const partial = chunk.substring(0, 20);
             const pIdx = refText.indexOf(partial, searchFrom);
             if (pIdx >= 0) {
                 chunkPositions.push({ start: pIdx, end: pIdx + chunk.length });
                 searchFrom = pIdx + chunk.length;
             } else {
-                // Can't find it — just push a null position
                 chunkPositions.push(null);
             }
         }
     }
+
+    ttsState._chunkPositions = chunkPositions;
 
     let chunkIndex = 0;
 
@@ -470,7 +621,6 @@ function speakTextWithChunking(text) {
             const p = chunkPositions[i];
             if (p && charIdx >= p.start && charIdx < p.end) return i;
         }
-        // If between chunks, find the nearest next chunk
         for (let i = 0; i < chunkPositions.length; i++) {
             const p = chunkPositions[i];
             if (p && charIdx < p.start) return i;
@@ -493,11 +643,11 @@ function speakTextWithChunking(text) {
         } catch (e) {
             console.warn('TTS highlight error (non-fatal):', e);
         }
-        ttsState._currentSentenceIdx = idx;
+        ttsState._currentChunkIdx = idx;
     }
 
     if (isCloud) {
-        // ─── Cloud TTS: Must use chunked approach (API character limits) ───
+        // ─── Cloud TTS ───
         function speakNextCloud() {
             if (ttsState._isTransitioning) return;
 
@@ -527,8 +677,7 @@ function speakTextWithChunking(text) {
                 if (ttsState.isPlaying && !ttsState.isPaused) {
                     setTimeout(speakNextCloud, 100);
                 } else {
-                    ttsState.isPlaying = false;
-                    updateTTSButton();
+                    _forceCleanStop();
                 }
             };
 
@@ -538,103 +687,122 @@ function speakTextWithChunking(text) {
                 if (ttsState.isPlaying && !ttsState.isPaused) {
                     setTimeout(speakNextCloud, 200);
                 } else {
-                    ttsState.isPlaying = false;
-                    updateTTSButton();
+                    _forceCleanStop();
                 }
             });
         }
         speakNextCloud();
 
     } else {
-        // ─── Native voice: Speak ENTIRE page as ONE utterance ───
-        // This eliminates the dead silence between sentences because the speech
-        // engine handles natural sentence pauses internally (brief & appropriate).
-        // We use onboundary to track which sentence we're in for highlighting.
+        // ─── Native voice: CHUNK-BY-CHUNK speaking ───
+        // Speaking the full page as one utterance sounds natural on desktop but
+        // breaks on mobile (no onboundary events → no highlighting, plus Chrome
+        // kills long utterances after ~15 seconds). Instead, we speak one sentence
+        // chunk at a time. This guarantees:
+        //   1. Each sentence gets highlighted as it's spoken
+        //   2. No Chrome 15-second timeout (each chunk is short)
+        //   3. Works on ALL devices (no onboundary dependency)
 
-        const utterance = new SpeechSynthesisUtterance(text);
-        if (ttsState.selectedVoice && !ttsState.selectedVoice.isCloud) {
-            utterance.voice = ttsState.selectedVoice;
-        }
-        utterance.rate = ttsState.speed;
-        utterance.pitch = 1.0;
+        let nativeChunkIdx = 0;
 
-        // Highlight the first sentence immediately
-        highlightChunk(0);
+        function speakNextNativeChunk() {
+            if (!ttsState.isPlaying || ttsState.isPaused || ttsState._isTransitioning) return;
 
-        // ── onboundary: real-time word/sentence tracking ──
-        // At high speeds (≥1.5x), skip word-level highlighting — it's too fast to
-        // read individual words anyway, and the heavy DOM work would cause lag.
-        // Only update when we move to a new sentence.
-        let lastHighlightedChunk = 0;
-        let pendingBoundaryUpdate = null;
-
-        utterance.onboundary = (event) => {
-            if (event.name !== 'word') return;
-
-            const charIdx = event.charIndex;
-            const newChunkIdx = getChunkAtChar(charIdx);
-
-            if (newChunkIdx >= 0 && newChunkIdx !== lastHighlightedChunk) {
-                // New sentence — always update (even at high speed)
-                lastHighlightedChunk = newChunkIdx;
-                if (pendingBoundaryUpdate) cancelAnimationFrame(pendingBoundaryUpdate);
-                pendingBoundaryUpdate = requestAnimationFrame(() => {
-                    highlightChunk(newChunkIdx);
-                    pendingBoundaryUpdate = null;
-                });
-            } else if (!isPdf && newChunkIdx >= 0 && ttsState.speed < 1.5) {
-                // Same sentence + normal speed — word-level highlight
-                if (pendingBoundaryUpdate) cancelAnimationFrame(pendingBoundaryUpdate);
-                pendingBoundaryUpdate = requestAnimationFrame(() => {
-                    try {
-                        const wordLen = event.charLength ||
-                            (text.substring(charIdx).match(/^\S+/) || [''])[0].length;
-                        const wordEnd = charIdx + wordLen;
-                        _unwrapActiveSpan();
-                        _highlightTextRange(charIdx, wordEnd);
-                    } catch (e) { /* non-fatal */ }
-                    pendingBoundaryUpdate = null;
-                });
+            if (nativeChunkIdx >= chunks.length) {
+                // All chunks done
+                if (isPdf) _clearPdfHighlights();
+                else _unwrapActiveSpan();
+                onPageReadingComplete();
+                return;
             }
-            // At ≥1.5x speed within the same sentence: do nothing (sentence stays highlighted)
-        };
 
-        utterance.onend = () => {
-            if (isPdf) _clearPdfHighlights();
-            else _unwrapActiveSpan();
-            onPageReadingComplete();
-        };
+            // Highlight current sentence
+            highlightChunk(nativeChunkIdx);
 
-        utterance.onerror = (e) => {
-            if (e.error === 'canceled') return;
-            console.error('TTS error:', e.error);
-            ttsState.isPlaying = false;
-            updateTTSButton();
-        };
+            const chunkText = chunks[nativeChunkIdx];
+            const utterance = new SpeechSynthesisUtterance(chunkText);
+            if (ttsState.selectedVoice && !ttsState.selectedVoice.isCloud) {
+                utterance.voice = ttsState.selectedVoice;
+            }
+            utterance.rate = ttsState.speed;
+            utterance.pitch = 1.0;
 
-        ttsState.currentUtterance = utterance;
-        ttsState.synth.speak(utterance);
+            // ── Word-level highlighting via onboundary (works on desktop) ──
+            let boundaryFired = false;
+            const chunkPos = chunkPositions[nativeChunkIdx];
 
-        // Chrome bug workaround: speech synthesis stops after ~15s
-        if (/Chrome/i.test(navigator.userAgent) && !/Edge|Edg/i.test(navigator.userAgent)) {
-            const keepAliveInterval = setInterval(() => {
-                if (!ttsState.isPlaying || ttsState.isPaused) {
-                    clearInterval(keepAliveInterval);
-                    return;
+            utterance.onboundary = (event) => {
+                if (event.name !== 'word') return;
+                boundaryFired = true;
+                ttsState._lastBoundaryTime = Date.now();
+                ttsState._boundaryCount++;
+
+                // Word-level highlight: offset relative to full page text
+                if (!isPdf && chunkPos && ttsState.speed < 1.5) {
+                    try {
+                        const wordStart = chunkPos.start + event.charIndex;
+                        const wordLen = event.charLength ||
+                            (chunkText.substring(event.charIndex).match(/^\S+/) || [''])[0].length;
+                        const wordEnd = wordStart + wordLen;
+                        _unwrapActiveSpan();
+                        _highlightTextRange(wordStart, wordEnd);
+                    } catch (e) { /* non-fatal */ }
                 }
-                if (ttsState.synth.speaking && !ttsState.synth.paused) {
-                    ttsState.synth.pause();
-                    ttsState.synth.resume();
+            };
+
+            utterance.onend = () => {
+                nativeChunkIdx++;
+                ttsState._pausedAtChunk = nativeChunkIdx;
+
+                // Immediately queue the next chunk — no artificial delay
+                if (ttsState.isPlaying && !ttsState.isPaused) {
+                    speakNextNativeChunk();
+                }
+            };
+
+            utterance.onerror = (e) => {
+                if (e.error === 'canceled' || e.error === 'interrupted') return;
+                console.error('TTS chunk error:', e.error, '— skipping chunk');
+
+                // Skip this chunk and try the next one
+                nativeChunkIdx++;
+                if (ttsState.isPlaying && !ttsState.isPaused) {
+                    setTimeout(speakNextNativeChunk, 100);
                 } else {
-                    clearInterval(keepAliveInterval);
+                    _forceCleanStop();
                 }
-            }, 10000);
+            };
+
+            ttsState.currentUtterance = utterance;
+
+            try {
+                ttsState.synth.speak(utterance);
+            } catch (e) {
+                console.error('TTS speak() threw:', e);
+                // Skip and try next
+                nativeChunkIdx++;
+                if (ttsState.isPlaying && !ttsState.isPaused) {
+                    setTimeout(speakNextNativeChunk, 200);
+                } else {
+                    _forceCleanStop();
+                }
+            }
         }
+
+        // Start from the first chunk
+        speakNextNativeChunk();
+
+        // ── Start keepalive and watchdog ──
+        _startKeepAlive();
+        _startWatchdog();
     }
 }
 
 // ===================== PAGE TURN SYNCHRONIZATION =====================
 function onPageReadingComplete() {
+    _stopKeepAlive();
+    _stopWatchdog();
+
     if (ttsState.autoTurn && ttsState.isPlaying && !ttsState.isPaused && ttsState._continuousMode) {
         const elapsed = Date.now() - ttsState._pageReadStartTime;
         const remainingWait = Math.max(0, ttsState._minReadTimeMs - elapsed);
@@ -652,26 +820,27 @@ function onPageReadingComplete() {
             if (nextZone) {
                 nextZone.click();
             } else {
-                ttsState.isPlaying = false;
-                ttsState._continuousMode = false;
-                ttsState._isTransitioning = false;
-                updateTTSButton();
+                _forceCleanStop();
             }
         }, remainingWait);
     } else {
         ttsState.isPlaying = false;
         ttsState._continuousMode = false;
+        ttsState._pausedAtChunk = -1;
         updateTTSButton();
     }
 }
 
 // ===================== TTS PLAYBACK =====================
 function playTTS() {
-    ttsState.synth.cancel();
+    // Always fully cancel before starting fresh
+    try { ttsState.synth.cancel(); } catch (e) {}
     if (ttsState._cloudAudio) {
-        ttsState._cloudAudio.pause();
+        try { ttsState._cloudAudio.pause(); } catch (e) {}
         ttsState._cloudAudio = null;
     }
+    _stopKeepAlive();
+    _stopWatchdog();
 
     const text = extractCurrentPageText();
     if (!text || text.length < 3) {
@@ -693,6 +862,7 @@ function playTTS() {
     ttsState._continuousMode = true;
     ttsState._isTransitioning = false;
     ttsState._pageReadStartTime = Date.now();
+    ttsState._pausedAtChunk = -1;
     updateTTSButton();
 
     speakTextWithChunking(text);
@@ -702,35 +872,67 @@ function playTTS() {
 }
 
 function stopTTS() {
-    ttsState.synth.cancel();
-    if (ttsState._cloudAudio) {
-        ttsState._cloudAudio.pause();
-        ttsState._cloudAudio = null;
-    }
-    ttsState.isPlaying = false;
-    ttsState.isPaused = false;
-    ttsState._continuousMode = false;
-    ttsState._isTransitioning = false;
-    ttsState.currentUtterance = null;
-    clearHighlighting();
-    updateTTSButton();
-    try { document.getElementById('tts-keepalive-audio')?.pause(); } catch(e) {}
+    _forceCleanStop();
 }
 
 function toggleTTS() {
     if (!ttsState.isPlaying) {
+        // Start fresh
         playTTS();
     } else if (ttsState.isPlaying && !ttsState.isPaused) {
-        ttsState.synth.pause();
-        if (ttsState._cloudAudio) ttsState._cloudAudio.pause();
+        // ── PAUSE ──
+        const isCloud = ttsState.selectedVoice && ttsState.selectedVoice.isCloud;
+        if (isCloud) {
+            if (ttsState._cloudAudio) ttsState._cloudAudio.pause();
+        } else {
+            try { ttsState.synth.pause(); } catch (e) {}
+        }
         ttsState.isPaused = true;
+        _stopKeepAlive();
+        _stopWatchdog();
         updateTTSButton();
         try { document.getElementById('tts-keepalive-audio')?.pause(); } catch(e) {}
     } else {
-        ttsState.synth.resume();
-        if (ttsState._cloudAudio) ttsState._cloudAudio.play().catch(()=>{});
-        ttsState.isPaused = false;
-        updateTTSButton();
+        // ── RESUME ──
+        const isCloud = ttsState.selectedVoice && ttsState.selectedVoice.isCloud;
+        if (isCloud) {
+            if (ttsState._cloudAudio) {
+                ttsState._cloudAudio.play().catch(() => {});
+            }
+            ttsState.isPaused = false;
+            updateTTSButton();
+        } else {
+            // On Android, synth.resume() is broken — it often does nothing.
+            // Strategy: try resume first, then check after 500ms if it worked.
+            // If not, restart the entire speech (which always works).
+            try { ttsState.synth.resume(); } catch (e) {}
+            ttsState.isPaused = false;
+            updateTTSButton();
+
+            // Verify resume actually worked after a short delay
+            setTimeout(() => {
+                if (!ttsState.isPlaying || ttsState.isPaused) return;
+
+                // Check if synth is actually speaking
+                if (!ttsState.synth.speaking && !ttsState.synth.paused) {
+                    // Resume failed! Restart from scratch.
+                    console.warn('TTS: resume() failed (Android bug). Restarting...');
+                    ttsState.synth.cancel();
+                    clearHighlighting();
+                    ttsState.isPaused = false;
+                    ttsState._isTransitioning = false;
+
+                    // Small delay to let cancel fully process
+                    setTimeout(() => {
+                        if (ttsState.isPlaying) playTTS();
+                    }, 200);
+                } else {
+                    // Resume worked — restart keepalive and watchdog
+                    _startKeepAlive();
+                    _startWatchdog();
+                }
+            }, 500);
+        }
         try { document.getElementById('tts-keepalive-audio')?.play().catch(() => {}); } catch(e) {}
     }
 }
@@ -903,7 +1105,6 @@ function initTTS() {
         }
 
         /* ===== ReadEra-Style Sentence Highlight ===== */
-        /* The ONE active sentence span — uses the shared highlight color */
         .tts-hl {
             background: rgba(var(--hl-color-rgb, 255, 140, 66), 0.15);
             border-bottom: 2px solid rgba(var(--hl-color-rgb, 255, 140, 66), 0.6);
@@ -914,7 +1115,7 @@ function initTTS() {
             -webkit-box-decoration-break: clone;
         }
 
-        /* Paragraph-level fallback (when sentence crosses element boundaries) */
+        /* Paragraph-level fallback */
         .tts-speaking-para {
             background: rgba(var(--hl-color-rgb, 255, 140, 66), 0.08) !important;
             border-left: 3px solid rgba(var(--hl-color-rgb, 255, 140, 66), 0.5);
@@ -923,7 +1124,7 @@ function initTTS() {
             transition: background 0.3s ease;
         }
 
-        /* Dark mode adjustments */
+        /* Dark mode */
         [data-theme="dark"] .tts-hl,
         .dark-mode .tts-hl {
             background: rgba(var(--hl-color-rgb, 255, 150, 80), 0.2);
@@ -934,7 +1135,7 @@ function initTTS() {
             background: rgba(var(--hl-color-rgb, 255, 150, 80), 0.1) !important;
         }
 
-        /* PDF highlight overlays the canvas */
+        /* PDF highlight */
         .pdf-text-layer span.tts-pdf-hl {
             background: rgba(var(--hl-color-rgb, 255, 140, 66), 0.25) !important;
             border-bottom: 2px solid rgba(var(--hl-color-rgb, 255, 140, 66), 0.6) !important;
