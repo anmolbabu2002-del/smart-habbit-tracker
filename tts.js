@@ -75,8 +75,15 @@ function getCoolVoiceName(voice) {
 function loadTTSVoices() {
     const allVoices = ttsState.synth.getVoices();
     const cloudVoices = [
-        { isCloud: true, lang: 'hi-IN', name: '🇮🇳 Hindi (Cloud)' },
-        { isCloud: true, lang: 'ne-NP', name: '🇳🇵 Nepali (Cloud)' }
+        { isCloud: true, lang: 'en-US', name: '☁️ English (Cloud — Reliable)' },
+        { isCloud: true, lang: 'hi-IN', name: '☁️ Hindi (Cloud — Reliable)' },
+        { isCloud: true, lang: 'ne-NP', name: '☁️ Nepali (Cloud — Reliable)' },
+        { isCloud: true, lang: 'es-ES', name: '☁️ Spanish (Cloud)' },
+        { isCloud: true, lang: 'fr-FR', name: '☁️ French (Cloud)' },
+        { isCloud: true, lang: 'de-DE', name: '☁️ German (Cloud)' },
+        { isCloud: true, lang: 'ja-JP', name: '☁️ Japanese (Cloud)' },
+        { isCloud: true, lang: 'ko-KR', name: '☁️ Korean (Cloud)' },
+        { isCloud: true, lang: 'zh-CN', name: '☁️ Chinese (Cloud)' }
     ];
 
     ttsState.voices = [...cloudVoices, ...allVoices];
@@ -695,15 +702,32 @@ function speakTextWithChunking(text) {
 
     } else {
         // ─── Native voice: CHUNK-BY-CHUNK speaking ───
-        // Speaking the full page as one utterance sounds natural on desktop but
-        // breaks on mobile (no onboundary events → no highlighting, plus Chrome
-        // kills long utterances after ~15 seconds). Instead, we speak one sentence
-        // chunk at a time. This guarantees:
-        //   1. Each sentence gets highlighted as it's spoken
-        //   2. No Chrome 15-second timeout (each chunk is short)
-        //   3. Works on ALL devices (no onboundary dependency)
+        // Android Chrome silently kills synth.speak() after a few sequential calls.
+        // Fix: cancel() before each speak(), add delay between chunks, and use
+        // a per-chunk safety timeout that force-advances if onend never fires.
 
+        const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+        const INTER_CHUNK_DELAY = isMobile ? 250 : 50; // Android needs longer reset
         let nativeChunkIdx = 0;
+        let chunkSafetyTimer = null;
+
+        function clearChunkSafety() {
+            if (chunkSafetyTimer) {
+                clearTimeout(chunkSafetyTimer);
+                chunkSafetyTimer = null;
+            }
+        }
+
+        function advanceToNextChunk() {
+            clearChunkSafety();
+            nativeChunkIdx++;
+            ttsState._pausedAtChunk = nativeChunkIdx;
+
+            if (ttsState.isPlaying && !ttsState.isPaused) {
+                // Critical: delay lets Android's speech engine fully reset
+                setTimeout(speakNextNativeChunk, INTER_CHUNK_DELAY);
+            }
+        }
 
         function speakNextNativeChunk() {
             if (!ttsState.isPlaying || ttsState.isPaused || ttsState._isTransitioning) return;
@@ -716,6 +740,10 @@ function speakTextWithChunking(text) {
                 return;
             }
 
+            // ★ CRITICAL: Cancel any lingering speech before starting new chunk.
+            // On Android, the previous utterance can leave the engine in a bad state.
+            try { ttsState.synth.cancel(); } catch (e) {}
+
             // Highlight current sentence
             highlightChunk(nativeChunkIdx);
 
@@ -727,17 +755,16 @@ function speakTextWithChunking(text) {
             utterance.rate = ttsState.speed;
             utterance.pitch = 1.0;
 
-            // ── Word-level highlighting via onboundary (works on desktop) ──
-            let boundaryFired = false;
+            // ── Word-level highlighting via onboundary (desktop only) ──
+            let chunkEnded = false;
             const chunkPos = chunkPositions[nativeChunkIdx];
 
             utterance.onboundary = (event) => {
                 if (event.name !== 'word') return;
-                boundaryFired = true;
                 ttsState._lastBoundaryTime = Date.now();
                 ttsState._boundaryCount++;
 
-                // Word-level highlight: offset relative to full page text
+                // Word-level highlight
                 if (!isPdf && chunkPos && ttsState.speed < 1.5) {
                     try {
                         const wordStart = chunkPos.start + event.charIndex;
@@ -751,23 +778,24 @@ function speakTextWithChunking(text) {
             };
 
             utterance.onend = () => {
-                nativeChunkIdx++;
-                ttsState._pausedAtChunk = nativeChunkIdx;
-
-                // Immediately queue the next chunk — no artificial delay
-                if (ttsState.isPlaying && !ttsState.isPaused) {
-                    speakNextNativeChunk();
-                }
+                if (chunkEnded) return; // Prevent double-fire
+                chunkEnded = true;
+                advanceToNextChunk();
             };
 
             utterance.onerror = (e) => {
-                if (e.error === 'canceled' || e.error === 'interrupted') return;
-                console.error('TTS chunk error:', e.error, '— skipping chunk');
+                if (chunkEnded) return;
+                chunkEnded = true;
+                clearChunkSafety();
 
-                // Skip this chunk and try the next one
+                if (e.error === 'canceled' || e.error === 'interrupted') {
+                    // If WE canceled it (via synth.cancel() in next chunk), ignore
+                    return;
+                }
+                console.error('TTS chunk error:', e.error, '— skipping');
                 nativeChunkIdx++;
                 if (ttsState.isPlaying && !ttsState.isPaused) {
-                    setTimeout(speakNextNativeChunk, 100);
+                    setTimeout(speakNextNativeChunk, 300);
                 } else {
                     _forceCleanStop();
                 }
@@ -775,25 +803,46 @@ function speakTextWithChunking(text) {
 
             ttsState.currentUtterance = utterance;
 
-            try {
-                ttsState.synth.speak(utterance);
-            } catch (e) {
-                console.error('TTS speak() threw:', e);
-                // Skip and try next
+            // ── Safety timeout: if onend NEVER fires, force-advance ──
+            // Estimate duration: ~130ms per character at 1x speed, minimum 4s
+            const estDurationMs = Math.max(4000, (chunkText.length * 130) / ttsState.speed);
+            clearChunkSafety();
+            chunkSafetyTimer = setTimeout(() => {
+                if (chunkEnded) return;
+                console.warn('TTS safety: onend never fired for chunk', nativeChunkIdx, '— force-advancing');
+                chunkEnded = true;
+                // Try canceling the stuck utterance
+                try { ttsState.synth.cancel(); } catch (e) {}
                 nativeChunkIdx++;
+                ttsState._pausedAtChunk = nativeChunkIdx;
                 if (ttsState.isPlaying && !ttsState.isPaused) {
-                    setTimeout(speakNextNativeChunk, 200);
-                } else {
-                    _forceCleanStop();
+                    setTimeout(speakNextNativeChunk, 300);
                 }
-            }
+            }, estDurationMs + 2000); // +2s grace period
+
+            // ── Speak! (with small delay after cancel to let engine reset) ──
+            setTimeout(() => {
+                if (!ttsState.isPlaying || ttsState.isPaused || chunkEnded) return;
+                try {
+                    ttsState.synth.speak(utterance);
+                } catch (e) {
+                    console.error('TTS speak() threw:', e);
+                    if (!chunkEnded) {
+                        chunkEnded = true;
+                        clearChunkSafety();
+                        nativeChunkIdx++;
+                        if (ttsState.isPlaying && !ttsState.isPaused) {
+                            setTimeout(speakNextNativeChunk, 300);
+                        }
+                    }
+                }
+            }, isMobile ? 100 : 10); // Android needs gap between cancel() and speak()
         }
 
         // Start from the first chunk
         speakNextNativeChunk();
 
-        // ── Start keepalive and watchdog ──
-        _startKeepAlive();
+        // Start watchdog (keepalive NOT needed for short chunks)
         _startWatchdog();
     }
 }
