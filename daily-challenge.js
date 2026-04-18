@@ -445,9 +445,8 @@
 
     els.loading.classList.add('hidden');
     els.content.classList.remove('hidden');
-    // Start collapsed by default ONLY if challenge is still active
-    // When completed, show expanded so "Challenge Conquered" banner is visible
-    els.content.classList.remove('dc-collapsed');
+    // Always start compact — user clicks to expand
+    els.content.classList.add('dc-collapsed');
 
     els.emoji.textContent = challenge.emoji || '⚡';
     els.title.textContent = challenge.title;
@@ -477,12 +476,10 @@
 
     if (status === 'new' || status === 'accepted') {
       els.actions.classList.remove('hidden');
-      els.content.classList.add('dc-collapsed'); // Collapsed when active
     } else if (status === 'completed') {
       els.completed.classList.remove('hidden');
       els.container.classList.add('is-completed');
       els.container.classList.remove('is-paused');
-      els.content.classList.remove('dc-collapsed'); // Expanded when done
     }
 
     // Sync vitality flag
@@ -627,7 +624,9 @@
       if (typeof localforage === 'undefined') return;
       const state = await localforage.getItem(DC_STATE_KEY);
       if (!state) return;
-      const today = new Date().toISOString().slice(0, 10);
+      // Must use LOCAL time — same format as getTodayKey()
+      const d = new Date();
+      const today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       if (state.date === today && state.status === 'completed') {
         window._dcCompletedToday = true;
       } else {
