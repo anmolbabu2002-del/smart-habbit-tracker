@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ultradian-v24';
+const CACHE_NAME = 'ultradian-v25';
 
 // ═══ CORE APP SHELL (HTML, CSS, JS) ═══
 const CORE_ASSETS = [
@@ -31,10 +31,8 @@ const FEATURE_ASSETS = [
 
 // ═══ ICONS & APP IMAGES ═══
 const IMAGE_ASSETS = [
-  '/icon-192.png',
-  '/icon-512.png',
-  '/icon_512.png',
-  '/ultradian_app_icon_1774120827802.png',
+  '/icon-192-v2.png',
+  '/icon-512-v2.png',
   '/anmol-ai-avatar.jpeg',
   '/welcome-character.png',
   // Hub / Knowledge content images
