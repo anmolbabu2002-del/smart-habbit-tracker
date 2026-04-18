@@ -445,8 +445,9 @@
 
     els.loading.classList.add('hidden');
     els.content.classList.remove('hidden');
-    // Start collapsed by default
-    els.content.classList.add('dc-collapsed');
+    // Start collapsed by default ONLY if challenge is still active
+    // When completed, show expanded so "Challenge Conquered" banner is visible
+    els.content.classList.remove('dc-collapsed');
 
     els.emoji.textContent = challenge.emoji || '⚡';
     els.title.textContent = challenge.title;
@@ -476,10 +477,12 @@
 
     if (status === 'new' || status === 'accepted') {
       els.actions.classList.remove('hidden');
+      els.content.classList.add('dc-collapsed'); // Collapsed when active
     } else if (status === 'completed') {
       els.completed.classList.remove('hidden');
       els.container.classList.add('is-completed');
       els.container.classList.remove('is-paused');
+      els.content.classList.remove('dc-collapsed'); // Expanded when done
     }
 
     // Sync vitality flag
@@ -616,7 +619,28 @@
     renderChallenge(challenge, 'new', idx.streak, isPaused);
   }
 
+  // ─── EARLY SYNC: Set _dcCompletedToday BEFORE vitality reads it ───
+  // The UI init has a 300ms delay, but vitality may check the flag sooner.
+  // This reads localforage immediately and sets the flag.
+  async function earlySyncDcFlag() {
+    try {
+      if (typeof localforage === 'undefined') return;
+      const state = await localforage.getItem(DC_STATE_KEY);
+      if (!state) return;
+      const today = new Date().toISOString().slice(0, 10);
+      if (state.date === today && state.status === 'completed') {
+        window._dcCompletedToday = true;
+      } else {
+        window._dcCompletedToday = false;
+      }
+      // Re-render vitality if it loaded before us
+      if (typeof updateVitalityUI === 'function') updateVitalityUI();
+    } catch (e) { /* silent */ }
+  }
+
   // ─── BOOT ───
+  // Run early sync ASAP, then init UI with a small delay
+  earlySyncDcFlag();
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => setTimeout(init, 300));
   } else {
