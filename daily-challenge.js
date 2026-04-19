@@ -487,66 +487,124 @@
     if (typeof updateVitalityUI === 'function') updateVitalityUI();
   }
 
-  // ─── EVENT HANDLERS ───
+  // ─── LOCALSTORAGE HELPERS (synchronous, instant, never hangs) ───
+  const LS_DC_TODAY_KEY = 'dc_today_state';      // JSON: {date, challenge, status}
+  const LS_DC_STREAK_KEY = 'dc_streak_data';     // JSON: {streak, lastDate}
 
-  async function handleComplete(e) {
-    if (e) { e.preventDefault(); e.stopPropagation(); }
-    
-    let state = await getState();
+  function lsGetToday() {
+    try {
+      const raw = localStorage.getItem(LS_DC_TODAY_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch(e) { return null; }
+  }
+
+  function lsSaveToday(obj) {
+    try { localStorage.setItem(LS_DC_TODAY_KEY, JSON.stringify(obj)); } catch(e) {}
+  }
+
+  function lsGetStreak() {
+    try {
+      const raw = localStorage.getItem(LS_DC_STREAK_KEY);
+      return raw ? JSON.parse(raw) : { streak: 0, lastDate: null };
+    } catch(e) { return { streak: 0, lastDate: null }; }
+  }
+
+  function lsSaveStreak(obj) {
+    try { localStorage.setItem(LS_DC_STREAK_KEY, JSON.stringify(obj)); } catch(e) {}
+  }
+
+  // ─── MARK AS DONE (global, synchronous, uses localStorage) ───
+  // This is the function called by the button. It NEVER uses async/await.
+  // It NEVER calls localforage. It works instantly on any device.
+
+  window._dcMarkDone = function() {
     const today = getTodayKey();
-    let idx = await getIndex();
+    let todayState = lsGetToday();
 
-    // Fallback: If state is missing due to slow load, create one on the fly
-    if (!state) {
-      console.warn('DC: State missing during completion — generating on the fly');
-      state = {
-        challenge: pickChallenge(idx),
-        status: 'new',
-        date: today
-      };
+    // If no state for today, generate one now
+    if (!todayState || todayState.date !== today) {
+      const streakData = lsGetStreak();
+      const challenge = pickChallenge({
+        easy: streakData.streak || 0,
+        medium: 0,
+        hard: 0,
+        totalDays: streakData.streak || 0,
+        streak: streakData.streak || 0,
+        lastDate: streakData.lastDate
+      });
+      todayState = { date: today, challenge: challenge, status: 'new' };
     }
 
-    state.status = 'completed';
-    await setState(state);
+    // Already completed? Don't double-complete
+    if (todayState.status === 'completed') return;
 
+    // Mark completed
+    todayState.status = 'completed';
+    lsSaveToday(todayState);
+
+    // Update streak
+    const streakData = lsGetStreak();
     const yesterday = getYesterdayKey();
-
-    // Increment streak (resume if paused)
-    if (idx.lastDate === yesterday || idx.lastDate === today) {
-      if (idx.lastDate !== today) {
-        idx.streak = (idx.streak || 0) + 1;
+    if (streakData.lastDate === yesterday || streakData.lastDate === today) {
+      if (streakData.lastDate !== today) {
+        streakData.streak = (streakData.streak || 0) + 1;
       }
     } else {
-      // Was paused — resume with +1
-      idx.streak = (idx.streak || 0) + 1;
+      streakData.streak = (streakData.streak || 0) + 1;
     }
-    idx.lastDate = today;
+    streakData.lastDate = today;
+    lsSaveStreak(streakData);
 
-    // Advance the pointer for the difficulty pool
-    const diff = getDifficulty(idx.streak > 0 ? idx.streak - 1 : 0);
-    idx[diff] = (idx[diff] || 0) + 1;
-    idx.totalDays = (idx.totalDays || 0) + 1;
+    // Set vitality flag IMMEDIATELY
+    window._dcCompletedToday = true;
 
-    await setIndex(idx);
-    
-    // Visually update the UI instantly
-    renderChallenge(state.challenge, 'completed', idx.streak, false);
+    // Update UI
+    getEls();
+    if (els.content) {
+      renderChallenge(todayState.challenge, 'completed', streakData.streak, false);
+    }
 
-    // Trigger vitality streak check
+    // Trigger vitality
+    if (typeof updateVitalityUI === 'function') updateVitalityUI();
     if (typeof tryVitalityStreak === 'function') tryVitalityStreak();
-  }
+
+    // Also save to localforage in background (non-critical)
+    if (typeof localforage !== 'undefined') {
+      try {
+        localforage.setItem(DC_STATE_KEY, todayState).catch(function(){});
+        localforage.getItem(DC_INDEX_KEY).then(function(idx) {
+          if (!idx) idx = { easy: 0, medium: 0, hard: 0, totalDays: 0, streak: 0, lastDate: null };
+          idx.streak = streakData.streak;
+          idx.lastDate = today;
+          idx.totalDays = (idx.totalDays || 0) + 1;
+          var diff = getDifficulty(idx.streak > 0 ? idx.streak - 1 : 0);
+          idx[diff] = (idx[diff] || 0) + 1;
+          localforage.setItem(DC_INDEX_KEY, idx).catch(function(){});
+        }).catch(function(){});
+      } catch(e) {}
+    }
+  };
 
   // ─── SETTINGS TOGGLE ───
 
   async function isEnabled() {
+    // Check localStorage first (instant), then localforage
     try {
-      const val = await localforage.getItem(DC_ENABLED_KEY);
-      return val !== false;
-    } catch(e) { return true; }
+      var lsVal = localStorage.getItem('dc_enabled_ls');
+      if (lsVal !== null) return lsVal !== 'false';
+    } catch(e) {}
+    try {
+      if (typeof localforage !== 'undefined') {
+        const val = await localforage.getItem(DC_ENABLED_KEY);
+        return val !== false;
+      }
+    } catch(e) {}
+    return true;
   }
 
   async function setEnabled(val) {
-    try { await localforage.setItem(DC_ENABLED_KEY, val); } catch(e) {}
+    try { localStorage.setItem('dc_enabled_ls', val ? 'true' : 'false'); } catch(e) {}
+    try { if (typeof localforage !== 'undefined') await localforage.setItem(DC_ENABLED_KEY, val); } catch(e) {}
   }
 
   function showContainer(show) {
@@ -560,54 +618,91 @@
     if (!enabled) {
       window._dcCompletedToday = false;
     }
-    // Re-render vitality config to add/remove challenge factor
     if (typeof renderVitalityConfigCards === 'function') renderVitalityConfigCards();
     if (typeof updateVitalityUI === 'function') updateVitalityUI();
   }
 
   // ─── INIT ───
 
-  async function init() {
+  function init() {
     getEls();
     if (!els.container) return;
 
-    // ── STEP 1: Immediately show SOMETHING (synchronous, no async) ──
-    // This guarantees the user NEVER sees "Loading..." stuck on screen.
-    // We render a placeholder challenge instantly, then update from storage.
+    // ── STEP 1: Show content immediately (synchronous) ──
     if (els.loading) els.loading.classList.add('hidden');
     if (els.content) {
       els.content.classList.remove('hidden');
       els.content.classList.add('dc-collapsed');
     }
 
-    // Wire the expand/collapse toggle immediately
+    // ── STEP 2: Wire expand/collapse ──
     if (els.topRow && !els.topRow._dcWired) {
       els.topRow._dcWired = true;
-      els.topRow.addEventListener('click', () => {
+      els.topRow.addEventListener('click', function() {
         if (els.content) els.content.classList.toggle('dc-collapsed');
       });
     }
 
-    // Wire complete button immediately
+    // ── STEP 3: Wire button (backup — HTML also has onclick) ──
     if (els.completeBtn && !els.completeBtn._dcWired) {
       els.completeBtn._dcWired = true;
-      els.completeBtn.addEventListener('click', handleComplete);
+      els.completeBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        window._dcMarkDone();
+      });
     }
 
-    // ── STEP 2: Handle Storage Retry ──
-    // If localforage isn't ready yet, show a default challenge and retry
-    if (typeof localforage === 'undefined') {
-      console.warn('DC: localForage not loaded yet, showing default challenge');
-      const fallback = pickChallenge({ easy: 0, medium: 0, hard: 0, totalDays: 0, streak: 0, lastDate: null });
-      renderChallenge(fallback, 'new', 0, false);
-      setTimeout(init, 800);
-      return;
+    // ── STEP 4: Render today's challenge from localStorage (instant) ──
+    var today = getTodayKey();
+    var todayState = lsGetToday();
+    var streakData = lsGetStreak();
+
+    if (todayState && todayState.date === today && todayState.challenge) {
+      // Already have today's challenge
+      window._dcCompletedToday = (todayState.status === 'completed');
+      renderChallenge(todayState.challenge, todayState.status || 'new', streakData.streak, false);
+    } else {
+      // Generate new challenge for today
+      var challenge = pickChallenge({
+        easy: streakData.streak || 0,
+        medium: 0,
+        hard: 0,
+        totalDays: streakData.streak || 0,
+        streak: streakData.streak || 0,
+        lastDate: streakData.lastDate
+      });
+      todayState = { date: today, challenge: challenge, status: 'new' };
+      lsSaveToday(todayState);
+      window._dcCompletedToday = false;
+      renderChallenge(challenge, 'new', streakData.streak, false);
     }
 
-    // ── STEP 3: Load real data from localforage (async but non-blocking) ──
+    // Update vitality display
+    if (typeof updateVitalityUI === 'function') updateVitalityUI();
+
+    // ── STEP 5: Async — sync localforage index in background (non-critical) ──
+    if (typeof localforage !== 'undefined') {
+      localforage.getItem(DC_INDEX_KEY).then(function(idx) {
+        if (idx && idx.streak > streakData.streak) {
+          // Localforage has higher streak — use it
+          streakData.streak = idx.streak;
+          streakData.lastDate = idx.lastDate;
+          lsSaveStreak(streakData);
+          renderChallenge(todayState.challenge, todayState.status, idx.streak, false);
+        }
+      }).catch(function(){});
+
+      // Also save today's state to localforage
+      localforage.setItem(DC_STATE_KEY, todayState).catch(function(){});
+    }
+
+    // ── STEP 6: Handle settings toggle (async but non-critical) ──
+    handleSettingsToggle();
+  }
+
+  async function handleSettingsToggle() {
     try {
-      // Check enabled state
-      const enabled = await isEnabled();
+      var enabled = await isEnabled();
       window._dcEnabledCache = enabled;
       showContainer(enabled);
 
@@ -615,7 +710,7 @@
         els.toggle._dcWired = true;
         els.toggle.checked = enabled;
         els.toggle.addEventListener('change', async function() {
-          const on = els.toggle.checked;
+          var on = els.toggle.checked;
           await setEnabled(on);
           showContainer(on);
           syncVitalityWithDC(on);
@@ -624,70 +719,24 @@
       if (!enabled) {
         window._dcCompletedToday = false;
         syncVitalityWithDC(false);
-        return;
       }
-
-      // Load state and index
-      const state = await getState();
-      const today = getTodayKey();
-      const idx = await getIndex();
-
-      // Check streak continuity — detect pause
-      const yesterday = getYesterdayKey();
-      let isPaused = false;
-      if (idx.lastDate && idx.lastDate !== yesterday && idx.lastDate !== today) {
-        isPaused = true;
-      }
-
-      if (state && state.date === today && state.challenge) {
-        // Already have today's challenge — render the real one
-        renderChallenge(state.challenge, state.status || 'new', idx.streak, isPaused);
-        return;
-      }
-
-      // Generate new challenge for today
-      const challenge = pickChallenge(idx);
-      const newState = { challenge, status: 'new', date: today };
-      await setState(newState);
-      renderChallenge(challenge, 'new', idx.streak, isPaused);
-
-    } catch (err) {
-      console.error('DC: init storage failed, using fallback', err);
-      // Already showing content from step 1, so just render a default challenge
-      const fallback = pickChallenge({ easy: 0, medium: 0, hard: 0, totalDays: 0, streak: 0, lastDate: null });
-      renderChallenge(fallback, 'new', 0, false);
-    }
-  }
-
-  // ─── EARLY SYNC: Set _dcCompletedToday BEFORE vitality reads it ───
-  async function earlySyncDcFlag() {
-    try {
-      if (typeof localforage === 'undefined') return;
-      const state = await localforage.getItem(DC_STATE_KEY);
-      if (!state) return;
-      const d = new Date();
-      const today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-      if (state.date === today && state.status === 'completed') {
-        window._dcCompletedToday = true;
-      } else {
-        window._dcCompletedToday = false;
-      }
-      if (typeof updateVitalityUI === 'function') updateVitalityUI();
-    } catch (e) { /* silent */ }
+    } catch(e) {}
   }
 
   // ─── BOOT ───
-  // Run early vitality sync ASAP, then init UI immediately (no 300ms delay)
-  earlySyncDcFlag();
-  // Script is at the bottom of the page, so DOM is ready — init immediately
+  // Set vitality flag from localStorage IMMEDIATELY (synchronous)
+  (function syncFlagNow() {
+    var today = getTodayKey();
+    var state = lsGetToday();
+    window._dcCompletedToday = !!(state && state.date === today && state.status === 'completed');
+  })();
+
+  // Init as soon as DOM is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => init());
+    document.addEventListener('DOMContentLoaded', init);
   } else {
-    // DOM already ready — run NOW, not after 300ms
     init();
   }
 
-  window.dailyChallenge = { init, getIndex };
+  window.dailyChallenge = { init };
 })();
-
-

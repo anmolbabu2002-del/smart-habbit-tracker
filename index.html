@@ -1027,7 +1027,7 @@
 
                 <!-- Active State: DONE button (mandatory challenge, always active) -->
                 <div id="dc-actions" class="dc-mini-actions">
-                    <button id="dc-complete-btn" class="dc-btn-done">✅ Mark as Done</button>
+                    <button id="dc-complete-btn" class="dc-btn-done" onclick="window._dcMarkDone && window._dcMarkDone()">✅ Mark as Done</button>
                 </div>
 
                 <!-- Completed state -->
@@ -5438,7 +5438,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="test-proxies.js"></script>
     <!-- Daily Challenge (loaded after core, before games) -->
-    <script src="daily-challenge.js?v=4.0"></script>
+    <script src="daily-challenge.js?v=5.0"></script>
 </body>
 
 </html>
