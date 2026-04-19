@@ -561,59 +561,84 @@
       return;
     }
 
-    // Check enabled state
-    const enabled = await isEnabled();
-    window._dcEnabledCache = enabled;
-    showContainer(enabled);
+    // Safety net: if after 3 seconds the content is still hidden, force-show it
+    // This prevents the blank box from ever appearing permanently
+    const safetyTimer = setTimeout(() => {
+      if (els.content && els.content.classList.contains('hidden')) {
+        console.warn('DC: Safety timeout — forcing content visible');
+        if (els.loading) els.loading.classList.add('hidden');
+        els.content.classList.remove('hidden');
+        els.content.classList.add('dc-collapsed');
+      }
+    }, 3000);
 
-    if (els.toggle) {
-      els.toggle.checked = enabled;
-      els.toggle.addEventListener('change', async function() {
-        const on = els.toggle.checked;
-        await setEnabled(on);
-        showContainer(on);
-        syncVitalityWithDC(on);
-      });
+    try {
+      // Check enabled state
+      const enabled = await isEnabled();
+      window._dcEnabledCache = enabled;
+      showContainer(enabled);
+
+      if (els.toggle) {
+        els.toggle.checked = enabled;
+        els.toggle.addEventListener('change', async function() {
+          const on = els.toggle.checked;
+          await setEnabled(on);
+          showContainer(on);
+          syncVitalityWithDC(on);
+        });
+      }
+      if (!enabled) {
+        clearTimeout(safetyTimer);
+        window._dcCompletedToday = false;
+        syncVitalityWithDC(false);
+        return;
+      }
+
+      // Wire buttons
+      if (els.completeBtn) els.completeBtn.addEventListener('click', handleComplete);
+      if (els.topRow) {
+        els.topRow.addEventListener('click', () => {
+          if (els.content) els.content.classList.toggle('dc-collapsed');
+        });
+      }
+
+      // Check existing state for today
+      const state = await getState();
+      const today = getTodayKey();
+      const idx = await getIndex();
+
+      // Check streak continuity — detect pause
+      const yesterday = getYesterdayKey();
+      let isPaused = false;
+      if (idx.lastDate && idx.lastDate !== yesterday && idx.lastDate !== today) {
+        // Missed day(s) — PAUSE streak (don't reset to 0)
+        isPaused = true;
+      }
+
+      if (state && state.date === today && state.challenge) {
+        clearTimeout(safetyTimer);
+        renderChallenge(state.challenge, state.status || 'new', idx.streak, isPaused);
+        return;
+      }
+
+      // Generate new challenge for today
+      const challenge = pickChallenge(idx);
+      const newState = { challenge, status: 'new', date: today };
+      await setState(newState);
+
+      clearTimeout(safetyTimer);
+      els.loading.classList.add('hidden');
+      renderChallenge(challenge, 'new', idx.streak, isPaused);
+    } catch (err) {
+      console.error('DC: init failed', err);
+      clearTimeout(safetyTimer);
+      // Force-show content even on error so it's never a blank box
+      if (els.loading) els.loading.classList.add('hidden');
+      if (els.content) {
+        els.content.classList.remove('hidden');
+        els.content.classList.add('dc-collapsed');
+      }
     }
-    if (!enabled) {
-      window._dcCompletedToday = false;
-      syncVitalityWithDC(false);
-      return;
-    }
-
-    // Wire buttons
-    if (els.completeBtn) els.completeBtn.addEventListener('click', handleComplete);
-    if (els.topRow) {
-      els.topRow.addEventListener('click', () => {
-        if (els.content) els.content.classList.toggle('dc-collapsed');
-      });
-    }
-
-    // Check existing state for today
-    const state = await getState();
-    const today = getTodayKey();
-    const idx = await getIndex();
-
-    // Check streak continuity — detect pause
-    const yesterday = getYesterdayKey();
-    let isPaused = false;
-    if (idx.lastDate && idx.lastDate !== yesterday && idx.lastDate !== today) {
-      // Missed day(s) — PAUSE streak (don't reset to 0)
-      isPaused = true;
-    }
-
-    if (state && state.date === today && state.challenge) {
-      renderChallenge(state.challenge, state.status || 'new', idx.streak, isPaused);
-      return;
-    }
-
-    // Generate new challenge for today
-    const challenge = pickChallenge(idx);
-    const newState = { challenge, status: 'new', date: today };
-    await setState(newState);
-
-    els.loading.classList.add('hidden');
-    renderChallenge(challenge, 'new', idx.streak, isPaused);
   }
 
   // ─── EARLY SYNC: Set _dcCompletedToday BEFORE vitality reads it ───
