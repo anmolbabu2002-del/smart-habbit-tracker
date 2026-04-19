@@ -489,19 +489,33 @@
 
   // ─── EVENT HANDLERS ───
 
-  async function handleComplete() {
-    const state = await getState();
-    if (!state) return;
+  async function handleComplete(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    
+    let state = await getState();
+    const today = getTodayKey();
+    let idx = await getIndex();
+
+    // Fallback: If state is missing due to slow load, create one on the fly
+    if (!state) {
+      console.warn('DC: State missing during completion — generating on the fly');
+      state = {
+        challenge: pickChallenge(idx),
+        status: 'new',
+        date: today
+      };
+    }
+
     state.status = 'completed';
     await setState(state);
 
-    const idx = await getIndex();
     const yesterday = getYesterdayKey();
-    const today = getTodayKey();
 
     // Increment streak (resume if paused)
     if (idx.lastDate === yesterday || idx.lastDate === today) {
-      if (idx.lastDate !== today) idx.streak += 1;
+      if (idx.lastDate !== today) {
+        idx.streak = (idx.streak || 0) + 1;
+      }
     } else {
       // Was paused — resume with +1
       idx.streak = (idx.streak || 0) + 1;
@@ -511,9 +525,11 @@
     // Advance the pointer for the difficulty pool
     const diff = getDifficulty(idx.streak > 0 ? idx.streak - 1 : 0);
     idx[diff] = (idx[diff] || 0) + 1;
-    idx.totalDays += 1;
+    idx.totalDays = (idx.totalDays || 0) + 1;
 
     await setIndex(idx);
+    
+    // Visually update the UI instantly
     renderChallenge(state.challenge, 'completed', idx.streak, false);
 
     // Trigger vitality streak check
