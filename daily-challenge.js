@@ -588,6 +588,13 @@
       });
     }
 
+    // Wire complete button immediately
+    if (els.completeBtn && !els.completeBtn._dcWired) {
+      els.completeBtn._dcWired = true;
+      els.completeBtn.addEventListener('click', handleComplete);
+    }
+
+    // ── STEP 2: Handle Storage Retry ──
     // If localforage isn't ready yet, show a default challenge and retry
     if (typeof localforage === 'undefined') {
       console.warn('DC: localForage not loaded yet, showing default challenge');
@@ -595,12 +602,6 @@
       renderChallenge(fallback, 'new', 0, false);
       setTimeout(init, 800);
       return;
-    }
-
-    // ── STEP 2: Wire complete button ──
-    if (els.completeBtn && !els.completeBtn._dcWired) {
-      els.completeBtn._dcWired = true;
-      els.completeBtn.addEventListener('click', handleComplete);
     }
 
     // ── STEP 3: Load real data from localforage (async but non-blocking) ──

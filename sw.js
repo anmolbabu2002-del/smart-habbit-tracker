@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ultradian-v32';
+const CACHE_NAME = 'ultradian-v33';
 
 // ═══ CORE APP SHELL (HTML, CSS, JS) ═══
 const CORE_ASSETS = [
@@ -11,7 +11,7 @@ const CORE_ASSETS = [
   '/tips.js',
   '/tts.js?v=1.0',
   '/advanced_dashboard.js',
-  '/daily-challenge.js?v=3.0',
+  '/daily-challenge.js?v=4.0',
   '/manifest.json'
 ];
 
