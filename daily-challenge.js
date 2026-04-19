@@ -555,30 +555,47 @@
     getEls();
     if (!els.container) return;
 
+    // ── STEP 1: Immediately show SOMETHING (synchronous, no async) ──
+    // This guarantees the user NEVER sees "Loading..." stuck on screen.
+    // We render a placeholder challenge instantly, then update from storage.
+    if (els.loading) els.loading.classList.add('hidden');
+    if (els.content) {
+      els.content.classList.remove('hidden');
+      els.content.classList.add('dc-collapsed');
+    }
+
+    // Wire the expand/collapse toggle immediately
+    if (els.topRow && !els.topRow._dcWired) {
+      els.topRow._dcWired = true;
+      els.topRow.addEventListener('click', () => {
+        if (els.content) els.content.classList.toggle('dc-collapsed');
+      });
+    }
+
+    // If localforage isn't ready yet, show a default challenge and retry
     if (typeof localforage === 'undefined') {
-      console.warn('DC: localForage not loaded yet, retrying in 500ms');
-      setTimeout(init, 500);
+      console.warn('DC: localForage not loaded yet, showing default challenge');
+      const fallback = pickChallenge({ easy: 0, medium: 0, hard: 0, totalDays: 0, streak: 0, lastDate: null });
+      renderChallenge(fallback, 'new', 0, false);
+      setTimeout(init, 800);
       return;
     }
 
-    // Safety net: if after 3 seconds the content is still hidden, force-show it
-    // This prevents the blank box from ever appearing permanently
-    const safetyTimer = setTimeout(() => {
-      if (els.content && els.content.classList.contains('hidden')) {
-        console.warn('DC: Safety timeout — forcing content visible');
-        if (els.loading) els.loading.classList.add('hidden');
-        els.content.classList.remove('hidden');
-        els.content.classList.add('dc-collapsed');
-      }
-    }, 3000);
+    // ── STEP 2: Wire complete button ──
+    if (els.completeBtn && !els.completeBtn._dcWired) {
+      els.completeBtn._dcWired = true;
+      els.completeBtn.addEventListener('click', handleComplete);
+    }
 
+    // ── STEP 3: Load real data from localforage (async but non-blocking) ──
     try {
       // Check enabled state
       const enabled = await isEnabled();
       window._dcEnabledCache = enabled;
       showContainer(enabled);
 
-      if (els.toggle) {
+      if (els.toggle && !els.toggle._dcWired) {
+        els.toggle._dcWired = true;
         els.toggle.checked = enabled;
         els.toggle.addEventListener('change', async function() {
           const on = els.toggle.checked;
@@ -588,21 +605,12 @@
         });
       }
       if (!enabled) {
-        clearTimeout(safetyTimer);
         window._dcCompletedToday = false;
         syncVitalityWithDC(false);
         return;
       }
 
-      // Wire buttons
-      if (els.completeBtn) els.completeBtn.addEventListener('click', handleComplete);
-      if (els.topRow) {
-        els.topRow.addEventListener('click', () => {
-          if (els.content) els.content.classList.toggle('dc-collapsed');
-        });
-      }
-
-      // Check existing state for today
+      // Load state and index
       const state = await getState();
       const today = getTodayKey();
       const idx = await getIndex();
@@ -611,12 +619,11 @@
       const yesterday = getYesterdayKey();
       let isPaused = false;
       if (idx.lastDate && idx.lastDate !== yesterday && idx.lastDate !== today) {
-        // Missed day(s) — PAUSE streak (don't reset to 0)
         isPaused = true;
       }
 
       if (state && state.date === today && state.challenge) {
-        clearTimeout(safetyTimer);
+        // Already have today's challenge — render the real one
         renderChallenge(state.challenge, state.status || 'new', idx.streak, isPaused);
         return;
       }
@@ -625,31 +632,22 @@
       const challenge = pickChallenge(idx);
       const newState = { challenge, status: 'new', date: today };
       await setState(newState);
-
-      clearTimeout(safetyTimer);
-      els.loading.classList.add('hidden');
       renderChallenge(challenge, 'new', idx.streak, isPaused);
+
     } catch (err) {
-      console.error('DC: init failed', err);
-      clearTimeout(safetyTimer);
-      // Force-show content even on error so it's never a blank box
-      if (els.loading) els.loading.classList.add('hidden');
-      if (els.content) {
-        els.content.classList.remove('hidden');
-        els.content.classList.add('dc-collapsed');
-      }
+      console.error('DC: init storage failed, using fallback', err);
+      // Already showing content from step 1, so just render a default challenge
+      const fallback = pickChallenge({ easy: 0, medium: 0, hard: 0, totalDays: 0, streak: 0, lastDate: null });
+      renderChallenge(fallback, 'new', 0, false);
     }
   }
 
   // ─── EARLY SYNC: Set _dcCompletedToday BEFORE vitality reads it ───
-  // The UI init has a 300ms delay, but vitality may check the flag sooner.
-  // This reads localforage immediately and sets the flag.
   async function earlySyncDcFlag() {
     try {
       if (typeof localforage === 'undefined') return;
       const state = await localforage.getItem(DC_STATE_KEY);
       if (!state) return;
-      // Must use LOCAL time — same format as getTodayKey()
       const d = new Date();
       const today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       if (state.date === today && state.status === 'completed') {
@@ -657,18 +655,19 @@
       } else {
         window._dcCompletedToday = false;
       }
-      // Re-render vitality if it loaded before us
       if (typeof updateVitalityUI === 'function') updateVitalityUI();
     } catch (e) { /* silent */ }
   }
 
   // ─── BOOT ───
-  // Run early sync ASAP, then init UI with a small delay
+  // Run early vitality sync ASAP, then init UI immediately (no 300ms delay)
   earlySyncDcFlag();
+  // Script is at the bottom of the page, so DOM is ready — init immediately
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setTimeout(init, 300));
+    document.addEventListener('DOMContentLoaded', () => init());
   } else {
-    setTimeout(init, 300);
+    // DOM already ready — run NOW, not after 300ms
+    init();
   }
 
   window.dailyChallenge = { init, getIndex };

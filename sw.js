@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ultradian-v30';
+const CACHE_NAME = 'ultradian-v31';
 
 // ═══ CORE APP SHELL (HTML, CSS, JS) ═══
 const CORE_ASSETS = [
