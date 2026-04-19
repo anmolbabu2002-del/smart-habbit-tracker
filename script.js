@@ -136,48 +136,70 @@ function getVitalityScore() {
 }
 
 function tryVitalityStreak() {
-  const todayStr = new Date().toDateString();
-  // Already incremented today?
-  const lastComp = appStorage.getItem("lastCompletionTime");
-  if (lastComp) {
-    const lastDate = new Date(parseInt(lastComp, 10)).toDateString();
-    if (lastDate === todayStr) return;
-  }
-
-  const score = getVitalityScore();
-  if (score >= 80) {
-    // If streak was paused, resume it
-    if (streakPaused) {
-      streakPaused = false;
-      showNotification(`⚡ Streak RESUMED! Welcome back!`);
+  try {
+    const todayStr = new Date().toDateString();
+    
+    // Already incremented today? Check guard flag
+    const lastComp = appStorage.getItem("lastCompletionTime");
+    if (lastComp) {
+      try {
+        const lastDate = new Date(parseInt(lastComp, 10)).toDateString();
+        if (lastDate === todayStr) {
+          console.log('[Vitality] Already completed today, skipping. count=' + count);
+          // Still refresh UI
+          updateVitalityUI();
+          if (typeof updatePauseOverlay === 'function') updatePauseOverlay();
+          return;
+        }
+      } catch(e) {
+        // If parsing fails, don't block — clear the stale value and continue
+        console.warn('[Vitality] Clearing corrupt lastCompletionTime');
+        appStorage.removeItem("lastCompletionTime");
+      }
     }
 
-    // ✅ INCREMENT STREAK
-    appStorage.setItem("lastCompletionTime", Date.now().toString());
-    appStorage.removeItem("lastStreakPenaltyTime");
-    addCompletionDate();
+    const score = getVitalityScore();
+    console.log('[Vitality] Score=' + score + ', count=' + count + ', threshold=80');
+    
+    if (score >= 80) {
+      // If streak was paused, resume it
+      if (streakPaused) {
+        streakPaused = false;
+        showNotification('⚡ Streak RESUMED! Welcome back!');
+      }
 
-    count += 1;
-    updateStreakDisplay();
-    saveState();
-    renderDashboard();
+      // ✅ INCREMENT STREAK — do count FIRST so it's guaranteed
+      count += 1;
+      console.log('[Vitality] ✅ Streak incremented to ' + count);
+      
+      // Now set the guard flag so we don't double-increment today
+      appStorage.setItem("lastCompletionTime", Date.now().toString());
+      appStorage.removeItem("lastStreakPenaltyTime");
+      addCompletionDate();
 
-    showNotification(`🔥 Vitality ${score}%! Streak extended to ${count} days!`);
+      updateStreakDisplay();
+      saveState();
+      renderDashboard();
 
-    // Check if user earned a shield
-    earnShield();
+      showNotification('🔥 Vitality ' + score + '%! Streak extended to ' + count + ' days!');
 
-    // Update vitality UI
+      // Check if user earned a shield
+      if (typeof earnShield === 'function') earnShield();
+
+      // Update vitality UI
+      updateVitalityUI();
+
+      setTimeout(function() {
+        if (typeof showStreakPage === 'function') showStreakPage();
+      }, 1500);
+    }
+
+    // Always refresh the vitality display and pause overlay
     updateVitalityUI();
-
-    setTimeout(() => {
-      showStreakPage();
-    }, 1500);
+    if (typeof updatePauseOverlay === 'function') updatePauseOverlay();
+  } catch(e) {
+    console.error('[Vitality] tryVitalityStreak error:', e);
   }
-
-  // Always refresh the vitality display and pause overlay
-  updateVitalityUI();
-  if (typeof updatePauseOverlay === 'function') updatePauseOverlay();
 }
 
 function updateVitalityUI() {
