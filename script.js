@@ -101,12 +101,18 @@ function getVitalityFactorScore(factorId) {
       return 0;
     }
     case "mood": {
-      if (typeof moodHistory !== "undefined" && moodHistory.length > 0) {
-        const latest = moodHistory[0];
-        const safeDateVal = latest.timestamp || latest.dateISO || latest.date;
-        const latestDate = new Date(safeDateVal).toDateString();
-        return (latestDate === todayStr) ? 1 : 0;
-      }
+      // Always read from appStorage directly — not the in-memory variable
+      // which may be stale after loadState() restores an older snapshot
+      try {
+        const raw = appStorage.getItem("moodHistory");
+        const history = raw ? JSON.parse(raw) : [];
+        if (history.length > 0) {
+          const latest = history[0];
+          const safeDateVal = latest.timestamp || latest.dateISO || latest.date;
+          const latestDate = new Date(safeDateVal).toDateString();
+          if (latestDate === todayStr) return 1;
+        }
+      } catch(e) {}
       return 0;
     }
     case "challenge": {
@@ -2585,7 +2591,6 @@ function saveState() {
     count: count,
     waterConsumed: waterConsumed,
     waterGoal: waterGoal,
-    moodHistory: moodHistory,
     sleepLogs: sleepLogs,
     completionDates: getCompletionDates(),
     unlockedMilestones: unlockedMilestones,
@@ -2684,7 +2689,6 @@ function loadState() {
     }
 
     if (typeof state.waterGoal === "number") waterGoal = state.waterGoal;
-    if (Array.isArray(state.moodHistory)) moodHistory = state.moodHistory;
     if (Array.isArray(state.sleepLogs)) sleepLogs = state.sleepLogs;
     if (Array.isArray(state.unlockedMilestones)) unlockedMilestones = state.unlockedMilestones;
     if (Array.isArray(state.completionDates)) {
@@ -6625,6 +6629,8 @@ function saveMood(moodStr) {
   moodHistory.unshift(entry);
   if (moodHistory.length > 100) moodHistory.pop();
   appStorage.setItem("moodHistory", JSON.stringify(moodHistory));
+  // Keep window.moodHistory in sync so other parts of the app see the latest entry
+  window.moodHistory = [...moodHistory];
 
   if (noteInput) noteInput.value = "";
   document.querySelectorAll(".mood-btn").forEach(b => b.classList.remove("active"));
@@ -6637,7 +6643,6 @@ function saveMood(moodStr) {
   if (typeof updateVitalityUI === 'function') updateVitalityUI();
   if (typeof tryVitalityStreak === 'function') tryVitalityStreak();
   saveState();
-  if (typeof tryVitalityStreak === "function") tryVitalityStreak();
 
   const heading = document.getElementById("mood-heading");
   if (heading) {
