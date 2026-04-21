@@ -545,12 +545,17 @@
     // Update streak
     const streakData = lsGetStreak();
     const yesterday = getYesterdayKey();
-    if (streakData.lastDate === yesterday || streakData.lastDate === today) {
-      if (streakData.lastDate !== today) {
-        streakData.streak = (streakData.streak || 0) + 1;
-      }
-    } else {
+    if (streakData.lastDate === today) {
+      // Already counted today — do nothing
+    } else if (streakData.lastDate === yesterday || !streakData.lastDate) {
+      // Consecutive day OR first ever — increment streak
       streakData.streak = (streakData.streak || 0) + 1;
+    } else {
+      // Missed one or more days — PAUSE (freeze the streak count, don't add)
+      // The streak number stays frozen at its current value
+      // User must complete today to "unpause" — but no increment for the gap
+      streakData.streak = streakData.streak || 0;
+      // We still record today's date so the pause ends
     }
     streakData.lastDate = today;
     lsSaveStreak(streakData);
@@ -657,10 +662,14 @@
     var todayState = lsGetToday();
     var streakData = lsGetStreak();
 
+    // Detect if DC streak is paused (missed a day)
+    var yesterday = getYesterdayKey();
+    var dcIsPaused = !!(streakData.lastDate && streakData.lastDate !== today && streakData.lastDate !== yesterday);
+
     if (todayState && todayState.date === today && todayState.challenge) {
       // Already have today's challenge
       window._dcCompletedToday = (todayState.status === 'completed');
-      renderChallenge(todayState.challenge, todayState.status || 'new', streakData.streak, false);
+      renderChallenge(todayState.challenge, todayState.status || 'new', streakData.streak, dcIsPaused);
     } else {
       // Generate new challenge for today
       var challenge = pickChallenge({
@@ -674,7 +683,7 @@
       todayState = { date: today, challenge: challenge, status: 'new' };
       lsSaveToday(todayState);
       window._dcCompletedToday = false;
-      renderChallenge(challenge, 'new', streakData.streak, false);
+      renderChallenge(challenge, 'new', streakData.streak, dcIsPaused);
     }
 
     // Update vitality display

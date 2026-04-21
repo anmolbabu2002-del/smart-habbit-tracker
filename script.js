@@ -1314,16 +1314,31 @@ function checkDailyStreak() {
     }
   }
 
-  // Missed a day — Try Shield first!
-  if (streakShields > 0) {
-    useShield();
-    appStorage.setItem("lastStreakPenaltyTime", Date.now().toString());
-    // Shield protects streak — pretend yesterday was completed
-    appStorage.setItem("lastCompletionTime", (Date.now() - 86400000).toString());
-    return;
+  // Calculate how many days were missed
+  const msPerDay = 86400000;
+  const lastMidnight = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate()).getTime();
+  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const missedDays = Math.max(0, Math.floor((todayMidnight - lastMidnight) / msPerDay) - 1);
+
+  // Try to cover missed days with shields (1 shield per missed day)
+  if (streakShields > 0 && missedDays > 0) {
+    const shieldsToUse = Math.min(streakShields, missedDays);
+    for (let i = 0; i < shieldsToUse; i++) {
+      useShield();
+    }
+
+    if (shieldsToUse >= missedDays) {
+      // All missed days covered — streak survives
+      appStorage.setItem("lastStreakPenaltyTime", Date.now().toString());
+      appStorage.setItem("lastCompletionTime", (Date.now() - msPerDay).toString());
+      showNotification(`🛡️ ${shieldsToUse} Shield${shieldsToUse > 1 ? 's' : ''} used to cover ${missedDays} missed day${missedDays > 1 ? 's' : ''}!`);
+      return;
+    }
+    // Some shields used but not enough — fall through to pause
+    showNotification(`🛡️ ${shieldsToUse} Shield${shieldsToUse > 1 ? 's' : ''} used, but ${missedDays - shieldsToUse} day${missedDays - shieldsToUse > 1 ? 's' : ''} uncovered!`);
   }
 
-  // No shield — PAUSE the streak (NOT reset!)
+  // No shields or not enough — PAUSE the streak (NOT reset!)
   streakPaused = true;
 
   saveState();
@@ -1596,7 +1611,7 @@ function createTaskItem(textValue, completed, taskColor, taskEmoji, taskPriority
   emojiBadge.textContent = emoji;
 
   text.textContent = textValue;
-  text.style.cssText = "flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;";
+  text.style.cssText = "flex: 1 1 0; min-width: 0; overflow-wrap: break-word; word-break: normal; display: block; font-weight: 600; font-size: 0.9rem; line-height: 1.4;";
 
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";
@@ -2223,6 +2238,21 @@ function updateStreakDisplay() {
   const bloomStreak = document.getElementById("bloom-streak-count");
   if (bloomStreak) {
     bloomStreak.textContent = count;
+  }
+
+  // Update home card mini-indicators (rank, shield, personal best)
+  const bloomRankMini = document.getElementById("bloom-rank-mini");
+  if (bloomRankMini) {
+    const rank = getRankForStreak(count);
+    bloomRankMini.textContent = `${rank.icon} ${rank.title}`;
+  }
+  const bloomShieldMini = document.getElementById("bloom-shield-count-mini");
+  if (bloomShieldMini) {
+    bloomShieldMini.textContent = streakShields;
+  }
+  const bloomPbMini = document.getElementById("bloom-pb-value-mini");
+  if (bloomPbMini) {
+    bloomPbMini.textContent = personalBest;
   }
 
   // Update castle builder
@@ -6771,50 +6801,85 @@ function renderMoodHeatmap() {
   }
 }
 
-// --- Mood Insights ---
+// --- Mood Insights (Advanced) ---
 function generateMoodInsights() {
   const textEl = document.getElementById("mood-insight-text");
   if (!textEl) return;
 
-  if (moodHistory.length < 5) {
-    textEl.textContent = "Log more moods across different days to generate insights about what makes you happiest!";
+  if (moodHistory.length < 3) {
+    textEl.innerHTML = "Log at least 3 moods across different days to unlock personalized insights about your emotional patterns.";
     return;
   }
 
   const moodScores = { "great": 5, "good": 4, "okay": 3, "bad": 2, "terrible": 1 };
   const insights = [];
 
-  // 1. Best time of day
+  // ── 1. Weekly trend (rising, falling, stable) ──
+  const last7 = moodHistory.filter(m => {
+    const ts = m.timestamp || new Date(m.dateISO || m.date).getTime();
+    return Date.now() - ts < 7 * 86400000;
+  });
+  const prev7 = moodHistory.filter(m => {
+    const ts = m.timestamp || new Date(m.dateISO || m.date).getTime();
+    return Date.now() - ts >= 7 * 86400000 && Date.now() - ts < 14 * 86400000;
+  });
+  if (last7.length >= 2 && prev7.length >= 2) {
+    const avgRecent = last7.reduce((s, m) => s + (moodScores[m.mood] || 3), 0) / last7.length;
+    const avgPrev = prev7.reduce((s, m) => s + (moodScores[m.mood] || 3), 0) / prev7.length;
+    const diff = avgRecent - avgPrev;
+    if (diff > 0.5) insights.push("📈 Your mood is <strong>trending upward</strong> compared to last week — great momentum!");
+    else if (diff < -0.5) insights.push("📉 Your mood has <strong>dipped</strong> this week compared to last. Check what changed.");
+    else insights.push("📊 Your mood has been <strong>stable</strong> over the past two weeks.");
+  }
+
+  // ── 2. Best and worst time of day ──
   const timeGroups = {};
   moodHistory.forEach(m => {
     const tod = m.timeOfDay || "unknown";
+    if (tod === "unknown") return;
     if (!timeGroups[tod]) timeGroups[tod] = [];
     timeGroups[tod].push(moodScores[m.mood] || 3);
   });
-  let bestTime = null, bestAvg = 0;
+  let bestTime = null, bestAvg = 0, worstTime = null, worstAvg = 6;
   for (const [time, scores] of Object.entries(timeGroups)) {
+    if (scores.length < 2) continue;
     const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
     if (avg > bestAvg) { bestAvg = avg; bestTime = time; }
+    if (avg < worstAvg) { worstAvg = avg; worstTime = time; }
   }
-  if (bestTime) insights.push(`☀️ You tend to feel best in the <strong>${bestTime}</strong>.`);
+  if (bestTime) insights.push(`☀️ You feel <strong>best</strong> in the <strong>${bestTime}</strong> (avg ${bestAvg.toFixed(1)}/5).`);
+  if (worstTime && worstTime !== bestTime) insights.push(`🌙 The <strong>${worstTime}</strong> tends to be your <strong>lowest</strong> mood window.`);
 
-  // 2. Tag correlation
+  // ── 3. Mood volatility (emotional stability) ──
+  if (moodHistory.length >= 5) {
+    const recent10 = moodHistory.slice(0, 10).map(m => moodScores[m.mood] || 3);
+    const mean = recent10.reduce((a, b) => a + b, 0) / recent10.length;
+    const variance = recent10.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / recent10.length;
+    const stdDev = Math.sqrt(variance);
+    if (stdDev < 0.5) insights.push("🧘 Your emotional state has been <strong>very stable</strong> — great self-regulation!");
+    else if (stdDev > 1.2) insights.push("🎢 Your mood has been quite <strong>volatile</strong> recently — consider what's driving the swings.");
+  }
+
+  // ── 4. Tag/influence correlation ──
   const tagScores = {};
   moodHistory.forEach(m => {
-    (m.tags || []).forEach(tag => {
+    const tags = m.tags || m.symptoms || [];
+    tags.forEach(tag => {
       if (!tagScores[tag]) tagScores[tag] = [];
       tagScores[tag].push(moodScores[m.mood] || 3);
     });
   });
-  let bestTag = null, bestTagAvg = 0;
+  let bestTag = null, bestTagAvg = 0, worstTag = null, worstTagAvg = 6;
   for (const [tag, scores] of Object.entries(tagScores)) {
     if (scores.length < 2) continue;
     const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
     if (avg > bestTagAvg) { bestTagAvg = avg; bestTag = tag; }
+    if (avg < worstTagAvg) { worstTagAvg = avg; worstTag = tag; }
   }
-  if (bestTag) insights.push(`🏷️ Your mood is highest when you do <strong>${bestTag}</strong>.`);
+  if (bestTag) insights.push(`🏷️ <strong>${bestTag.charAt(0).toUpperCase() + bestTag.slice(1)}</strong> is your top mood booster (avg ${bestTagAvg.toFixed(1)}/5).`);
+  if (worstTag && worstTag !== bestTag) insights.push(`⚠️ Mood tends to be lowest around <strong>${worstTag}</strong> (avg ${worstTagAvg.toFixed(1)}/5).`);
 
-  // 3. Water correlation
+  // ── 5. Water-mood correlation ──
   const withWater = moodHistory.filter(m => m.context && m.context.waterConsumed > 500);
   const withoutWater = moodHistory.filter(m => m.context && m.context.waterConsumed <= 500);
   if (withWater.length >= 3 && withoutWater.length >= 3) {
@@ -6822,16 +6887,51 @@ function generateMoodInsights() {
     const avgWithout = withoutWater.reduce((s, m) => s + (moodScores[m.mood] || 3), 0) / withoutWater.length;
     if (avgWith > avgWithout + 0.3) {
       const pct = Math.round(((avgWith - avgWithout) / avgWithout) * 100);
-      insights.push(`💧 You feel <strong>${pct}% happier</strong> on days you drink more water.`);
+      insights.push(`💧 You're <strong>${pct}% happier</strong> on days with higher water intake.`);
     }
   }
 
-  // 4. Overall assessment
-  const overallAvg = moodHistory.slice(0, 14).reduce((s, m) => s + (moodScores[m.mood] || 3), 0) / Math.min(moodHistory.length, 14);
-  if (overallAvg >= 4) insights.push("🌟 Your overall mood has been <strong>excellent</strong> recently!");
-  else if (overallAvg <= 2.5) insights.push("💛 Your mood has been low lately. Take care of yourself and try some self-care activities.");
+  // ── 6. Day-of-week pattern ──
+  if (moodHistory.length >= 7) {
+    const dayGroups = {};
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    moodHistory.forEach(m => {
+      const ts = m.timestamp || new Date(m.dateISO || m.date).getTime();
+      const day = new Date(ts).getDay();
+      if (!dayGroups[day]) dayGroups[day] = [];
+      dayGroups[day].push(moodScores[m.mood] || 3);
+    });
+    let bestDay = null, bestDayAvg = 0;
+    for (const [day, scores] of Object.entries(dayGroups)) {
+      if (scores.length < 2) continue;
+      const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+      if (avg > bestDayAvg) { bestDayAvg = avg; bestDay = parseInt(day); }
+    }
+    if (bestDay !== null) insights.push(`📅 <strong>${dayNames[bestDay]}s</strong> are consistently your happiest day of the week.`);
+  }
 
-  textEl.innerHTML = insights.length > 0 ? insights.join("<br>") : "Keep logging to discover patterns! We need at least 5 entries to generate insights.";
+  // ── 7. Current mood streak ──
+  if (moodHistory.length >= 2) {
+    const latestMood = moodHistory[0].mood;
+    let moodStreak = 1;
+    for (let i = 1; i < moodHistory.length; i++) {
+      if (moodHistory[i].mood === latestMood) moodStreak++;
+      else break;
+    }
+    if (moodStreak >= 3) {
+      const emoji = { great: "🌟", good: "😊", okay: "😐", bad: "😔", terrible: "😢" }[latestMood] || "🎭";
+      insights.push(`${emoji} You've logged <strong>"${latestMood}"</strong> ${moodStreak} times in a row.`);
+    }
+  }
+
+  // ── 8. Overall assessment + recommendation ──
+  const overallAvg = moodHistory.slice(0, 14).reduce((s, m) => s + (moodScores[m.mood] || 3), 0) / Math.min(moodHistory.length, 14);
+  if (overallAvg >= 4.2) insights.push("🌟 Overall mood: <strong>Excellent</strong>. Whatever you're doing, keep it up!");
+  else if (overallAvg >= 3.5) insights.push("✅ Overall mood: <strong>Good</strong>. Room for improvement — try more of your top boosters.");
+  else if (overallAvg >= 2.5) insights.push("💛 Overall mood: <strong>Moderate</strong>. Small changes in routine could make a big difference.");
+  else insights.push("🫂 Overall mood: <strong>Low</strong>. Prioritize self-care — hydration, sleep, and activities that boost you.");
+
+  textEl.innerHTML = insights.join("<br><br>");
 }
 
 // --- 2. SLEEP TRACKER ---
@@ -10218,7 +10318,7 @@ function renderHabits() {
         span.textContent = h.text;
         span.style.backgroundColor = h.color;
         span.style.color = "white"; 
-        span.style.cssText += " flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; padding: 6px 12px; border-radius: 8px;";
+        span.style.cssText += " flex: 1 1 0; min-width: 0; overflow-wrap: break-word; word-break: normal; display: block; padding: 6px 12px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; line-height: 1.4;";
 
         // Double-click to edit if not completed
         if (!h.completedToday) {

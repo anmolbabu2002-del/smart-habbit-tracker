@@ -1348,103 +1348,216 @@
     <!-- Advanced Mood Tracker Page -->
     <div id="mood-page" class="page">
         <button id="closeMood" class="close-btn">✕</button>
-        <h1 class="page-title" style="text-align: center; margin-top: 30px;">How are you feeling?</h1>
+        <h1 id="mood-heading" class="page-title" style="text-align: center; margin-top: 30px;">How are you feeling?</h1>
 
         <div class="mood-tracker-container"
             style="max-width: 600px; margin: 0 auto; padding: 20px; text-align: center; overflow-y: auto; padding-bottom: 100px;">
 
-            <!-- Emotion -->
-            <div
-                style="background: var(--card-bg); padding: 20px; border-radius: 16px; margin-bottom: 20px; border: 1px solid var(--border); box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-                <h3 style="margin-top: 0; color: var(--text-main);">Emotional State</h3>
+            <!-- ══════════════════════════════════════════════ -->
+            <!-- SECTION 1: PRIMARY EMOTIONAL STATE            -->
+            <!-- ══════════════════════════════════════════════ -->
+            <div id="mood-primary-card"
+                style="background: var(--card-bg); padding: 24px; border-radius: 20px; margin-bottom: 20px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.06); transition: all 0.3s ease;">
+                <h3 style="margin-top: 0; color: var(--text-main); font-size: 1.1rem; font-weight: 700;">Core Emotional State</h3>
+                <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 15px;">Tap the emotion closest to how you feel right now</p>
                 <div class="mood-emojis-selector" id="mood-emojis-selector"
                     style="display: flex; justify-content: space-around; font-size: 2.5rem; margin-top: 15px;">
-                    <span class="mood-pick-emoji" data-mood="amazing"
-                        style="cursor: pointer; transition: transform 0.2s;">🤩</span>
-                    <span class="mood-pick-emoji" data-mood="good"
-                        style="cursor: pointer; transition: transform 0.2s;">😊</span>
-                    <span class="mood-pick-emoji" data-mood="okay"
-                        style="cursor: pointer; transition: transform 0.2s;">😐</span>
-                    <span class="mood-pick-emoji" data-mood="bad"
-                        style="cursor: pointer; transition: transform 0.2s; filter: grayscale(50%);">😔</span>
-                    <span class="mood-pick-emoji" data-mood="awful"
-                        style="cursor: pointer; transition: transform 0.2s; filter: grayscale(100%);">😫</span>
+                    <div class="mood-pick-primary" data-mood="amazing" style="cursor:pointer; transition: all 0.3s ease; display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px; border-radius:16px;">
+                        <span style="font-size:2.5rem;">🤩</span>
+                        <span style="font-size:0.6rem; color:var(--text-muted); font-weight:600;">Amazing</span>
+                    </div>
+                    <div class="mood-pick-primary" data-mood="good" style="cursor:pointer; transition: all 0.3s ease; display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px; border-radius:16px;">
+                        <span style="font-size:2.5rem;">😊</span>
+                        <span style="font-size:0.6rem; color:var(--text-muted); font-weight:600;">Good</span>
+                    </div>
+                    <div class="mood-pick-primary" data-mood="okay" style="cursor:pointer; transition: all 0.3s ease; display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px; border-radius:16px;">
+                        <span style="font-size:2.5rem;">😐</span>
+                        <span style="font-size:0.6rem; color:var(--text-muted); font-weight:600;">Neutral</span>
+                    </div>
+                    <div class="mood-pick-primary" data-mood="bad" style="cursor:pointer; transition: all 0.3s ease; display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px; border-radius:16px; filter: grayscale(30%);">
+                        <span style="font-size:2.5rem;">😔</span>
+                        <span style="font-size:0.6rem; color:var(--text-muted); font-weight:600;">Low</span>
+                    </div>
+                    <div class="mood-pick-primary" data-mood="awful" style="cursor:pointer; transition: all 0.3s ease; display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px; border-radius:16px; filter: grayscale(60%);">
+                        <span style="font-size:2.5rem;">😫</span>
+                        <span style="font-size:0.6rem; color:var(--text-muted); font-weight:600;">Awful</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Influences -->
-            <div
-                style="background: var(--card-bg); padding: 20px; border-radius: 16px; margin-bottom: 20px; border: 1px solid var(--border); box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-                <h3 style="margin-top: 0; color: var(--text-main);">Influences & Symptoms</h3>
-                <div id="mood-symptoms-grid"
-                    style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 15px;">
-                    <!-- Merged symptoms and old tags as symptom-btn -->
-                    <button class="symptom-btn" data-symptom="headache"
-                        style="padding: 10px 15px; border-radius: 20px; border: 1px solid var(--border); background: transparent; cursor: pointer; color: var(--text-main); transition: all 0.2s;">🤕
-                        Headache</button>
-                    <button class="symptom-btn" data-symptom="tension"
-                        style="padding: 10px 15px; border-radius: 20px; border: 1px solid var(--border); background: transparent; cursor: pointer; color: var(--text-main); transition: all 0.2s;">😖
-                        Tension</button>
-                    <button class="symptom-btn" data-symptom="brainfog"
-                        style="padding: 10px 15px; border-radius: 20px; border: 1px solid var(--border); background: transparent; cursor: pointer; color: var(--text-main); transition: all 0.2s;">🌫️
-                        Brain Fog</button>
-                    <button class="symptom-btn" data-symptom="cramps"
-                        style="padding: 10px 15px; border-radius: 20px; border: 1px solid var(--border); background: transparent; cursor: pointer; color: var(--text-main); transition: all 0.2s;">⚡
-                        Cramps</button>
-                    <button class="symptom-btn" data-symptom="exercise"
-                        style="padding: 10px 15px; border-radius: 20px; border: 1px solid var(--border); background: transparent; cursor: pointer; color: var(--text-main); transition: all 0.2s;">🏃
-                        Exercise</button>
-                    <button class="symptom-btn" data-symptom="work"
-                        style="padding: 10px 15px; border-radius: 20px; border: 1px solid var(--border); background: transparent; cursor: pointer; color: var(--text-main); transition: all 0.2s;">💻
-                        Work</button>
-                    <button class="symptom-btn" data-symptom="social"
-                        style="padding: 10px 15px; border-radius: 20px; border: 1px solid var(--border); background: transparent; cursor: pointer; color: var(--text-main); transition: all 0.2s;">👥
-                        Social</button>
-                    <button class="symptom-btn" data-symptom="relax"
-                        style="padding: 10px 15px; border-radius: 20px; border: 1px solid var(--border); background: transparent; cursor: pointer; color: var(--text-main); transition: all 0.2s;">🧘
-                        Relax</button>
-                    <button class="symptom-btn" data-symptom="sleep"
-                        style="padding: 10px 15px; border-radius: 20px; border: 1px solid var(--border); background: transparent; cursor: pointer; color: var(--text-main); transition: all 0.2s;">😴
-                        Sleep</button>
-                </div>
-                <!-- Custom Influence Input -->
-                <div style="margin-top: 15px;">
-                    <input type="text" id="custom-influence-input" placeholder="Type a custom influence..."
-                        style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-main); font-family: inherit; outline: none; box-sizing: border-box;">
+            <!-- ══════════════════════════════════════════════ -->
+            <!-- SECTION 2: SUB-EMOTION (reveals after pick)   -->
+            <!-- ══════════════════════════════════════════════ -->
+            <div id="mood-sub-emotion-card" class="hidden"
+                style="background: var(--card-bg); padding: 20px; border-radius: 20px; margin-bottom: 20px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.06); animation: fadeSlideUp 0.4s ease;">
+                <h3 style="margin-top: 0; color: var(--text-main); font-size: 1rem; font-weight: 700;">Can you be more specific?</h3>
+                <p style="color: var(--text-muted); font-size: 0.75rem; margin-bottom: 12px;">Naming your exact emotion builds emotional intelligence</p>
+                <div id="mood-sub-emotions-grid"
+                    style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;">
+                    <!-- Populated dynamically by JS -->
                 </div>
             </div>
 
-            <!-- CBT Journal Prompt -->
+            <!-- ══════════════════════════════════════════════ -->
+            <!-- SECTION 3: EMPATHETIC RESPONSE BANNER         -->
+            <!-- ══════════════════════════════════════════════ -->
+            <div id="mood-empathy-banner" class="hidden"
+                style="background: linear-gradient(135deg, rgba(255,140,66,0.08), rgba(236,72,153,0.08)); padding: 16px 20px; border-radius: 16px; margin-bottom: 20px; border-left: 4px solid var(--primary); text-align: left; animation: fadeSlideUp 0.5s ease;">
+                <p id="mood-empathy-text" style="margin: 0; font-size: 0.9rem; line-height: 1.6; color: var(--text-main); font-style: italic;"></p>
+            </div>
+
+            <!-- ══════════════════════════════════════════════ -->
+            <!-- SECTION 4: CATEGORIZED INFLUENCE TAGS         -->
+            <!-- ══════════════════════════════════════════════ -->
+            <div id="mood-influences-card"
+                style="background: var(--card-bg); padding: 20px; border-radius: 20px; margin-bottom: 20px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+                <h3 style="margin-top: 0; color: var(--text-main); font-size: 1rem; font-weight: 700;">What's influencing you?</h3>
+                <p style="color: var(--text-muted); font-size: 0.75rem; margin-bottom: 14px;">Select anything that applies — this trains your personal mood patterns</p>
+
+                <!-- Physical -->
+                <div style="margin-bottom: 12px;">
+                    <span style="font-size: 0.65rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 1px;">🏋️ Physical</span>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
+                        <button class="symptom-btn" data-symptom="exercise" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">🏃 Exercise</button>
+                        <button class="symptom-btn" data-symptom="sleep" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">😴 Sleep</button>
+                        <button class="symptom-btn" data-symptom="headache" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">🤕 Headache</button>
+                        <button class="symptom-btn" data-symptom="energy" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">⚡ Energy</button>
+                        <button class="symptom-btn" data-symptom="pain" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">🩹 Pain</button>
+                        <button class="symptom-btn" data-symptom="hydration" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">💧 Hydration</button>
+                    </div>
+                </div>
+
+                <!-- Social -->
+                <div style="margin-bottom: 12px;">
+                    <span style="font-size: 0.65rem; font-weight: 700; color: #8B5CF6; text-transform: uppercase; letter-spacing: 1px;">👥 Social</span>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
+                        <button class="symptom-btn" data-symptom="friends" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">🫂 Friends</button>
+                        <button class="symptom-btn" data-symptom="family" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">👨‍👩‍👧 Family</button>
+                        <button class="symptom-btn" data-symptom="alone" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">🧍 Alone Time</button>
+                        <button class="symptom-btn" data-symptom="conflict" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">⚡ Conflict</button>
+                        <button class="symptom-btn" data-symptom="social" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">🎉 Social Event</button>
+                    </div>
+                </div>
+
+                <!-- Work / Study -->
+                <div style="margin-bottom: 12px;">
+                    <span style="font-size: 0.65rem; font-weight: 700; color: #059669; text-transform: uppercase; letter-spacing: 1px;">💼 Work & Study</span>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
+                        <button class="symptom-btn" data-symptom="productive" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">🚀 Productive</button>
+                        <button class="symptom-btn" data-symptom="overwhelmed" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">😵 Overwhelmed</button>
+                        <button class="symptom-btn" data-symptom="deadline" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">⏰ Deadline</button>
+                        <button class="symptom-btn" data-symptom="achievement" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">🏆 Achievement</button>
+                        <button class="symptom-btn" data-symptom="bored" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">🥱 Bored</button>
+                    </div>
+                </div>
+
+                <!-- Lifestyle -->
+                <div style="margin-bottom: 6px;">
+                    <span style="font-size: 0.65rem; font-weight: 700; color: #D97706; text-transform: uppercase; letter-spacing: 1px;">🌿 Lifestyle</span>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
+                        <button class="symptom-btn" data-symptom="screentime" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">📱 Screen Time</button>
+                        <button class="symptom-btn" data-symptom="nature" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">🌳 Nature</button>
+                        <button class="symptom-btn" data-symptom="music" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">🎵 Music</button>
+                        <button class="symptom-btn" data-symptom="caffeine" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">☕ Caffeine</button>
+                        <button class="symptom-btn" data-symptom="junkfood" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">🍔 Junk Food</button>
+                        <button class="symptom-btn" data-symptom="meditation" style="padding:8px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-main); transition:all 0.2s; font-size:0.75rem;">🧘 Meditation</button>
+                    </div>
+                </div>
+
+                <!-- Custom Influence -->
+                <div style="margin-top: 12px;">
+                    <input type="text" id="custom-influence-input" placeholder="✏️ Type a custom influence..."
+                        style="width: 100%; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-main); font-family: inherit; outline: none; box-sizing: border-box; font-size: 0.8rem;">
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════ -->
+            <!-- SECTION 5: DYNAMIC SELF-REFLECTION PROMPT     -->
+            <!-- ══════════════════════════════════════════════ -->
             <details id="cbt-journal-area"
-                style="background: var(--card-bg); padding: 15px 20px; border-radius: 16px; margin-bottom: 20px; border: 1px solid var(--border); box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: left; cursor: pointer;">
+                style="background: var(--card-bg); padding: 15px 20px; border-radius: 20px; margin-bottom: 20px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.06); text-align: left; cursor: pointer;">
                 <summary
-                    style="font-size: 1.1rem; font-weight: bold; color: var(--text-main); outline: none; display: flex; align-items: center; gap: 8px;">
-                    <span style="color:var(--primary);">💡</span> Self-Reflection (Optional)
+                    style="font-size: 1rem; font-weight: bold; color: var(--text-main); outline: none; display: flex; align-items: center; gap: 8px;">
+                    <span style="color:var(--primary);">💭</span> Self-Reflection (Recommended)
                 </summary>
                 <div style="margin-top: 15px; cursor: default;">
                     <p id="cbt-prompt-text"
-                        style="color: var(--text-muted); font-style: italic; margin-bottom: 15px; font-size: 0.95rem; text-align: center;">
+                        style="color: var(--text-muted); font-style: italic; margin-bottom: 12px; font-size: 0.85rem; text-align: center; line-height: 1.5; background: linear-gradient(135deg, rgba(255,140,66,0.05), rgba(139,92,246,0.05)); padding: 12px; border-radius: 12px;">
                         What's one small thing you can control right now?</p>
-                    <textarea id="mood-journal-input" placeholder="Type your thoughts here..."
-                        style="width: 100%; height: 80px; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-main); resize: vertical; font-family: inherit; box-sizing: border-box; outline: none;"></textarea>
+                    <textarea id="mood-journal-input" placeholder="Type your thoughts here... This is a safe space."
+                        style="width: 100%; height: 90px; padding: 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-main); resize: vertical; font-family: inherit; box-sizing: border-box; outline: none; font-size: 0.85rem; line-height: 1.5;"></textarea>
                 </div>
             </details>
 
-            <!-- Context Radar Removed Per Request -->
+            <!-- ══════════════════════════════════════════════ -->
+            <!-- SECTION 6: SAVE BUTTON                        -->
+            <!-- ══════════════════════════════════════════════ -->
             <button id="save-advanced-mood-btn" class="primary-btn"
-                style="width: 100%; padding: 15px; border-radius: 12px; font-size: 1.2rem; font-weight: bold; background: var(--primary); color: white; border: none; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">Save
-                Check-in</button>
+                style="width: 100%; padding: 16px; border-radius: 14px; font-size: 1.1rem; font-weight: bold; background: linear-gradient(135deg, var(--primary), #ec4899); color: white; border: none; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 20px rgba(255,140,66,0.3);">
+                Save Check-in ✨</button>
 
-            <!-- Merged Analytics (Stats, Insights, Heatmap, History) -->
+            <!-- ══════════════════════════════════════════════ -->
+            <!-- SECTION 7: PATTERN DETECTION ALERT            -->
+            <!-- ══════════════════════════════════════════════ -->
+            <div id="mood-pattern-alert" class="hidden"
+                style="margin-top: 20px; background: linear-gradient(135deg, rgba(251,191,36,0.12), rgba(245,158,11,0.08)); padding: 16px 20px; border-radius: 16px; border-left: 4px solid #F59E0B; text-align: left; animation: fadeSlideUp 0.5s ease;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                    <span style="font-size:1.2rem;">🔮</span>
+                    <strong style="color: #D97706; font-size: 0.85rem;">Pattern Detected</strong>
+                </div>
+                <p id="mood-pattern-alert-text" style="margin: 0; font-size: 0.85rem; line-height: 1.5; color: var(--text-main);"></p>
+            </div>
+
+            <!-- ══════════════════════════════════════════════ -->
+            <!-- SECTION 8: WELLBEING INDEX RING               -->
+            <!-- ══════════════════════════════════════════════ -->
+            <div style="margin-top: 24px; background: var(--card-bg); padding: 24px; border-radius: 20px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+                <h3 style="margin-top: 0; color: var(--text-main); font-size: 1rem; font-weight: 700; text-align:center;">Mental Wellbeing Index</h3>
+                <p style="color: var(--text-muted); font-size: 0.7rem; text-align:center; margin-bottom:16px;">Computed from your mood patterns, stability, and trends</p>
+                <div style="display:flex; justify-content:center; align-items:center; gap: 20px;">
+                    <div style="position:relative; width:120px; height:120px;">
+                        <svg viewBox="0 0 120 120" style="width:120px; height:120px; transform:rotate(-90deg);">
+                            <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,140,66,0.1)" stroke-width="8"/>
+                            <circle id="wellbeing-ring-fill" cx="60" cy="60" r="50" fill="none" stroke="url(#wellbeingGrad)" stroke-width="8"
+                                stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round"
+                                style="transition: stroke-dashoffset 1.5s ease;"/>
+                            <defs>
+                                <linearGradient id="wellbeingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#FF8C42"/>
+                                    <stop offset="50%" stop-color="#ec4899"/>
+                                    <stop offset="100%" stop-color="#8B5CF6"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center;">
+                            <span id="wellbeing-score" style="font-size:1.8rem; font-weight:800; color:var(--primary);">—</span>
+                            <br>
+                            <span style="font-size:0.55rem; color:var(--text-muted); font-weight:600;">/ 100</span>
+                        </div>
+                    </div>
+                    <div style="text-align:left; max-width:180px;">
+                        <p id="wellbeing-label" style="font-size:0.9rem; font-weight:700; color:var(--primary); margin:0 0 4px;">Calculating...</p>
+                        <p id="wellbeing-desc" style="font-size:0.72rem; color:var(--text-muted); margin:0; line-height:1.4;">Log more moods to calculate your Wellbeing Index</p>
+                        <div style="margin-top:8px; display:flex; gap:12px; font-size:0.6rem; color:var(--text-muted);">
+                            <span>📊 Avg: <strong id="wellbeing-avg">—</strong></span>
+                            <span>📈 Trend: <strong id="wellbeing-trend">—</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════ -->
+            <!-- SECTION 9: STATS + INSIGHTS                   -->
+            <!-- ══════════════════════════════════════════════ -->
             <div class="mood-stats-summary"
-                style="margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                style="margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                 <div class="insight-box"
-                    style="background: rgba(255,255,255,0.4); padding: 15px; border-radius: 12px; text-align: center;">
+                    style="background: rgba(255,255,255,0.4); padding: 15px; border-radius: 14px; text-align: center;">
                     <span style="display: block; font-size: 24px;" id="mood-trend-emoji">➖</span>
                     <small style="color: var(--text-muted); font-weight: bold;">7-Day Trend</small>
                 </div>
                 <div class="insight-box"
-                    style="background: rgba(255,255,255,0.4); padding: 15px; border-radius: 12px; text-align: center;">
+                    style="background: rgba(255,255,255,0.4); padding: 15px; border-radius: 14px; text-align: center;">
                     <span style="display: block; font-size: 20px; font-weight: bold; color: var(--primary);"
                         id="mood-count-total">0</span>
                     <small style="color: var(--text-muted); font-weight: bold;">Total Entries</small>
@@ -1452,23 +1565,29 @@
             </div>
 
             <div id="mood-ai-insights"
-                style="margin-top: 20px; background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); padding: 20px; border-radius: 15px; border-left: 4px solid var(--primary); text-align: left;">
-                <h4 style="margin-top: 0; margin-bottom: 10px; color: var(--primary);">✨ General AI Insights</h4>
+                style="margin-top: 20px; background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); padding: 20px; border-radius: 18px; border-left: 4px solid var(--primary); text-align: left;">
+                <h4 style="margin-top: 0; margin-bottom: 10px; color: var(--primary); font-size: 0.95rem;">🧠 AI Insights</h4>
                 <p id="mood-insight-text"
-                    style="margin: 0; font-size: 0.95rem; line-height: 1.5; color: var(--text-main);">Log more moods
-                    across different days to generate AI insights about what makes you happiest!</p>
+                    style="margin: 0; font-size: 0.85rem; line-height: 1.6; color: var(--text-main);">Log more moods
+                    across different days to generate deep insights about what makes you happiest!</p>
             </div>
 
-            <div class="mood-heatmap-container" style="margin-top: 30px; text-align: left;">
-                <h3 style="color: var(--text-main);">Activity Heatmap (Last 14 Days)</h3>
+            <!-- ══════════════════════════════════════════════ -->
+            <!-- SECTION 10: HEATMAP                           -->
+            <!-- ══════════════════════════════════════════════ -->
+            <div class="mood-heatmap-container" style="margin-top: 24px; text-align: left;">
+                <h3 style="color: var(--text-main); font-size: 1rem;">Emotional Heatmap (Last 14 Days)</h3>
                 <div id="mood-heatmap-grid" class="heatmap-grid"
                     style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 15px;">
                     <!-- JS will populate blocks here -->
                 </div>
             </div>
 
-            <div id="mood-history" class="mood-history" style="margin-top: 30px; text-align: left;">
-                <h3 style="color: var(--text-main);">Recent Context</h3>
+            <!-- ══════════════════════════════════════════════ -->
+            <!-- SECTION 11: HISTORY                           -->
+            <!-- ══════════════════════════════════════════════ -->
+            <div id="mood-history" class="mood-history" style="margin-top: 24px; text-align: left;">
+                <h3 style="color: var(--text-main); font-size: 1rem;">Recent Check-ins</h3>
                 <div id="mood-list" class="mood-list"></div>
             </div>
 
@@ -1548,9 +1667,15 @@
                 <span class="rank-icon">🌱</span>
                 <span class="rank-title" id="streak-rank-title">Newcomer</span>
             </div>
-            <div class="streak-shield-indicator" id="streak-shield-indicator">
+            <div class="streak-shield-indicator" id="streak-shield-indicator" title="Shields protect your streak if you miss a day. Earn 1 shield per 7-day streak!">
                 <span class="shield-icon">🛡️</span>
-                <span class="shield-count" id="streak-shield-count">0</span>
+                <div style="display:flex; flex-direction:column; align-items:center;">
+                    <span class="shield-count" id="streak-shield-count">0</span>
+                    <div style="text-align:center; margin-top:4px; line-height:1.2;">
+                        <div style="font-size:0.5rem; color:var(--text-main); font-weight:700; white-space:nowrap;">7 Perfect Days = +1 🛡️</div>
+                        <div style="font-size:0.45rem; color:var(--text-muted); white-space:nowrap;">saves the day you miss</div>
+                    </div>
+                </div>
             </div>
             <div class="streak-personal-best" id="streak-personal-best">
                 <span class="pb-label">Best</span>
@@ -5433,12 +5558,12 @@
     <script src="neuro-link.js"></script>
 
     <!-- Advanced Dash & Mood Tracker -->
-    <script src="advanced_dashboard.js"></script>
+    <script src="advanced_dashboard.js?v=1.1"></script>
     <!-- Import Three.js dependencies via script tags -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="test-proxies.js"></script>
     <!-- Daily Challenge (loaded after core, before games) -->
-    <script src="daily-challenge.js?v=5.0"></script>
+    <script src="daily-challenge.js?v=5.1"></script>
 </body>
 
 </html>

@@ -1,45 +1,45 @@
-const CACHE_NAME = 'ultradian-v36';
+const CACHE_NAME = 'ultradian-v37';
 
 // ═══ CORE APP SHELL (HTML, CSS, JS) ═══
 const CORE_ASSETS = [
-  '/',
-  '/index.html',
-  '/styles.css?v=4.0',
-  '/script.js?v=4.0',
-  '/storage.js',
-  '/quotes.js',
-  '/tips.js',
-  '/tts.js?v=1.0',
-  '/advanced_dashboard.js',
-  '/daily-challenge.js?v=5.0',
-  '/manifest.json'
+  './',
+  './index.html',
+  './styles.css?v=4.0',
+  './script.js?v=4.0',
+  './storage.js',
+  './quotes.js',
+  './tips.js',
+  './tts.js?v=1.0',
+  './advanced_dashboard.js?v=1.1',
+  './daily-challenge.js?v=5.1',
+  './manifest.json'
 ];
 
 // ═══ 3D, GAMES & FEATURE JS ═══
 const FEATURE_ASSETS = [
-  '/welcome-3d.js',
-  '/castle-3d.js?v=4.5',
-  '/hero-landscape-3d.js',
-  '/math-missile.js',
-  '/pattern-prophet.js',
-  '/omniscient.js',
-  '/cross-zero.js',
-  '/neuro-link.js',
-  '/test-proxies.js',
-  '/bundle.js'
+  './welcome-3d.js',
+  './castle-3d.js?v=4.5',
+  './hero-landscape-3d.js',
+  './math-missile.js',
+  './pattern-prophet.js',
+  './omniscient.js',
+  './cross-zero.js',
+  './neuro-link.js',
+  './test-proxies.js',
+  './bundle.js'
 ];
 
 // ═══ ICONS & APP IMAGES ═══
 const IMAGE_ASSETS = [
-  '/icon-192-v2.png',
-  '/icon-512-v2.png',
-  '/anmol-ai-avatar.jpeg',
-  '/welcome-character.png',
+  './icon-192-v2.png',
+  './icon-512-v2.png',
+  './anmol-ai-avatar.jpeg',
+  './welcome-character.png',
   // Hub / Knowledge content images
-  '/file_00000000164871fa8242a2f408db55dc.png',
-  '/file_000000005c3871fab43858a38fc3b6a8.png',
-  '/file_0000000074b4720899d764b82548f222.png',
-  '/file_00000000ca207208bab30f2ec889c89f.png'
+  './file_00000000164871fa8242a2f408db55dc.png',
+  './file_000000005c3871fab43858a38fc3b6a8.png',
+  './file_0000000074b4720899d764b82548f222.png',
+  './file_00000000ca207208bab30f2ec889c89f.png'
 ];
 
 // ═══ MEDITATION & FOCUS AUDIO/VIDEO ═══
@@ -176,7 +176,7 @@ self.addEventListener('fetch', event => {
     }).catch(() => {
       // Last resort: serve index.html for HTML navigation requests
       if (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html')) {
-        return caches.match('/index.html');
+        return caches.match('./index.html');
       }
     })
   );
@@ -197,7 +197,7 @@ self.addEventListener('notificationclick', event => {
           }
         }
         if (clients.openWindow) {
-          return clients.openWindow('/');
+          return clients.openWindow('./');
         }
       })
   );
