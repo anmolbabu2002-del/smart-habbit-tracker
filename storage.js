@@ -122,6 +122,32 @@ const appStorage = {
   },
 
   /**
+   * Snapshot of every key/value currently in localStorage (for backups).
+   */
+  exportAll() {
+    const data = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) data[key] = localStorage.getItem(key);
+    }
+    return data;
+  },
+
+  /**
+   * Replace all data with a backup snapshot. Waits for the IndexedDB mirror
+   * to be cleared first so the restored values can't be wiped by a late clear().
+   */
+  async importAll(data) {
+    localStorage.clear();
+    if (typeof localforage !== "undefined") {
+      await localforage.clear().catch(() => {});
+    }
+    for (const [key, value] of Object.entries(data)) {
+      this.setItem(key, value);
+    }
+  },
+
+  /**
    * Store binary data (ArrayBuffer/Blob) directly in IndexedDB.
    * Bypasses localStorage entirely (no 5 MB limit).
    */

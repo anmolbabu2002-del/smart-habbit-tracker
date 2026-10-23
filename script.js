@@ -314,13 +314,6 @@ function setBreathingPhase(index) {
   text.textContent = phase.name;
 }
 
-function resetBreathingVisual() {
-  const circle = document.getElementById("breathing-circle");
-  const text = document.getElementById("breathing-text");
-  if (circle) circle.className = "breathing-circle";
-  if (text) text.textContent = "Ready?";
-}
-
 // ==================== MEDITATION SOUNDS ====================
 let currentMeditationAudio = null;
 const meditationSoundUrls = {
@@ -330,71 +323,27 @@ const meditationSoundUrls = {
   spiritual: "videoplayback.1773901315901.publer.com.mp4"
 };
 
-// Preload audio on first user interaction (mobile browsers require a gesture)
-function preloadMeditationAudio() {
-  if (window.preloadedMedAudio) return; // already done
-  window.preloadedMedAudio = {};
-  for (const [name, url] of Object.entries(meditationSoundUrls)) {
-    const audio = new Audio();
-    audio.preload = "auto";
-    audio.loop = true;
-    audio.src = url;
-    audio.load();
-    window.preloadedMedAudio[name] = audio;
-  }
-}
-
-// Trigger preload on first touch/click anywhere on the page
-(function () {
-  function onFirstInteraction() {
-    preloadMeditationAudio();
-    document.removeEventListener("touchstart", onFirstInteraction);
-    document.removeEventListener("click", onFirstInteraction);
-  }
-  document.addEventListener("touchstart", onFirstInteraction, { once: true, passive: true });
-  document.addEventListener("click", onFirstInteraction, { once: true });
-})();
+// Audio elements are created on demand and reused. We deliberately do NOT
+// preload: the four tracks total ~150 MB and most sessions never play them.
+const meditationAudioCache = {};
 
 function playMeditationSound(soundName) {
   if (currentMeditationAudio) { currentMeditationAudio.pause(); currentMeditationAudio.currentTime = 0; currentMeditationAudio = null; }
   if (soundName === "none" || !meditationSoundUrls[soundName]) return;
-  // Ensure audio is cached (fallback if preload hasn't run yet)
-  preloadMeditationAudio();
-  const cachedAudio = window.preloadedMedAudio[soundName];
-  if (cachedAudio) {
-    cachedAudio.currentTime = 0;
-    currentMeditationAudio = cachedAudio;
-  } else {
-    currentMeditationAudio = new Audio(meditationSoundUrls[soundName]);
+  if (!meditationAudioCache[soundName]) {
+    const audio = new Audio();
+    audio.preload = "none";
+    audio.src = meditationSoundUrls[soundName];
+    meditationAudioCache[soundName] = audio;
   }
+  currentMeditationAudio = meditationAudioCache[soundName];
+  currentMeditationAudio.currentTime = 0;
   currentMeditationAudio.loop = true;
   currentMeditationAudio.play().catch(e => console.error("Audio error:", e));
 }
 
 function stopMeditationSound() {
   if (currentMeditationAudio) { currentMeditationAudio.pause(); currentMeditationAudio.currentTime = 0; currentMeditationAudio = null; }
-}
-
-function breathingStep() {
-  if (!breathingActive) return;
-  setBreathingPhase(breathingIndex);
-  breathingTimeout = setTimeout(() => {
-    breathingIndex = (breathingIndex + 1) % breathingPhases.length;
-    breathingStep();
-  }, breathingPhases[breathingIndex].duration);
-}
-
-function startBreathingAnimation() {
-  breathingActive = true;
-  breathingIndex = 0;
-  breathingStep();
-}
-
-function stopBreathingAnimation() {
-  breathingActive = false;
-  if (breathingTimeout) clearTimeout(breathingTimeout);
-  breathingTimeout = null;
-  resetBreathingVisual();
 }
 
 // ── main session control ────────────────────────────────
@@ -1760,7 +1709,7 @@ function startFocusSession(taskName, checkboxElement = null) {
 
     banner.innerHTML = `
       <div class="focus-banner-label">CURRENTLY FOCUSING ON</div>
-      <span class="focus-banner-emoji">${emoji}</span>
+      <span class="focus-banner-emoji">${escapeHTML(emoji)}</span>
       <div class="focus-banner-task">${text}</div>
     `;
     banner.classList.remove('hidden');
@@ -3099,15 +3048,16 @@ function loadJournalEntries() {
     entryDiv.className = `journal-entry ${entry.paperStyle || ""}`;
 
     // Process tags into badges
-    const tagsHtml = (entry.tags || []).map(t => `<span class="journal-tag-badge">${t}</span>`).join('');
+    const tagsHtml = (entry.tags || []).map(t => `<span class="journal-tag-badge">${escapeHTML(t)}</span>`).join('');
 
     // Process doodle
-    const doodleHtml = entry.doodle ? `<img src="${entry.doodle}" style="max-width:100%; max-height:150px; border-radius:8px; margin-top:10px; border:1px solid rgba(0,0,0,0.1);">` : '';
+    const doodleSrc = safeImageSrc(entry.doodle);
+    const doodleHtml = doodleSrc ? `<img src="${doodleSrc}" style="max-width:100%; max-height:150px; border-radius:8px; margin-top:10px; border:1px solid rgba(0,0,0,0.1);">` : '';
 
     entryDiv.innerHTML = `
-      <h3>${entry.title || 'Untitled'}</h3>
+      <h3>${escapeHTML(entry.title || 'Untitled')}</h3>
       <div style="margin-bottom: 5px;">${tagsHtml}</div>
-      <div class="journal-entry-preview">${entry.content}</div>
+      <div class="journal-entry-preview">${sanitizeRichHTML(entry.content)}</div>
       ${doodleHtml}
       <div style="margin-top: 15px;">
           <small>${new Date(entry.date).toLocaleDateString()}</small>
@@ -3302,7 +3252,7 @@ function openJournalEditor(entry = null, index = null) {
     if (deleteBtn) deleteBtn.style.display = "inline-block";
     titleInput.value = entry.title || "";
     tagsInput.value = (entry.tags || []).join(" ");
-    if (contentDiv) contentDiv.innerHTML = entry.content || "";
+    if (contentDiv) contentDiv.innerHTML = sanitizeRichHTML(entry.content);
 
     // Set paper style
     if (paperSelect) {
@@ -3592,76 +3542,6 @@ function updateWaterDisplay() {
 
   // Sync Bloom dashboard water widget
   if (typeof updateBloomWidgets === "function") updateBloomWidgets();
-}
-
-function recordWaterIntake() {
-  const today = new Date().toDateString();
-  let history = [];
-  try {
-    history = JSON.parse(appStorage.getItem("waterHistory") || "[]");
-  } catch (e) { }
-
-  const todayEntry = history.find(entry => entry.date === today);
-  if (todayEntry) {
-    todayEntry.amount = waterConsumed;
-  } else {
-    history.push({ date: today, amount: waterConsumed });
-  }
-
-  // Keep last 7 days
-  if (history.length > 7) {
-    history = history.slice(history.length - 7);
-  }
-  appStorage.setItem("waterHistory", JSON.stringify(history));
-}
-
-function renderWaterChart() {
-  const chartEl = document.getElementById("water-history-chart");
-  if (!chartEl) return;
-
-  let history = [];
-  try {
-    history = JSON.parse(appStorage.getItem("waterHistory") || "[]");
-  } catch (e) { }
-
-  chartEl.innerHTML = "";
-
-  // Fill with empty days if less than 7
-  const displayHistory = [...history];
-  while (displayHistory.length < 7) {
-    displayHistory.unshift({ date: "", amount: 0 });
-  }
-
-  const maxAmount = Math.max(waterGoal, ...displayHistory.map(d => d.amount));
-
-  displayHistory.forEach(day => {
-    const barContainer = document.createElement("div");
-    barContainer.style.display = "flex";
-    barContainer.style.flexDirection = "column";
-    barContainer.style.alignItems = "center";
-    barContainer.style.height = "100%";
-    barContainer.style.justifyContent = "flex-end";
-    barContainer.style.gap = "5px";
-
-    const h = maxAmount > 0 ? (day.amount / maxAmount) * 100 : 0;
-
-    // Label for day
-    let dayLabelText = "";
-    if (day.date) {
-      const d = new Date(day.date);
-      const days = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-      dayLabelText = days[d.getDay()];
-    }
-
-    barContainer.innerHTML = `
-      <div style="font-size: 10px; color: var(--text-muted);">${day.amount > 0 ? day.amount : ''}</div>
-      <div style="width: 20px; height: 100px; background: rgba(0,0,0,0.05); border-radius: 10px; position: relative; overflow: hidden; display: flex; align-items: flex-end;">
-        <div style="width: 100%; height: ${h}%; background: var(--primary); border-radius: 10px; transition: height 0.3s;"></div>
-      </div>
-      <div style="font-size: 12px; font-weight: bold; color: var(--text-main);">${dayLabelText}</div>
-    `;
-    chartEl.appendChild(barContainer);
-  });
 }
 
 function addWater(amount) {
@@ -4082,8 +3962,8 @@ function completePomodoro() {
     pmElement.innerHTML = `
       <h2>🎉 Great Work! 🎉</h2>
       <p>You've completed your Pomodoro session!</p>
-      <p style="font-style: italic; margin-top: 20px;">"${quoteText}"</p>
-      <p style="font-size: 0.9em; margin-top: 5px; color: var(--text-muted);">- ${author}</p>
+      <p style="font-style: italic; margin-top: 20px;">"${escapeHTML(quoteText)}"</p>
+      <p style="font-size: 0.9em; margin-top: 5px; color: var(--text-muted);">- ${escapeHTML(author)}</p>
     `;
     pmElement.style.display = "block";
   }
@@ -4182,8 +4062,14 @@ function showNotification(message) {
     }
   };
 
-  // Try to use Service Worker registration for a native system-tray notification
-  if ("serviceWorker" in navigator) {
+  // While the app is open, the in-app toast below is enough. System-tray
+  // notifications are only for reminders that fire while the app is in the background.
+  const appVisible = document.visibilityState === "visible";
+  const canNotify = "Notification" in window && Notification.permission === "granted";
+
+  if (appVisible || !canNotify) {
+    // skip system notification
+  } else if ("serviceWorker" in navigator) {
     navigator.serviceWorker.ready.then(registration => {
       registration.showNotification("Ultradian", options);
     }).catch(e => {
@@ -4192,7 +4078,7 @@ function showNotification(message) {
         new Notification("Ultradian", options);
       }
     });
-  } else if ("Notification" in window && Notification.permission === "granted") {
+  } else {
     new Notification("Ultradian", options);
   }
 
@@ -4477,11 +4363,11 @@ function renderRecommendations() {
 
     card.innerHTML = `
             <div class="book-cover-flat">
-                <img src="${book.coverUrl}" alt="Cover" loading="lazy">
+                <img src="${escapeHTML(safeImageSrc(book.coverUrl))}" alt="Cover" loading="lazy">
             </div>
             <div class="book-info-block">
-                <div class="book-info-title">${book.title}</div>
-                <div class="book-info-author">${book.author}</div>
+                <div class="book-info-title">${escapeHTML(book.title)}</div>
+                <div class="book-info-author">${escapeHTML(book.author)}</div>
             </div>
         `;
     card.addEventListener("click", () => openReader(book.id, book.title, book.textUrl, book.coverUrl));
@@ -4524,9 +4410,9 @@ function renderReadingHistory() {
         'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
       ];
       const bg = gradients[index % gradients.length];
-      coverHtml = `<div class="custom-cover-gradient" style="background: ${bg};"><span>${emoji}</span></div>`;
+      coverHtml = `<div class="custom-cover-gradient" style="background: ${bg};"><span>${escapeHTML(emoji)}</span></div>`;
     } else {
-      coverHtml = `<img src="${book.coverUrl || 'icon-192.png'}" alt="Cover" onerror="this.src='icon-192.png'" loading="lazy">`;
+      coverHtml = `<img src="${escapeHTML(safeImageSrc(book.coverUrl) || 'icon-192.png')}" alt="Cover" onerror="this.src='icon-192.png'" loading="lazy">`;
     }
 
     // We use the cover as a blurred backdrop as well
@@ -4539,7 +4425,7 @@ function renderReadingHistory() {
                     ${coverHtml}
                 </div>
                 <div class="cinematic-info">
-                    <div class="cinematic-title">${book.title}</div>
+                    <div class="cinematic-title">${escapeHTML(book.title)}</div>
                     <div class="cinematic-meta">${pct}% Completed</div>
                     <div class="cinematic-progress-bar">
                         <div class="cinematic-progress-fill" style="width: ${pct}%;"></div>
@@ -4615,9 +4501,9 @@ function renderFinishedBooks() {
         'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)',
       ];
       const bg = gradients[index % gradients.length];
-      coverHtml = `<div class="custom-cover-gradient" style="background: ${bg};"><span>${emoji}</span></div>`;
+      coverHtml = `<div class="custom-cover-gradient" style="background: ${bg};"><span>${escapeHTML(emoji)}</span></div>`;
     } else {
-      coverHtml = `<img src="${book.coverUrl || 'icon-192.png'}" alt="Cover" onerror="this.src='icon-192.png'" loading="lazy">`;
+      coverHtml = `<img src="${escapeHTML(safeImageSrc(book.coverUrl) || 'icon-192.png')}" alt="Cover" onerror="this.src='icon-192.png'" loading="lazy">`;
     }
 
     const finDate = new Date(book.finishedAt).toLocaleDateString();
@@ -4631,7 +4517,7 @@ function renderFinishedBooks() {
           <div class="finished-trophy">🏆</div>
         </div>
         <div class="cinematic-info">
-          <div class="cinematic-title">${book.title}</div>
+          <div class="cinematic-title">${escapeHTML(book.title)}</div>
           <div class="cinematic-meta" style="color: #f6a623;">✅ Finished ${finDate}</div>
           <div class="cinematic-progress-bar">
             <div class="cinematic-progress-fill" style="width: 100%; background: linear-gradient(90deg, #f6d365, #fda085);"></div>
@@ -5210,7 +5096,18 @@ async function parseEpubFile(arrayBuffer) {
         }
       }
     }
-    chapters.push(body.innerHTML);
+    // SVG-wrapped images (common for covers) → plain <img>, since the sanitizer drops <svg>
+    for (const svg of body.querySelectorAll('svg')) {
+      const image = svg.querySelector('image');
+      const href = image && (image.getAttribute('href') || image.getAttribute('xlink:href'));
+      if (href) {
+        const img = doc.createElement('img');
+        img.setAttribute('src', href);
+        svg.replaceWith(img);
+      }
+    }
+    // Uploaded EPUBs are untrusted: strip scripts, event handlers, iframes, etc.
+    chapters.push(sanitizeRichHTML(body.innerHTML));
   }
   if (chapters.length === 0) throw new Error('No readable content found in EPUB.');
   return chapters;
@@ -5388,11 +5285,11 @@ function renderMyBooks() {
                 <button class="custom-book-delete" data-id="${book.id}" title="Delete this book" 
                         style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.4); color:white; border:none; border-radius:50%; width:24px; height:24px; font-size:14px; cursor:pointer; z-index:10; backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center;">&times;</button>
                 <div class="custom-cover-gradient" style="background: ${bg}; width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size: 3rem;">
-                    <span>${emoji}</span>
+                    <span>${escapeHTML(emoji)}</span>
                 </div>
             </div>
             <div class="book-info-block" style="padding-top:0;">
-                <div class="book-info-title" title="${book.title}">${book.title}</div>
+                <div class="book-info-title" title="${escapeHTML(book.title)}">${escapeHTML(book.title)}</div>
                 <div class="custom-book-size" style="font-size: 0.75rem; color: var(--text-muted); font-weight:600; margin-top:2px;">${sizeLabel}</div>
             </div>
         `;
@@ -5564,11 +5461,11 @@ async function searchLibrary() {
 
       card.innerHTML = `
                 <div class="book-cover-flat">
-                    <img src="${coverUrl}" alt="Cover" loading="lazy">
+                    <img src="${escapeHTML(safeImageSrc(coverUrl))}" alt="Cover" loading="lazy">
                 </div>
                 <div class="book-info-block">
-                    <div class="book-info-title">${book.title}</div>
-                    <div class="book-info-author">${authorName}</div>
+                    <div class="book-info-title">${escapeHTML(book.title)}</div>
+                    <div class="book-info-author">${escapeHTML(authorName)}</div>
                     <div style="font-size:0.75rem; color:#8b5cf6; padding-top:6px; font-weight:600;">⬇ ${book.download_count.toLocaleString()}</div>
                 </div>
              `;
@@ -6726,16 +6623,16 @@ function renderMoodHistory() {
   const recentMoods = moodHistory.slice(0, 10);
 
   list.innerHTML = recentMoods.map(m => {
-    const tagsHtml = (m.tags || []).map(t => `<span style="display:inline-block; background: linear-gradient(135deg, var(--primary), var(--secondary)); color:white; padding:2px 8px; border-radius:8px; font-size:0.75rem; margin-right:4px; font-weight:600;">${t}</span>`).join('');
+    const tagsHtml = (m.tags || []).map(t => `<span style="display:inline-block; background: linear-gradient(135deg, var(--primary), var(--secondary)); color:white; padding:2px 8px; border-radius:8px; font-size:0.75rem; margin-right:4px; font-weight:600;">${escapeHTML(t)}</span>`).join('');
 
     return `
       <div class="mood-item" style="display:flex; flex-direction:column; margin-bottom:10px; padding:12px; border-radius:12px; background:rgba(255,255,255,0.6); border-left:4px solid ${getMoodColor(m.mood)};">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-weight:bold; font-size:1.1em;">${getMoodEmoji(m.mood)} ${m.mood.charAt(0).toUpperCase() + m.mood.slice(1)}</span>
+          <span style="font-weight:bold; font-size:1.1em;">${getMoodEmoji(m.mood)} ${escapeHTML(m.mood.charAt(0).toUpperCase() + m.mood.slice(1))}</span>
           <small style="color:var(--text-muted);">${m.date} ${m.time} · ${m.timeOfDay || ''}</small>
         </div>
         ${tagsHtml ? `<div style="margin-top:6px;">${tagsHtml}</div>` : ''}
-        ${m.note ? `<p style="margin:6px 0 0; font-size:0.9em; color:var(--text-main); font-style:italic;">"${m.note}"</p>` : ''}
+        ${m.note ? `<p style="margin:6px 0 0; font-size:0.9em; color:var(--text-main); font-style:italic;">"${escapeHTML(m.note)}"</p>` : ''}
       </div>
     `;
   }).join("");
@@ -7078,7 +6975,7 @@ function updateSleepStats() {
       if (s.factors && s.factors.length > 0) {
         const factorEmojis = { 'exercise': '🏃', 'caffeine': '☕', 'screens': '📱', 'stress': '😫', 'alcohol': '🍷', 'reading': '📖' };
         factorsHtml = `<div style="margin-top:5px; font-size: 0.8rem; color: var(--text-muted);">
-            ${s.factors.map(f => `<span style="background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; margin-right: 4px;">${factorEmojis[f] || f}</span>`).join('')}
+            ${s.factors.map(f => `<span style="background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; margin-right: 4px;">${factorEmojis[f] || escapeHTML(f)}</span>`).join('')}
           </div>`;
       }
 
@@ -8326,8 +8223,13 @@ function renderWaterChart() {
 
 // --- 10. BACKUP & RESTORE ---
 function exportData() {
-  const data = JSON.stringify(appStorage);
-  const blob = new Blob([data], { type: "application/json" });
+  const backup = {
+    app: "ultradian",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    data: appStorage.exportAll()
+  };
+  const blob = new Blob([JSON.stringify(backup)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -8342,18 +8244,32 @@ function importData(event) {
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function (e) {
+  reader.onload = async function (e) {
+    // Validate everything BEFORE touching existing data
+    let data;
     try {
-      const data = JSON.parse(e.target.result);
-      appStorage.clear();
-      for (const key in data) {
-        appStorage.setItem(key, data[key]);
-      }
-      showNotification("📥 Data restored! Reloading...");
-      setTimeout(() => location.reload(), 1500);
+      const parsed = JSON.parse(e.target.result);
+      // v1 backups wrap the data; older files were a flat key/value object
+      data = parsed && parsed.app === "ultradian" && parsed.data ? parsed.data : parsed;
     } catch (err) {
-      alert("Error importing data: " + err.message);
+      showNotification("⚠️ That file isn't a valid backup.");
+      event.target.value = "";
+      return;
     }
+
+    const entries = data && typeof data === "object" && !Array.isArray(data)
+      ? Object.entries(data).filter(([, v]) => typeof v === "string")
+      : [];
+    const looksLikeOurs = entries.some(([k]) => k === "habitAppState" || k === "userName");
+    if (!looksLikeOurs) {
+      showNotification("⚠️ This backup is empty or not from Ultradian — nothing was changed.");
+      event.target.value = "";
+      return;
+    }
+
+    await appStorage.importAll(Object.fromEntries(entries));
+    showNotification("📥 Data restored! Reloading...");
+    setTimeout(() => location.reload(), 1500);
   };
   reader.readAsText(file);
 }
@@ -8902,8 +8818,10 @@ function appendAIMessage(text, isUser, skipScroll) {
 
   if (isUser) {
     bubble.textContent = text;
+    bubble.style.whiteSpace = "pre-wrap";
   } else {
-    let formatted = text
+    // Escape first so model output can never inject markup, then apply light formatting
+    let formatted = escapeHTML(text)
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.+?)\*/g, '<em>$1</em>')
       .replace(/\n/g, '<br>');
@@ -9024,7 +8942,7 @@ async function sendMessageToAnmolAI(userMessage) {
   if (currentAttachedFileData) {
     payload.attachedFile = currentAttachedFileData;
     // Visually append that a file was sent
-    appendAIMessage(`📎 [Attached: ${currentAttachedFileData.name}]<br>` + userMessage, true);
+    appendAIMessage(`📎 [Attached: ${currentAttachedFileData.name}]\n` + userMessage, true);
     aiConversationHistory.push({ role: "user", text: `[Attached File: ${currentAttachedFileData.name}]\n${userMessage}` });
     clearAttachment(); // reset for next message
   } else {
@@ -10131,33 +10049,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
-});
-document.addEventListener("DOMContentLoaded", () => {
+
   const backBtn = document.getElementById("tasks-back-btn");
-  const taskCard = document.querySelector(".bloom-tasks-card");
-
-  function setTaskTextExpanded(expanded) {
-    const spans = taskCard.querySelectorAll("#task li span.task-text, #task li span[style]");
-    spans.forEach(span => {
-      if (span.classList.contains('task-emoji') || span.classList.contains('task-tag') || span.classList.contains('task-priority-badge') || span.classList.contains('task-select-cb')) return;
-      
-      if (expanded) {
-        span.style.setProperty('white-space', 'normal', 'important');
-        span.style.setProperty('overflow', 'visible', 'important');
-        span.style.setProperty('text-overflow', 'unset', 'important');
-        span.style.setProperty('word-break', 'break-word', 'important');
-        span.style.setProperty('display', 'block', 'important');
-        span.style.setProperty('height', 'auto', 'important');
-      } else {
-        span.style.setProperty('white-space', 'nowrap', 'important');
-        span.style.setProperty('overflow', 'hidden', 'important');
-        span.style.setProperty('text-overflow', 'ellipsis', 'important');
-        span.style.removeProperty('word-break');
-        span.style.setProperty('display', 'block', 'important');
-      }
-    });
-  }
-
   if (backBtn && taskCard) {
     backBtn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -10472,7 +10365,7 @@ function startHabitFocusSession(habitName, habitIndex) {
         const emoji = getEmojiForTask(habitName);
         banner.innerHTML = `
             <div class="focus-banner-label">HABIT FOCUS SESSION</div>
-            <span class="focus-banner-emoji">${emoji}</span>
+            <span class="focus-banner-emoji">${escapeHTML(emoji)}</span>
             <div class="focus-banner-task">${habitName}</div>
         `;
         banner.classList.remove('hidden');
@@ -10577,9 +10470,9 @@ function _renderHabitStatsOverlay() {
             html += `
                 <div class="habit-stats-card">
                     <div class="habit-stats-header">
-                        <span class="habit-stats-emoji">${emoji}</span>
+                        <span class="habit-stats-emoji">${escapeHTML(emoji)}</span>
                         <div>
-                            <div class="habit-stats-name">${h.text}</div>
+                            <div class="habit-stats-name">${escapeHTML(h.text)}</div>
                             <div class="habit-stats-meta">🔥 ${h.streak} day streak &bull; ${completionRate}% completion</div>
                         </div>
                     </div>

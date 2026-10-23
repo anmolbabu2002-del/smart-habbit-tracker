@@ -6,6 +6,7 @@ const CORE_ASSETS = [
   './index.html',
   './styles.css?v=4.0',
   './script.js?v=4.0',
+  './safe-html.js',
   './storage.js',
   './quotes.js',
   './tips.js',

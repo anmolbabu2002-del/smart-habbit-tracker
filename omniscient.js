@@ -691,7 +691,7 @@ function renderOmnQuestion(q) {
 
     omnEl.answerBtns.forEach((btn, idx) => {
         if (idx < answers.length) {
-            btn.innerHTML = `<span class="omn-letter">${letters[idx]}</span> <span class="omn-answer-text">${answers[idx]}</span>`;
+            btn.innerHTML = `<span class="omn-letter">${letters[idx]}</span> <span class="omn-answer-text">${escapeHTML(answers[idx])}</span>`;
             btn.style.display = "block";
             btn.dataset.correct = answers[idx] === q.correct_answer ? "true" : "false";
         } else {
