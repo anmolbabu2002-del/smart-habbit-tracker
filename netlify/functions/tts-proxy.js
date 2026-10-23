@@ -2,9 +2,19 @@
 // Returns raw audio/mpeg bytes with proper CORS headers.
 // This completely bypasses browser CORS restrictions.
 
+const { guard } = require("../lib/guard");
+
 exports.handler = async function (event) {
+  const g = guard(event, { methods: ["GET"] });
+  if (g.response) return g.response;
+
   const text = event.queryStringParameters?.q;
   const lang = event.queryStringParameters?.tl || 'hi';
+
+  // Language codes only, e.g. "en", "hi", "zh-CN"
+  if (!/^[a-zA-Z]{2,3}(-[a-zA-Z]{2,4})?$/.test(lang)) {
+    return { statusCode: 400, body: JSON.stringify({ error: "Invalid language code." }) };
+  }
 
   if (!text) {
     return {
@@ -44,7 +54,8 @@ exports.handler = async function (event) {
       statusCode: 200,
       headers: {
         "Content-Type": "audio/mpeg",
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": g.origin,
+        "Vary": "Origin",
         "Cache-Control": "public, max-age=86400",
       },
       body: base64,

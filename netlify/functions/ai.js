@@ -1,231 +1,192 @@
 // Anmol AI — Netlify Serverless Function
 // Proxies requests to Gemini API (primary) with fallback to Groq API (secondary)
-// The secret keys are hidden server-side
+// The secret keys are hidden server-side.
+// Models can be changed without a code edit via GEMINI_MODEL / GROQ_MODEL env vars.
+
+const { guard, json, clampString } = require("../lib/guard");
+
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+const GROQ_MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
+
+const MAX_MESSAGE_CHARS = 8000;
+const MAX_HISTORY_ITEMS = 20;
+const MAX_HISTORY_CHARS = 6000;
+const MAX_ATTACHMENT_BASE64 = 4.5 * 1024 * 1024; // Netlify request bodies cap at 6 MB
 
 exports.handler = async function (event) {
-  // Only allow POST
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: JSON.stringify({ error: "Method not allowed" }) };
-  }
+  const g = guard(event, { methods: ["POST"] });
+  if (g.response) return g.response;
+  const origin = g.origin;
 
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
   const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
-  if (!GEMINI_API_KEY) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: "API key not configured. Set GEMINI_API_KEY in Netlify environment variables." })
-    };
+  if (!GEMINI_API_KEY && !GROQ_API_KEY) {
+    return json(500, { error: "AI is not configured. Set GEMINI_API_KEY (and optionally GROQ_API_KEY) in Netlify environment variables." }, origin);
   }
 
   let body;
   try {
     body = JSON.parse(event.body);
   } catch (e) {
-    return { statusCode: 400, body: JSON.stringify({ error: "Invalid JSON body" }) };
+    return json(400, { error: "Invalid JSON body" }, origin);
   }
 
-  const { message, context, history, attachedFile } = body;
+  const message = clampString(body.message, MAX_MESSAGE_CHARS);
+  const context = body.context && typeof body.context === "object" ? body.context : {};
+  const history = sanitizeHistory(body.history);
+  const attachedFile = sanitizeAttachment(body.attachedFile);
 
+  if (body.attachedFile && !attachedFile) {
+    return json(413, { error: "That file is too large or unsupported. Please attach something under ~3 MB." }, origin);
+  }
   if (!message && !attachedFile) {
-    return { statusCode: 400, body: JSON.stringify({ error: "Message is required" }) };
+    return json(400, { error: "Message is required" }, origin);
   }
 
-  // Build the system prompt
   const systemPrompt = buildSystemPrompt(context);
 
-  // Determine if the attached file is an image
-  const isImage = attachedFile && attachedFile.mimeType && attachedFile.mimeType.startsWith("image/");
-
-  // Build conversation contents for Gemini
-  const contents = [];
-
-  // Add conversation history (last 20 for better memory)
-  if (Array.isArray(history)) {
-    for (const msg of history.slice(-20)) {
-      contents.push({
-        role: msg.role === "user" ? "user" : "model",
-        parts: [{ text: msg.text }]
-      });
-    }
-  }
-
-  // Build the current user message parts
-  const userParts = [];
-
-  if (attachedFile && !isImage) {
-    // Text-based file: decode base64 and prepend as context
+  if (GEMINI_API_KEY) {
     try {
-      const fileText = Buffer.from(attachedFile.data, "base64").toString("utf-8");
-      userParts.push({ text: `[Attached File: ${attachedFile.name}]\n\n${fileText}` });
-    } catch (e) {
-      userParts.push({ text: `[Attached File: ${attachedFile.name} — could not decode]` });
+      const reply = await callGemini(systemPrompt, history, message, attachedFile, GEMINI_API_KEY);
+      if (reply) return json(200, { reply, source: "gemini" }, origin);
+      console.warn("Gemini returned an empty reply. Falling back to Groq...");
+    } catch (err) {
+      console.warn(`Gemini failed (${err.message}). Falling back to Groq...`);
     }
   }
 
-  if (attachedFile && isImage) {
-    // Image file: send as inlineData for Gemini vision
-    userParts.push({
-      inlineData: {
-        mimeType: attachedFile.mimeType,
-        data: attachedFile.data
-      }
-    });
+  if (!GROQ_API_KEY) {
+    return json(502, { error: "Anmol AI is busy right now. Please try again in a minute." }, origin);
   }
-
-  if (message) {
-    userParts.push({ text: message });
-  } else if (attachedFile) {
-    userParts.push({ text: "Here is a file. Please analyze it or tell me what it contains." });
-  }
-
-  contents.push({
-    role: "user",
-    parts: userParts
-  });
-
-  // Call Gemini API (using gemini-2.0-flash)
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
   try {
-    const response = await fetch(geminiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: {
-          parts: [{ text: systemPrompt }]
-        },
-        contents: contents,
-        generationConfig: {
-          temperature: 0.9,
-          topP: 0.95,
-          maxOutputTokens: 1024
-        }
-      })
-    });
-
-    if (!response.ok) {
-      if (response.status === 400) {
-        // Bad request (usually consecutive user roles or invalid payload). Better to return the exact error.
-        const errText = await response.text();
-        console.error("Gemini API 400 error:", errText);
-        return {
-          statusCode: response.status,
-          body: JSON.stringify({ error: "Gemini API error (400)", details: errText })
-        };
-      }
-
-      // For ANY other error (429 Rate Limit, 500 Server Error, 503 Unavailable), fall back to Groq!
-      console.warn(`Gemini API failed with status ${response.status}. Falling back to Groq...`);
-      return await fallbackToGroq(systemPrompt, history, message, GROQ_API_KEY, attachedFile);
-    }
-
-    const data = await response.json();
-
-    // Extract the text from the response
-    const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Hmm, I got nothing. Try again? 🤷";
-
-    return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reply: aiText, source: "gemini" })
-    };
+    const reply = await callGroq(systemPrompt, history, message, attachedFile, GROQ_API_KEY);
+    return json(200, { reply: reply || "Hmm, I got nothing. Try again? 🤷", source: "groq" }, origin);
   } catch (err) {
-    console.error("Gemini Fetch error:", err);
-    // If network error, also try fallback
-    console.warn("Gemini fetch failed. Falling back to Groq...");
-    return await fallbackToGroq(systemPrompt, history, message, GROQ_API_KEY, attachedFile);
+    console.error("Groq failed:", err.message);
+    return json(502, { error: "Anmol AI is busy right now. Please try again in a minute." }, origin);
   }
 };
 
-async function fallbackToGroq(systemPrompt, history, message, groqApiKey, attachedFile) {
-  if (!groqApiKey) {
-    return {
-      statusCode: 429,
-      body: JSON.stringify({ error: "Gemini API limits reached, and GROQ_API_KEY is not configured for fallback. Please set GROQ_API_KEY in Netlify environment variables." })
-    };
+// History: keep the last N turns, only valid text, and merge consecutive
+// same-role turns (Gemini rejects user→user sequences).
+function sanitizeHistory(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const msg of raw.slice(-MAX_HISTORY_ITEMS)) {
+    if (!msg || typeof msg.text !== "string" || !msg.text.trim()) continue;
+    const role = msg.role === "user" ? "user" : "model";
+    const text = clampString(msg.text, MAX_HISTORY_CHARS);
+    const last = out[out.length - 1];
+    if (last && last.role === role) last.text += "\n\n" + text;
+    else out.push({ role, text });
   }
+  // The new user message follows, so history must not end on a user turn
+  while (out.length && out[out.length - 1].role === "user") out.pop();
+  return out;
+}
 
-  const messages = [
-    { role: "system", content: systemPrompt }
-  ];
+function sanitizeAttachment(file) {
+  if (!file || typeof file !== "object") return null;
+  if (typeof file.data !== "string" || file.data.length > MAX_ATTACHMENT_BASE64) return null;
+  return {
+    name: clampString(file.name || "file", 120),
+    mimeType: clampString(file.mimeType || "application/octet-stream", 100),
+    data: file.data
+  };
+}
 
-  if (Array.isArray(history)) {
-    for (const msg of history.slice(-20)) {
-      messages.push({
-        role: msg.role === "user" ? "user" : "assistant",
-        content: msg.text
-      });
-    }
-  }
+function isImageFile(file) {
+  return !!(file && file.mimeType.startsWith("image/"));
+}
 
-  // Build user content for Groq (text only — images not supported)
-  let userContent = message || "";
-  if (attachedFile) {
-    const isImage = attachedFile.mimeType && attachedFile.mimeType.startsWith("image/");
-    if (isImage) {
-      userContent = "[User attached an image, but the fallback AI model cannot process images. Please let them know to try again later.]\n" + userContent;
-    } else {
-      try {
-        const fileText = Buffer.from(attachedFile.data, "base64").toString("utf-8");
-        userContent = `[Attached File: ${attachedFile.name}]\n\n${fileText}\n\n` + userContent;
-      } catch (e) {
-        userContent = `[Attached File: ${attachedFile.name} — could not decode]\n` + userContent;
-      }
-    }
-  }
-
-  messages.push({
-    role: "user",
-    content: userContent
-  });
-
-  const groqUrl = "https://api.groq.com/openai/v1/chat/completions";
-
+function decodeTextAttachment(file) {
   try {
-    const response = await fetch(groqUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${groqApiKey}`
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: messages,
-        temperature: 0.9,
-        max_tokens: 1024
-      })
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("Groq API error:", errText);
-      return {
-        statusCode: response.status,
-        body: JSON.stringify({ error: "Both Gemini and Groq APIs failed", details: errText })
-      };
-    }
-
-    const data = await response.json();
-    const aiText = data?.choices?.[0]?.message?.content || "Hmm, I got nothing. Try again? 🤷";
-
-    return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reply: aiText, source: "groq" })
-    };
-  } catch (err) {
-    console.error("Groq Fetch error:", err);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: "Failed to reach Groq API fallback", details: err.message })
-    };
+    return `[Attached File: ${file.name}]\n\n${Buffer.from(file.data, "base64").toString("utf-8")}`;
+  } catch (e) {
+    return `[Attached File: ${file.name} — could not decode]`;
   }
 }
 
+async function callGemini(systemPrompt, history, message, attachedFile, apiKey) {
+  const contents = history.map(m => ({ role: m.role, parts: [{ text: m.text }] }));
+
+  const userParts = [];
+  if (attachedFile && isImageFile(attachedFile)) {
+    userParts.push({ inline_data: { mime_type: attachedFile.mimeType, data: attachedFile.data } });
+  } else if (attachedFile) {
+    userParts.push({ text: decodeTextAttachment(attachedFile) });
+  }
+  userParts.push({ text: message || "Here is a file. Please analyze it or tell me what it contains." });
+  contents.push({ role: "user", parts: userParts });
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents,
+        // Thinking tokens count toward this limit, so leave generous headroom
+        generationConfig: { temperature: 0.9, topP: 0.95, maxOutputTokens: 4096 }
+      })
+    }
+  );
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errText.slice(0, 300)}`);
+  }
+
+  const data = await response.json();
+  const parts = data?.candidates?.[0]?.content?.parts || [];
+  // Skip internal "thought" parts — only show the actual answer
+  return parts.filter(p => !p.thought && typeof p.text === "string").map(p => p.text).join("").trim();
+}
+
+async function callGroq(systemPrompt, history, message, attachedFile, apiKey) {
+  const messages = [{ role: "system", content: systemPrompt }];
+  for (const m of history) {
+    messages.push({ role: m.role === "user" ? "user" : "assistant", content: m.text });
+  }
+
+  // Groq fallback is text-only
+  let userContent = message || "";
+  if (attachedFile && isImageFile(attachedFile)) {
+    userContent = "[User attached an image, but the backup AI model cannot see images. Let them know to try again in a minute.]\n" + userContent;
+  } else if (attachedFile) {
+    userContent = decodeTextAttachment(attachedFile) + "\n\n" + userContent;
+  }
+  messages.push({ role: "user", content: userContent });
+
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      messages,
+      temperature: 0.9,
+      max_completion_tokens: 2048,
+      reasoning_effort: "low",
+      include_reasoning: false
+    })
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errText.slice(0, 300)}`);
+  }
+
+  const data = await response.json();
+  return (data?.choices?.[0]?.message?.content || "").trim();
+}
+
 function buildSystemPrompt(context) {
-  const name = context?.userName || "friend";
-  const now = context?.currentTime || new Date().toLocaleString();
+  const name = clampString(context?.userName, 40) || "friend";
+  const now = clampString(context?.currentTime, 60) || new Date().toLocaleString();
+  if (context?.globalMemory) context.globalMemory = clampString(context.globalMemory, 4000);
 
   let dataBlock = "";
 

@@ -1,3 +1,29 @@
 [build]
   publish = "."
   functions = "netlify/functions"
+
+# Dev-only files in the repo that should never be served
+[[redirects]]
+  from = "/_archive/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), geolocation=(), payment=()"
+
+# Always revalidate the service worker and app shell so updates reach users fast
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"

@@ -5615,7 +5615,9 @@ async function openReader(id, title, url, coverUrl) {
   try {
     let secureUrl = url.replace("http://", "https://");
 
+    // Our own Netlify proxy first (fast, reliable); public proxies only as backup
     const proxies = [
+      `/.netlify/functions/book-proxy?url=${encodeURIComponent(secureUrl)}`,
       `https://api.allorigins.win/get?url=${encodeURIComponent(secureUrl)}`,
       `https://api.allorigins.win/raw?url=${encodeURIComponent(secureUrl)}`,
       `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(secureUrl)}`,
