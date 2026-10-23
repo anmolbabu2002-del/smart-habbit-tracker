@@ -590,6 +590,15 @@ function runNotificationSetupIfNeeded() {
   if (!("Notification" in window)) return;
   if (appStorage.getItem("notificationSetupDone") === "1") return;
 
+  // Don't ambush brand-new users: wait until they've registered a name and
+  // come back for a second session. "Not now" snoozes for 3 days.
+  if (!appStorage.getItem("userName")) return;
+  const launches = parseInt(appStorage.getItem("appLaunchCount") || "0", 10) + 1;
+  appStorage.setItem("appLaunchCount", String(launches));
+  if (launches < 2) return;
+  const snoozedUntil = parseInt(appStorage.getItem("notificationSetupSnoozedUntil") || "0", 10);
+  if (Date.now() < snoozedUntil) return;
+
   const overlay = document.createElement("div");
   overlay.className = "notification-setup-overlay";
 
@@ -637,7 +646,9 @@ function runNotificationSetupIfNeeded() {
 
   if (skipBtn) {
     skipBtn.addEventListener("click", () => {
-      finalize({ taskReminders: false, waterReminders: false });
+      setReminderPreferences({ taskReminders: false, waterReminders: false });
+      appStorage.setItem("notificationSetupSnoozedUntil", String(Date.now() + 3 * 24 * 60 * 60 * 1000));
+      overlay.remove();
     });
   }
 
@@ -733,7 +744,7 @@ function updateGreeting() {
 
         const validateAndSave = () => {
           const nameStr = nameInput.value.trim();
-          if (nameStr.length >= 3 && nameStr.length <= 10) {
+          if (nameStr.length >= 1 && nameStr.length <= 20) {
             // Valid name
             nameInput.classList.remove("invalid");
             errorMsg.classList.remove("visible");
@@ -8743,7 +8754,7 @@ function loadAIChat(chatId) {
   // Keep the welcome message
   messagesEl.innerHTML = `
     <div class="ai-message ai-bot-message">
-      <div class="ai-msg-avatar" style="padding:0; overflow:hidden;"><img src="anmol-ai-avatar.jpeg" style="width:100%; height:100%; object-fit:cover;"></div>
+      <div class="ai-msg-avatar" style="padding:0; overflow:hidden;"><img src="anmol-ai-avatar.webp" style="width:100%; height:100%; object-fit:cover;"></div>
       <div class="ai-msg-bubble">
         Namaste! 🇳🇵👋🔥 I'm <strong>Anmol AI</strong>, an advanced assistant built by the brilliant <strong>Anmol Jha</strong>. 
         <br><br>My core purpose is to <strong>enhance your productivity</strong> and <strong>faithfully follow your exact instructions</strong>. 
@@ -8882,7 +8893,7 @@ function appendAIMessage(text, isUser, skipScroll) {
 
   const avatar = document.createElement("div");
   avatar.className = "ai-msg-avatar";
-  if (isUser) { avatar.textContent = '👤'; } else { avatar.style.padding = '0'; avatar.style.overflow = 'hidden'; avatar.innerHTML = '<img src="anmol-ai-avatar.jpeg" style="width:100%; height:100%; object-fit:cover;">'; }
+  if (isUser) { avatar.textContent = '👤'; } else { avatar.style.padding = '0'; avatar.style.overflow = 'hidden'; avatar.innerHTML = '<img src="anmol-ai-avatar.webp" style="width:100%; height:100%; object-fit:cover;">'; }
 
   const bubble = document.createElement("div");
   bubble.className = "ai-msg-bubble";

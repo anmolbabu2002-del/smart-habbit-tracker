@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ultradian-v37';
+const CACHE_NAME = 'ultradian-v38';
 
 // ═══ CORE APP SHELL (HTML, CSS, JS) ═══
 const CORE_ASSETS = [
@@ -24,22 +24,16 @@ const FEATURE_ASSETS = [
   './pattern-prophet.js',
   './omniscient.js',
   './cross-zero.js',
-  './neuro-link.js',
-  './test-proxies.js',
-  './bundle.js'
+  './neuro-link.js'
 ];
 
 // ═══ ICONS & APP IMAGES ═══
 const IMAGE_ASSETS = [
   './icon-192-v2.png',
   './icon-512-v2.png',
-  './anmol-ai-avatar.jpeg',
-  './welcome-character.png',
-  // Hub / Knowledge content images
-  './file_00000000164871fa8242a2f408db55dc.png',
-  './file_000000005c3871fab43858a38fc3b6a8.png',
-  './file_0000000074b4720899d764b82548f222.png',
-  './file_00000000ca207208bab30f2ec889c89f.png'
+  './anmol-ai-avatar.webp',
+  './welcome-character.png'
+  // Hub infographics (hub-*.webp) are cached on first view, not pre-cached
 ];
 
 // ═══ MEDITATION & FOCUS AUDIO/VIDEO ═══
@@ -50,7 +44,6 @@ const IMAGE_ASSETS = [
 const CDN_ASSETS = [
   'https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js',
@@ -155,30 +148,38 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // ── 4. All other local assets: Cache-first, network fallback ──
-  event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-
-      // Try without query string as fallback
-      const bareUrl = event.request.url.split('?')[0];
-      return caches.match(bareUrl).then(fallback => {
-        if (fallback) return fallback;
-
-        // Not in cache — fetch from network and cache it
-        return fetch(event.request).then(response => {
-          if (!response || response.status !== 200) return response;
+  // ── 4. App code (HTML/JS/CSS/JSON): Network-first, cache fallback ──
+  // Users always get the latest deploy when online, and the cached copy offline.
+  // No more manual CACHE_NAME bumps needed to ship a fix.
+  const isCode = event.request.mode === 'navigate' || /\.(html|js|css|json)$/i.test(url.pathname) || url.pathname.endsWith('/');
+  if (isCode) {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        if (response && response.status === 200) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-          return response;
-        });
+        }
+        return response;
+      }).catch(() =>
+        caches.match(event.request, { ignoreSearch: true }).then(cached =>
+          cached || (event.request.mode === 'navigate' ? caches.match('./index.html') : new Response('', { status: 503 }))
+        )
+      )
+    );
+    return;
+  }
+
+  // ── 5. Images & other static files: Cache-first, network fallback ──
+  event.respondWith(
+    caches.match(event.request, { ignoreSearch: true }).then(cached => {
+      if (cached) return cached;
+      return fetch(event.request).then(response => {
+        if (!response || response.status !== 200) return response;
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        return response;
       });
-    }).catch(() => {
-      // Last resort: serve index.html for HTML navigation requests
-      if (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html')) {
-        return caches.match('./index.html');
-      }
-    })
+    }).catch(() => new Response('', { status: 503, statusText: 'Offline' }))
   );
 });
 

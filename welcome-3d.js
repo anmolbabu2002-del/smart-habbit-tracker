@@ -553,11 +553,17 @@
     tl.call(shatterPanel, null, 8.5);
     tl.to(rShoulder.rotation, { z: 0, x: 0, duration: 0.3 }, 8.6);
     tl.to(headGroup.rotation, { y: 0.2, x: 0, duration: 0.3 }, 8.6);
-    // Show UI card
-    tl.call(function() {
+    // Show UI card — driven by the timeline, but also by a wall-clock fallback
+    // so slow devices (low FPS stretches the GSAP timeline) never get stuck
+    function showCard() {
       var ui = document.getElementById('welcome-ui-overlay');
       if (ui) ui.classList.add('visible');
-    }, null, 8.5);
+    }
+    tl.call(showCard, null, 8.5);
+    var reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setTimeout(showCard, reduceMotion ? 0 : 9000);
+    // Tapping anywhere skips straight to the card
+    container.addEventListener('pointerdown', function() { tl.progress(1); showCard(); }, { once: true });
     tl.to(camera.position, { y: 2.5, z: isMobile ? 7.5 : 5.5, x: 0, duration: 1.5, ease: "power2.inOut" }, 8.5);
     // Walk out
     tl.call(function() { walkOn = true; trailActive = true; }, null, 9.2);
@@ -566,7 +572,17 @@
 
     // ═══ RENDER LOOP ═══
     var clk = new THREE.Clock();
+    var stopped = false;
     function loop() {
+      if (stopped) return;
+      // Once the user has entered their name the overlay hides — free the GPU
+      if (overlay.classList.contains('hidden')) {
+        stopped = true;
+        tl.kill();
+        renderer.dispose();
+        if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
+        return;
+      }
       requestAnimationFrame(loop);
       var t = clk.getElapsedTime();
       doWalk(t);
