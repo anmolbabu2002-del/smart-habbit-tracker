@@ -1,0 +1,932 @@
+/* ==================== MEDITATION SCENE: FOREST LAKE ==================== */
+/* Built by meditation-scene.js inside the meditation card. The horizon height comes from JS as --hz. */
+
+.med-scene {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    display: none;
+    border-radius: inherit;
+    --hz: 56%;
+    --W: 400px;
+    overflow: hidden;
+    pointer-events: none;
+    contain: strict;
+
+    /* Day palette (default) */
+    --sky1: #3fa9f5;
+    --sky2: #8fd3ff;
+    --sky3: #e3f6ff;
+    --mtn-far: #a9c8e6;
+    --mtn-near: #7ea9cc;
+    --haze: rgba(227, 246, 255, 0.85);
+    --tree-back: #5c9a84;
+    --tree-mid: #2f7a5c;
+    --tree-front: #1b5a43;
+    --bank: #2a6a50;
+    --water1: #bfe8f4;
+    --water2: #1f7aa3;
+    --sun: #fffbe3;
+    --sun-glow: rgba(255, 250, 215, 0.75);
+    --sun-x: 84%;
+    --sun-y: 7%;
+    --sun-size: 58px;
+    --glint: rgba(255, 255, 255, 0.95);
+    --ripple: rgba(255, 255, 255, 0.75);
+    --mist: rgba(255, 255, 255, 0.55);
+    --cloud: rgba(255, 255, 255, 0.92);
+    --bird: rgba(35, 52, 66, 0.75);
+    --leaf: #8cc63f;
+    --fly: rgba(255, 255, 220, 0.85);
+    --pad: #3f9a52;
+    --reed: #2f6b3c;
+    --stars-o: 0;
+    --clouds-o: 1;
+    --rays-o: 0.55;
+    --mist-o: 0.5;
+    --glints-o: 0.55;
+    --fly-size: 3px;
+}
+
+body.med-scene-on .med-scene {
+    display: block;
+}
+
+.med-scene[data-tod="dawn"] {
+    --sky1: #2f3d73;
+    --sky2: #d9849a;
+    --sky3: #ffd3a6;
+    --mtn-far: #a982a8;
+    --mtn-near: #735e92;
+    --haze: rgba(255, 205, 175, 0.85);
+    --tree-back: #4f5b7c;
+    --tree-mid: #2f4659;
+    --tree-front: #1d3141;
+    --bank: #273c4f;
+    --water1: #f6bba3;
+    --water2: #36457a;
+    --sun: #ffe6b0;
+    --sun-glow: rgba(255, 190, 140, 0.8);
+    --sun-x: 30%;
+    --sun-y: 43%;
+    --sun-size: 74px;
+    --glint: rgba(255, 225, 190, 0.95);
+    --mist: rgba(255, 228, 214, 0.75);
+    --cloud: rgba(255, 210, 200, 0.85);
+    --bird: rgba(50, 40, 70, 0.75);
+    --leaf: #f2a65a;
+    --pad: #3b7a5c;
+    --reed: #24394a;
+    --stars-o: 0.25;
+    --clouds-o: 0.85;
+    --rays-o: 0.5;
+    --mist-o: 0.95;
+    --glints-o: 0.8;
+}
+
+.med-scene[data-tod="dusk"] {
+    --sky1: #33276b;
+    --sky2: #c4507f;
+    --sky3: #ffa35c;
+    --mtn-far: #915a8b;
+    --mtn-near: #5f3f70;
+    --haze: rgba(255, 160, 120, 0.8);
+    --tree-back: #4a3a5f;
+    --tree-mid: #2d2843;
+    --tree-front: #1b192b;
+    --bank: #24203a;
+    --water1: #ffad78;
+    --water2: #2a2350;
+    --sun: #ffd27a;
+    --sun-glow: rgba(255, 140, 90, 0.85);
+    --sun-x: 64%;
+    --sun-y: 44%;
+    --sun-size: 84px;
+    --glint: rgba(255, 205, 140, 0.95);
+    --ripple: rgba(255, 225, 200, 0.7);
+    --mist: rgba(255, 190, 170, 0.5);
+    --cloud: rgba(255, 170, 160, 0.8);
+    --bird: rgba(30, 20, 40, 0.8);
+    --leaf: #ff8c42;
+    --fly: rgba(255, 230, 140, 0.95);
+    --pad: #2f5a4c;
+    --reed: #1d1b2e;
+    --stars-o: 0.45;
+    --clouds-o: 0.8;
+    --rays-o: 0.25;
+    --mist-o: 0.6;
+    --glints-o: 0.85;
+}
+
+.med-scene[data-tod="night"] {
+    --sky1: #040a1d;
+    --sky2: #111e48;
+    --sky3: #2c3c72;
+    --mtn-far: #263460;
+    --mtn-near: #19244a;
+    --haze: rgba(70, 90, 150, 0.6);
+    --tree-back: #142039;
+    --tree-mid: #0c162b;
+    --tree-front: #060c19;
+    --bank: #0a1326;
+    --water1: #2b3e73;
+    --water2: #040a1d;
+    --sun: #f6f2dc;
+    --sun-glow: rgba(190, 205, 255, 0.45);
+    --sun-x: 18%;
+    --sun-y: 8%;
+    --sun-size: 48px;
+    --glint: rgba(225, 232, 255, 0.85);
+    --ripple: rgba(200, 215, 255, 0.55);
+    --mist: rgba(140, 160, 220, 0.3);
+    --cloud: rgba(120, 140, 200, 0.3);
+    --fly: rgba(215, 255, 140, 1);
+    --pad: #1f3d3a;
+    --reed: #070d1a;
+    --stars-o: 1;
+    --clouds-o: 0.5;
+    --rays-o: 0;
+    --mist-o: 0.55;
+    --glints-o: 0.6;
+    --fly-size: 4px;
+}
+
+.med-scene > * {
+    position: absolute;
+}
+
+.med-scene svg {
+    overflow: visible;
+}
+
+.med-scene path,
+.med-scene circle,
+.med-scene rect,
+.med-scene stop {
+    transition: fill 1.5s ease, stop-color 1.5s ease;
+}
+
+/* Sky */
+.ms-sky {
+    inset: 0;
+    background: linear-gradient(180deg, var(--sky1) 0%, var(--sky2) 34%, var(--sky3) var(--hz), var(--sky3) 100%);
+    transition: background 1.5s ease;
+}
+
+.ms-stars {
+    inset: 0;
+    opacity: var(--stars-o);
+    transition: opacity 2s ease;
+}
+
+.ms-stars i {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
+    border-radius: 50%;
+    animation: msTwinkle 5s ease-in-out infinite alternate;
+}
+
+.ms-stars i:last-child {
+    animation-duration: 7s;
+    animation-delay: -3s;
+}
+
+/* Sun / moon */
+.ms-sun {
+    left: var(--sun-x);
+    top: var(--sun-y);
+    width: 0;
+    height: 0;
+    transition: left 2s ease, top 2s ease;
+}
+
+.ms-sun-disc,
+.ms-sun-glow {
+    position: absolute;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.ms-sun-disc {
+    width: var(--sun-size);
+    height: var(--sun-size);
+    background: radial-gradient(circle at 40% 38%, #fff, var(--sun) 60%);
+    box-shadow: 0 0 40px 10px var(--sun-glow);
+}
+
+.med-scene[data-tod="night"] .ms-sun-disc {
+    background: radial-gradient(circle at 38% 36%, #fffef4, var(--sun) 55%, #d9d3b8 100%);
+    box-shadow: 0 0 30px 6px var(--sun-glow), inset -8px -6px 0 rgba(180, 175, 150, 0.35);
+}
+
+.ms-sun-glow {
+    width: calc(var(--sun-size) * 6);
+    height: calc(var(--sun-size) * 6);
+    background: radial-gradient(circle, var(--sun-glow) 0%, transparent 65%);
+    opacity: 0.8;
+    transition: transform var(--breath-dur, 4s) ease-in-out, opacity var(--breath-dur, 4s) ease-in-out;
+}
+
+.med-scene.breath-in .ms-sun-glow {
+    transform: translate(-50%, -50%) scale(1.35);
+    opacity: 1;
+}
+
+/* Light rays */
+.ms-rays {
+    left: var(--sun-x);
+    top: var(--sun-y);
+    width: 0;
+    height: 0;
+    opacity: var(--rays-o);
+    transition: opacity 2s ease, left 2s ease, top 2s ease;
+}
+
+.ms-rays i {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 70px;
+    height: 120%;
+    transform-origin: 50% 0;
+    background: linear-gradient(180deg, rgba(255, 252, 230, 0.5), rgba(255, 252, 230, 0) 75%);
+    filter: blur(14px);
+    animation: msRay 9s ease-in-out infinite alternate;
+}
+
+.ms-rays i:nth-child(1) { transform: translateX(-50%) rotate(18deg); }
+.ms-rays i:nth-child(2) { transform: translateX(-50%) rotate(34deg); width: 40px; animation-delay: -3s; }
+.ms-rays i:nth-child(3) { transform: translateX(-50%) rotate(52deg); animation-delay: -5s; }
+.ms-rays i:nth-child(4) { transform: translateX(-50%) rotate(-8deg); width: 50px; animation-delay: -7s; }
+
+/* Clouds */
+.ms-clouds {
+    inset: 0 0 calc(100% - var(--hz)) 0;
+    opacity: var(--clouds-o);
+    transition: opacity 2s ease;
+}
+
+.ms-cloud {
+    position: absolute;
+    left: 0;
+    width: calc(150px * var(--s));
+    height: calc(42px * var(--s));
+    border-radius: 999px;
+    background: var(--cloud);
+    filter: blur(5px);
+    animation: msDrift linear infinite;
+}
+
+.ms-cloud::before,
+.ms-cloud::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    background: inherit;
+}
+
+.ms-cloud::before {
+    width: 46%;
+    height: 150%;
+    left: 16%;
+    top: -70%;
+}
+
+.ms-cloud::after {
+    width: 34%;
+    height: 115%;
+    left: 50%;
+    top: -45%;
+}
+
+/* Birds */
+.ms-birds {
+    inset: 0;
+}
+
+.ms-flock {
+    position: absolute;
+    left: 0;
+    width: 0;
+    height: 0;
+}
+
+.ms-flock span {
+    position: absolute;
+    display: block;
+}
+
+.ms-bird {
+    display: block;
+    width: 100%;
+    fill: var(--bird);
+}
+
+.ms-wing {
+    fill: none;
+    stroke: var(--bird);
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    transform-origin: 12px 7px;
+    animation: msFlapL var(--flap, 0.5s) ease-in-out var(--delay, 0s) infinite alternate;
+}
+
+.ms-wing-r {
+    animation-name: msFlapR;
+}
+
+/* Landscape layers */
+.ms-far,
+.ms-refl,
+.ms-banks,
+.ms-front {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.ms-mtn-far { fill: var(--mtn-far); }
+.ms-mtn-near { fill: var(--mtn-near); }
+.ms-treeline { fill: var(--tree-back); }
+.ms-tree-mid { fill: var(--tree-mid); }
+.ms-tree-round { fill: var(--tree-mid); }
+.ms-bank { fill: var(--bank); }
+.ms-tree-front { fill: var(--tree-front); }
+.ms-haze0 { stop-color: var(--haze); stop-opacity: 0; }
+.ms-haze1 { stop-color: var(--haze); stop-opacity: 1; }
+
+/* Lake */
+.ms-water {
+    left: 0;
+    right: 0;
+    top: var(--hz);
+    bottom: 0;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0, transparent 3px),
+        linear-gradient(180deg, var(--water1) 0%, var(--water2) 100%);
+    transition: background 1.5s ease;
+}
+
+.ms-refl {
+    opacity: 0.5;
+    filter: blur(1.2px);
+    transform-origin: 50% var(--hz);
+    animation: msReflect 7s ease-in-out infinite alternate;
+}
+
+.ms-fishes,
+.ms-lake {
+    left: 0;
+    right: 0;
+    top: var(--hz);
+    bottom: 0;
+}
+
+.ms-fishes {
+    overflow: hidden;
+}
+
+.ms-fish {
+    position: absolute;
+    left: 0;
+    filter: blur(0.7px) saturate(0.9);
+}
+
+.ms-fish svg,
+.ms-jumper svg {
+    display: block;
+    width: 100%;
+}
+
+.ms-fish.ltr svg {
+    transform: scaleX(-1);
+}
+
+.ms-fish-tail {
+    transform-origin: 44px 12px;
+    animation: msTail 0.9s ease-in-out infinite alternate;
+}
+
+.ms-jumper {
+    position: absolute;
+    z-index: 2;
+}
+
+.ms-ripple {
+    position: absolute;
+    border: 1.5px solid var(--ripple);
+    border-radius: 50%;
+    box-sizing: border-box;
+}
+
+.ms-glints {
+    left: var(--sun-x);
+    top: calc(var(--hz) + 0.4%);
+    bottom: 4%;
+    width: 0;
+    opacity: var(--glints-o);
+    transition: left 2s ease, opacity 2s ease;
+}
+
+.ms-glints i {
+    position: absolute;
+    left: 0;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--glint);
+    box-shadow: 0 0 6px var(--glint);
+    animation: msGlint 2.6s ease-in-out infinite alternate;
+}
+
+.ms-mist {
+    left: 0;
+    right: 0;
+    top: calc(var(--hz) - 9%);
+    height: 16%;
+    opacity: var(--mist-o);
+    transition: opacity 2s ease;
+}
+
+.ms-mist i {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 200%;
+    height: 100%;
+    background:
+        radial-gradient(ellipse 22% 45% at 12% 55%, var(--mist), transparent 70%),
+        radial-gradient(ellipse 18% 35% at 38% 45%, var(--mist), transparent 70%);
+    background-size: 50% 100%;
+    background-repeat: repeat-x;
+    animation: msMist 90s linear infinite;
+}
+
+.ms-mist i:last-child {
+    top: 25%;
+    opacity: 0.7;
+    animation-duration: 140s;
+    animation-direction: reverse;
+}
+
+.ms-pad {
+    position: absolute;
+    fill: var(--pad);
+    animation: msBob 6s ease-in-out infinite alternate;
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.15));
+}
+
+.ms-lotus {
+    fill: #ff9ec7;
+    stroke: rgba(255, 255, 255, 0.6);
+    stroke-width: 0.6;
+}
+
+.med-scene[data-tod="night"] .ms-lotus {
+    fill: #c98fb2;
+}
+
+/* Foreground reeds */
+.ms-reeds {
+    bottom: -2px;
+    width: min(34%, 230px);
+    height: min(26%, 240px);
+}
+
+.ms-reeds-l {
+    left: -10px;
+}
+
+.ms-reeds-r {
+    right: -14px;
+    transform: scaleX(-1);
+    width: min(26%, 180px);
+    height: min(20%, 200px);
+}
+
+.ms-blade {
+    fill: var(--reed);
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: msSway 4s ease-in-out infinite alternate;
+}
+
+.ms-stem {
+    fill: none;
+    stroke: var(--reed);
+    stroke-width: 2;
+}
+
+.ms-cattail {
+    fill: #6b4a2e;
+}
+
+.med-scene[data-tod="night"] .ms-cattail {
+    fill: #1d1712;
+}
+
+/* Fireflies (night/dusk) and floating motes (day) */
+.ms-flies {
+    inset: 0;
+}
+
+.ms-flies i {
+    position: absolute;
+    width: var(--fly-size);
+    height: var(--fly-size);
+    border-radius: 50%;
+    background: var(--fly);
+    box-shadow: 0 0 10px 3px var(--fly);
+    animation: msFly ease-in-out infinite alternate, msBlink ease-in-out infinite alternate;
+}
+
+.med-scene[data-tod="day"] .ms-flies i,
+.med-scene[data-tod="dawn"] .ms-flies i {
+    width: 2px;
+    height: 2px;
+    box-shadow: 0 0 4px 1px var(--fly);
+    opacity: 0.6;
+}
+
+.ms-leaf {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 12px;
+    height: 8px;
+    border-radius: 0 100% 0 100%;
+    background: var(--leaf);
+    z-index: 3;
+}
+
+.ms-vignette {
+    inset: 0;
+    background:
+        linear-gradient(180deg, rgba(5, 20, 40, 0.22) 0, transparent 220px),
+        radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(5, 15, 25, 0.35) 100%);
+    opacity: 0.6;
+    transition: opacity 2s ease;
+}
+
+.med-scene.in-session .ms-vignette {
+    opacity: 1;
+}
+
+/* Keyframes */
+@keyframes msTwinkle { from { opacity: 0.45; } to { opacity: 1; } }
+@keyframes msRay { from { opacity: 0.35; } to { opacity: 0.9; } }
+@keyframes msDrift { from { transform: translateX(-220px); } to { transform: translateX(calc(var(--W) + 40px)); } }
+@keyframes msFlapL { from { transform: rotate(-32deg); } to { transform: rotate(14deg); } }
+@keyframes msFlapR { from { transform: rotate(32deg); } to { transform: rotate(-14deg); } }
+@keyframes msReflect { from { transform: scaleY(1) translateX(0); } to { transform: scaleY(1.02) translateX(3px); } }
+@keyframes msTail { from { transform: rotate(-14deg); } to { transform: rotate(14deg); } }
+@keyframes msGlint { from { opacity: 0.1; transform: scaleX(0.6); } to { opacity: 1; transform: scaleX(1.1); } }
+@keyframes msMist { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes msBob { from { transform: translateY(0) rotate(-1deg); } to { transform: translateY(2px) rotate(1deg); } }
+@keyframes msSway { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+@keyframes msFly { from { transform: translate(0, 0); } to { transform: translate(var(--dx), var(--dy)); } }
+@keyframes msBlink { 0%, 40% { opacity: 0.1; } 100% { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .med-scene *,
+    .med-scene *::before,
+    .med-scene *::after {
+        animation: none !important;
+    }
+}
+
+/* ==================== MEDITATION CARD = THE SCENE ==================== */
+/* The card is the window into the forest lake; controls float on frosted panels. */
+body.med-scene-on #meditation-page .meditation-card {
+    background: transparent !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 20px 50px rgba(8, 30, 45, 0.28) !important;
+    min-height: min(calc(100dvh - 130px), 900px);
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    isolation: isolate;
+    animation: none;
+}
+
+body.med-scene-on #meditation-page .meditation-header {
+    display: none;
+}
+
+body.med-scene-on #meditation-page .meditation-title {
+    margin-top: 8px;
+    color: #fff !important;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.3);
+}
+
+body.med-scene-on #meditation-page .meditation-desc {
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: 600;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+    margin-bottom: 1rem;
+}
+
+body.med-scene-on #meditation-page .close-btn {
+    z-index: 5;
+    background: rgba(255, 255, 255, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    color: #fff !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+/* Layout over the scene: header in the sky, countdown floating on the horizon, panels on the lake */
+body.med-scene-on #meditation-page .meditation-title { order: 1; }
+body.med-scene-on #meditation-page .meditation-desc { order: 2; }
+body.med-scene-on #meditation-page .med-countdown-wrap { order: 4; }
+body.med-scene-on #meditation-page .med-duration-block { order: 5; }
+body.med-scene-on #meditation-page .sound-selector-container { order: 6; }
+body.med-scene-on #meditation-page .breathing-toggle-row { order: 7; }
+body.med-scene-on #meditation-page .breathing-section { order: 8; }
+body.med-scene-on #meditation-page .med-controls { order: 9; }
+
+body.med-scene-on #meditation-page .med-countdown-wrap {
+    width: 100%;
+    padding: 34px 0 54px;
+    margin-bottom: 18px;
+    text-align: center;
+}
+
+body.med-scene-on #meditation-page #med-countdown {
+    font-size: 4.2rem;
+    background: none;
+    -webkit-text-fill-color: #fff;
+    color: #fff;
+    text-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+    letter-spacing: 4px;
+}
+
+body.med-scene-on #meditation-page #med-countdown-label {
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+    font-weight: 600;
+}
+
+/* Frosted panels */
+body.med-scene-on #meditation-page :is(.med-duration-block, .sound-selector-container, .breathing-toggle-row, .breathing-section) {
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.68);
+    background: color-mix(in srgb, var(--bg-card) 70%, transparent);
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(8, 30, 45, 0.12);
+}
+
+body.med-scene-on #meditation-page .med-duration-block {
+    margin: 0 0 14px;
+}
+
+body.med-scene-on #meditation-page .sound-selector-container {
+    padding: 14px;
+    margin-bottom: 14px;
+}
+
+body.med-scene-on #meditation-page .breathing-toggle-row {
+    margin-bottom: 14px;
+}
+
+body.med-scene-on #meditation-page .breathing-section {
+    padding: 16px 14px;
+    margin-bottom: 14px;
+}
+
+body.med-scene-on #meditation-page .med-controls {
+    position: relative;
+    margin-top: 6px;
+}
+
+/* During a session the panels step away; the timer and breath orb float over the lake */
+body.med-scene-on #meditation-page.med-session-active .meditation-card {
+    justify-content: flex-start;
+    padding-top: 64px;
+}
+
+body.med-scene-on #meditation-page.med-session-active :is(.meditation-title, .meditation-desc, .ms-time, .med-duration-block, .sound-selector-container, .breathing-toggle-row, .breathing-modes, .breathing-instructions) {
+    display: none;
+}
+
+body.med-scene-on #meditation-page.med-session-active .med-countdown-wrap {
+    padding: 0;
+}
+
+body.med-scene-on #meditation-page.med-session-active .breathing-section {
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+body.med-scene-on #meditation-page.med-session-active .breathing-circle {
+    background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.9), rgba(170, 230, 255, 0.45) 45%, rgba(120, 200, 255, 0.12) 72%);
+    box-shadow: 0 0 60px rgba(210, 240, 255, 0.55);
+    opacity: 1;
+}
+
+body.med-scene-on #meditation-page.med-session-active .med-stop-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+/* ==================== CALM GLASS CONTROLS ==================== */
+/* No boxes, no glow: just faint glass buttons with white text over the scene. */
+body.med-scene-on #meditation-page :is(.med-duration-block, .sound-selector-container, .breathing-section) {
+    background: transparent !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: none !important;
+    box-shadow: none;
+    padding: 0;
+    margin: 0 0 18px;
+}
+
+/* Less text on screen */
+body.med-scene-on #meditation-page :is(.meditation-desc, .med-duration-block h3, .med-duration-row, .sound-selector-container h3, .breathing-toggle-row) {
+    display: none;
+}
+
+body.med-scene-on #meditation-page .meditation-title {
+    margin-bottom: 0;
+}
+
+body.med-scene-on #meditation-page :is(.mode-label, .mode-timing, .breathing-instructions, .breathing-instructions span, .breathing-instructions b) {
+    color: #fff !important;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Duration: − 5m 10m 15m 20m 30m + in one row */
+body.med-scene-on #meditation-page .med-quick-picks {
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin: 0;
+}
+
+body.med-scene-on #meditation-page :is(.med-quick-btn, .med-dur-btn, .ms-time-btn, .ms-breath-pill, .sound-btn) {
+    min-height: 0 !important;
+}
+
+body.med-scene-on #meditation-page .med-quick-btn {
+    height: 30px;
+    min-width: 0;
+    padding: 0 8px;
+    line-height: 28px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+}
+
+body.med-scene-on #meditation-page .med-dur-btn {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    font-size: 1rem;
+}
+
+/* Sounds: small pills instead of big tiles */
+body.med-scene-on #meditation-page .sound-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+}
+
+body.med-scene-on #meditation-page .sound-btn {
+    flex-direction: row;
+    gap: 5px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+body.med-scene-on #meditation-page .sound-btn:hover {
+    transform: none;
+}
+
+/* Shared glass button look */
+body.med-scene-on #meditation-page :is(.med-dur-btn, .med-quick-btn, .sound-btn, .breathing-mode-btn, .ms-breath-pill) {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.35) !important;
+    color: #fff !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    box-shadow: none !important;
+}
+
+body.med-scene-on #meditation-page :is(.med-quick-btn, .sound-btn, .breathing-mode-btn, .ms-breath-pill).active {
+    background: rgba(255, 255, 255, 0.3) !important;
+    border-color: rgba(255, 255, 255, 0.8) !important;
+    font-weight: 700;
+}
+
+.ms-breath-pill {
+    order: 7;
+    align-self: center;
+    margin: 0 0 18px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+body.med-scene-on #meditation-page .breathing-modes {
+    margin-bottom: 14px;
+}
+
+body.med-scene-on #meditation-page .breathing-mode-btn {
+    padding: 8px;
+    border-radius: 14px;
+}
+
+body.med-scene-on #meditation-page .breathing-circle {
+    background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.85), rgba(170, 230, 255, 0.4) 45%, rgba(120, 200, 255, 0.1) 72%);
+    box-shadow: 0 0 30px rgba(210, 240, 255, 0.35);
+}
+
+body.med-scene-on #meditation-page #start-breathing {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    color: #fff;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    box-shadow: none !important;
+}
+
+/* Time of day: tiny corner button with a pop-out list */
+.ms-time {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 6;
+}
+
+.ms-time-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    background: rgba(255, 255, 255, 0.15);
+    font-size: 0.95rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+}
+
+.ms-time-menu {
+    position: absolute;
+    top: 42px;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 120px;
+    padding: 6px;
+    border-radius: 16px;
+    background: rgba(10, 20, 35, 0.45);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    animation: msMenuIn 0.18s ease-out;
+}
+
+.ms-time-menu[hidden] {
+    display: none;
+}
+
+.ms-time-menu button {
+    border: none;
+    background: transparent;
+    color: #fff;
+    text-align: left;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.ms-time-menu button.active {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+@keyframes msMenuIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: none; }
+}
+
+body.med-scene-on #meditation-page.med-session-active :is(.ms-time, .ms-breath-pill) {
+    display: none;
+}
