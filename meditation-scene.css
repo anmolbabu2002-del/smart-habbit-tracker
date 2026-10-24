@@ -930,3 +930,51 @@ body.med-scene-on #meditation-page #start-breathing {
 body.med-scene-on #meditation-page.med-session-active :is(.ms-time, .ms-breath-pill) {
     display: none;
 }
+
+/* ==================== NO PINK PAGE BACKGROUND ==================== */
+body.med-scene-on #meditation-page {
+    background: transparent !important;
+    animation: none !important;
+}
+
+body.med-scene-on #meditation-page .med-ambient-bg {
+    display: none;
+}
+
+/* ==================== PHONES: THE SCENE FILLS THE SCREEN ==================== */
+@media (max-width: 600px) {
+    body.med-scene-on #meditation-page .meditation-card {
+        position: fixed !important;
+        inset: 0;
+        z-index: 900;
+        width: auto;
+        max-width: none;
+        min-height: 0;
+        margin: 0 !important;
+        border: none;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: calc(20px + env(safe-area-inset-top)) 16px calc(110px + env(safe-area-inset-bottom)) !important;
+    }
+
+    /* Pin the landscape to the screen while the controls scroll over it */
+    body.med-scene-on .med-scene {
+        position: fixed;
+        border-radius: 0;
+    }
+
+    body.med-scene-on #meditation-page.med-session-active .meditation-card {
+        padding-top: calc(70px + env(safe-area-inset-top)) !important;
+    }
+
+    body.med-scene-on #meditation-page .close-btn {
+        top: calc(16px + env(safe-area-inset-top));
+    }
+
+    .ms-time {
+        top: calc(16px + env(safe-area-inset-top));
+    }
+}

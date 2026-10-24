@@ -554,7 +554,7 @@
       const open = page.classList.contains("active") && !document.hidden;
       document.body.classList.toggle("med-scene-on", page.classList.contains("active"));
       scene.classList.toggle("in-session", page.classList.contains("med-session-active"));
-      if (open) start(); else stop();
+      if (open) { start(); build(); } else stop();
     };
     new MutationObserver(sync).observe(page, { attributes: true, attributeFilter: ["class"] });
     document.addEventListener("visibilitychange", sync);
