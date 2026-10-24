@@ -4684,9 +4684,24 @@ function markTextInElement(root, searchText, targetOffset = -1, hl = null) {
     }
     if (hl && hl.color) span.style.setProperty('--hl-bg', hl.color);
     if (hl && hl.note) span.classList.add('has-note');
+    if (hl && hl.ts && Date.now() - hl.ts < 2500) span.classList.add('hl-fresh'); // just made: animate the stroke
     const fragment = range.extractContents();
     span.appendChild(fragment);
     range.insertNode(span);
+
+    // Plain text: keep blank lines out of the marker stroke (one stroke per run of text)
+    if (span.childNodes.length === 1 && span.firstChild.nodeType === Node.TEXT_NODE && /\n/.test(span.textContent)) {
+      const parts = span.textContent.split(/(\n+)/);
+      const frag = document.createDocumentFragment();
+      parts.forEach(part => {
+        if (!part) return;
+        if (/^\n+$/.test(part)) { frag.appendChild(document.createTextNode(part)); return; }
+        const piece = span.cloneNode(false);
+        piece.textContent = part;
+        frag.appendChild(piece);
+      });
+      span.replaceWith(frag);
+    }
   } catch (e) {
     console.warn('Highlight apply failed (cross-node):', e);
   }

@@ -209,22 +209,64 @@
 }
 
 /* ---------- Highlights ---------- */
+/* Looks like a real highlighter: ink pools at the start of each stroke, the ends are rough
+   and rounded, and faint streaks run along the stroke. Each line is its own stroke. */
 #reader-modal .book-highlight {
-    background: color-mix(in srgb, var(--hl-bg, rgb(var(--hl-color-rgb, 255, 213, 79))) 48%, transparent);
-    border-radius: 3px;
-    padding: 0 1px;
+    --ink: var(--hl-bg, rgb(var(--hl-color-rgb, 255, 213, 79)));
+    margin: 0 -0.22em;
+    padding: 0.06em 0.22em 0.02em;
+    border-radius: 0.75em 0.25em 0.7em 0.3em / 0.45em 0.6em 0.4em 0.55em;
+    background-color: transparent;
+    background-image:
+        repeating-linear-gradient(179deg, transparent 0 0.22em, color-mix(in srgb, var(--ink) 18%, transparent) 0.22em 0.26em),
+        linear-gradient(100deg,
+            color-mix(in srgb, var(--ink) 20%, transparent) 0%,
+            color-mix(in srgb, var(--ink) 78%, transparent) 2.5%,
+            color-mix(in srgb, var(--ink) 58%, transparent) 9%,
+            color-mix(in srgb, var(--ink) 52%, transparent) 55%,
+            color-mix(in srgb, var(--ink) 64%, transparent) 94%,
+            color-mix(in srgb, var(--ink) 24%, transparent) 100%);
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
     -webkit-box-decoration-break: clone;
     box-decoration-break: clone;
+    mix-blend-mode: multiply;
 }
 
+/* On dark pages the ink glows instead of darkening */
 #reader-modal[data-rd-theme="night"] .book-highlight,
 #reader-modal[data-rd-theme="black"] .book-highlight {
-    background: color-mix(in srgb, var(--hl-bg, rgb(var(--hl-color-rgb, 255, 213, 79))) 32%, transparent);
+    mix-blend-mode: normal;
     color: inherit;
+    background-image:
+        linear-gradient(100deg,
+            color-mix(in srgb, var(--ink) 12%, transparent) 0%,
+            color-mix(in srgb, var(--ink) 42%, transparent) 2.5%,
+            color-mix(in srgb, var(--ink) 30%, transparent) 9%,
+            color-mix(in srgb, var(--ink) 27%, transparent) 55%,
+            color-mix(in srgb, var(--ink) 36%, transparent) 94%,
+            color-mix(in srgb, var(--ink) 12%, transparent) 100%);
+}
+
+/* A fresh highlight is "drawn" left to right, like dragging the marker */
+#reader-modal .book-highlight.hl-fresh {
+    animation: hlSwipe 0.5s cubic-bezier(0.3, 0.7, 0.3, 1) both;
+}
+
+@keyframes hlSwipe {
+    from { background-size: 0% 100%; }
+    to { background-size: 100% 100%; }
 }
 
 #reader-modal .book-highlight.has-note {
-    border-bottom: 2px dotted color-mix(in srgb, var(--hl-bg, #FFD54F) 90%, #000);
+    text-decoration: underline dotted color-mix(in srgb, var(--ink) 80%, #000);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+}
+
+#reader-modal .book-page-display::selection,
+#reader-modal .book-page-display *::selection {
+    background: rgba(var(--hl-color-rgb, 255, 213, 79), 0.35);
 }
 
 ::highlight(tts-sentence) {
