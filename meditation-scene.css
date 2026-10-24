@@ -424,6 +424,26 @@ body.med-scene-on .med-scene {
     box-sizing: border-box;
 }
 
+/* Shader-drawn lake (WebGL); the CSS water layers below are the fallback */
+.ms-gl,
+.ms-gl-slot {
+    left: 0;
+    right: 0;
+    top: var(--hz);
+    bottom: 0;
+    width: 100%;
+    height: calc(100% - var(--hz));
+    display: block;
+}
+
+.med-scene.gl-water :is(.ms-water, .ms-refl, .ms-waves, .ms-sheen, .ms-glints) {
+    display: none;
+}
+
+.med-scene.gl-water .ms-fish {
+    filter: blur(1px) saturate(0.85);
+}
+
 /* Drifting wave lines: each row is a repeating wave, slid one tile width for a seamless loop */
 .ms-waves {
     left: 0;
