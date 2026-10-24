@@ -212,6 +212,15 @@
       stars[i % 2].push(`${Math.round(starRnd() * W)}px ${Math.round(starRnd() * hy * 0.95)}px 0 ${size === 2 ? 0.5 : 0}px rgba(255,255,255,${(0.4 + starRnd() * 0.6).toFixed(2)})`);
     }
 
+    let waves = "";
+    const rows = 11;
+    for (let i = 0; i < rows; i++) {
+      const t = (i + 1) / rows;
+      const bw = Math.round(36 + t * t * 220);
+      const dur = r1(18 - t * 9 + rand(-1, 1));
+      waves += `<i class="${i % 2 ? "rev" : ""}" style="top:${r1(Math.pow(t, 1.5) * 96)}%;height:${r1(3 + t * 12)}px;--bw:${bw}px;background-size:${bw}px 100%;opacity:${(0.1 + t * 0.28).toFixed(2)};animation-duration:${dur}s;animation-delay:-${r1(rand(0, dur))}s"></i>`;
+    }
+
     let glints = "";
     for (let i = 0; i < 22; i++) {
       const w = rand(8, 46) * (0.4 + i / 22);
@@ -245,6 +254,8 @@
           <path class="ms-mtn-far" d="${far.far}"/><path class="ms-mtn-near" d="${far.near}"/><path class="ms-treeline" d="${far.trees}"/>
         </g></g>
       </svg>
+      <div class="ms-waves">${waves}</div>
+      <div class="ms-sheen"><i></i></div>
       <div class="ms-glints">${glints}</div>
       <div class="ms-mist"><i></i><i></i></div>
       <div class="ms-lake">
@@ -536,6 +547,20 @@
     }).observe(circle, { attributes: true, attributeFilter: ["class"] });
   }
 
+  // Tap anywhere on the water (not on a button) to send ripples across the lake
+  function enableTapRipples() {
+    card.addEventListener("pointerdown", (e) => {
+      if (!running || e.target.closest("button, a, input, select, textarea, .med-mood-overlay, .ms-time")) return;
+      const box = scene.getBoundingClientRect();
+      const x = e.clientX - box.left;
+      const y = e.clientY - box.top - box.height * horizon;
+      if (y < 0) return;
+      const depth = Math.min(1, y / (box.height * (1 - horizon)));
+      ripple(x, y, 60 + depth * 160, 2600, 3);
+      if (navigator.vibrate) navigator.vibrate(8);
+    });
+  }
+
   function init() {
     const page = document.getElementById("meditation-page");
     if (!page) return;
@@ -547,6 +572,7 @@
     card.insertBefore(scene, card.firstChild);
     addTimePicker();
     compactControls();
+    enableTapRipples();
     applyTime();
     watchBreathing();
 
