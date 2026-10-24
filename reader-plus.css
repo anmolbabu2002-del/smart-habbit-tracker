@@ -927,3 +927,37 @@
 #translate-modal .add-book-card {
     border-radius: 22px !important;
 }
+
+/* Save / remove buttons in the selection toolbar */
+.rd-save-hl,
+.rd-remove-hl {
+    flex: 1;
+    border: none;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font: 800 0.85rem 'Inter', sans-serif;
+    cursor: pointer;
+}
+
+.rd-save-hl {
+    color: #fff;
+    background: linear-gradient(135deg, var(--rd-accent), #6d28d9);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--rd-accent) 35%, transparent);
+}
+
+.rd-remove-hl {
+    color: #d64545;
+    background: color-mix(in srgb, #d64545 12%, transparent);
+}
+
+.rd-save-hl:active,
+.rd-remove-hl:active {
+    transform: scale(0.97);
+}
+
+.rd-popup .rd-dot {
+    min-height: 0 !important;
+    min-width: 0 !important;
+    padding: 0;
+    flex: 0 0 28px;
+}

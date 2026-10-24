@@ -721,6 +721,22 @@
     function hidePopup() {
         if (popup) { popup.hidden = true; popup.classList.remove('rd-popup-wide'); }
         activeHl = null;
+        clearPreview();
+    }
+
+    // Selected text is shown highlighted right away (a preview); it's only kept after "Save"
+    let previewColor = localStorage.getItem('rdHlColor') || HL_COLORS[0];
+    let previewStyle = null;
+    function showPreview(range) {
+        if (!(window.CSS && CSS.highlights && typeof Highlight !== 'undefined')) return;
+        if (!previewStyle) { previewStyle = document.createElement('style'); document.head.appendChild(previewStyle); }
+        previewStyle.textContent = `::highlight(hl-preview){background-color:${previewColor}99}
+            #reader-modal .book-page-display::selection,#reader-modal .book-page-display *::selection{background:${previewColor}99}`;
+        CSS.highlights.set('hl-preview', new Highlight(range));
+    }
+    function clearPreview() {
+        if (window.CSS && CSS.highlights) CSS.highlights.delete('hl-preview');
+        if (previewStyle) previewStyle.textContent = '';
     }
 
     function selectionToolbar(range) {
@@ -728,8 +744,10 @@
         activeHl = null;
         const text = range.toString().trim();
         const single = /^[\p{L}'’-]{2,30}$/u.test(text);
+        showPreview(range);
         popup.innerHTML = `
-            <div class="rd-pop-row">${HL_COLORS.map(c => `<button type="button" class="rd-dot" data-color="${c}" style="background:${c}" aria-label="Highlight"></button>`).join('')}</div>
+            <div class="rd-pop-row">${HL_COLORS.map(c => `<button type="button" class="rd-dot ${c === previewColor ? 'on' : ''}" data-color="${c}" style="background:${c}" aria-label="Highlight colour"></button>`).join('')}</div>
+            <div class="rd-pop-row"><button type="button" class="rd-save-hl" data-act="save">🖍️ Save highlight</button></div>
             <div class="rd-pop-row rd-pop-actions">
                 <button type="button" data-act="note">📝<small>Note</small></button>
                 <button type="button" data-act="translate">🌐<small>Translate</small></button>
@@ -754,8 +772,8 @@
                 <button type="button" data-act="note">📝<small>${h.note ? 'Edit note' : 'Note'}</small></button>
                 <button type="button" data-act="copy">📋<small>Copy</small></button>
                 <button type="button" data-act="share">📤<small>Share</small></button>
-                <button type="button" data-act="remove">🗑️<small>Remove</small></button>
-            </div>`;
+            </div>
+            <div class="rd-pop-row"><button type="button" class="rd-remove-hl" data-act="remove">🗑️ Remove highlight</button></div>`;
         placePopup(el.getBoundingClientRect());
     }
 
@@ -772,9 +790,10 @@
                 activeHl.el.style.setProperty('--hl-bg', color);
                 popup.querySelectorAll('.rd-dot').forEach(d => d.classList.toggle('on', d === dot));
             } else if (selRange) {
-                handleTextSelection(selRange, { color });
-                window.getSelection()?.removeAllRanges();
-                hidePopup();
+                previewColor = color;
+                localStorage.setItem('rdHlColor', color);
+                popup.querySelectorAll('.rd-dot').forEach(d => d.classList.toggle('on', d === dot));
+                showPreview(selRange);
             }
             return;
         }
@@ -782,6 +801,14 @@
         if (!b) return;
         const act = b.dataset.act;
         const text = currentText();
+        if (act === 'save' && selRange) {
+            handleTextSelection(selRange, { color: previewColor });
+            window.getSelection()?.removeAllRanges();
+            hidePopup();
+            window.SFX?.play('success');
+            notify('🖍️ Highlight saved');
+            return;
+        }
         if (act === 'copy') {
             try { await navigator.clipboard.writeText(text); notify('📋 Copied'); } catch (err) { notify('Couldn\'t copy'); }
             hidePopup();
@@ -794,6 +821,8 @@
             removeHighlight(currentBookId, activeHl.page, activeHl.text, activeHl.offset);
             hidePopup();
             showBookPage(bookPageIndex, 'none');
+            window.SFX?.play('delete');
+            notify('🗑️ Highlight removed');
         } else if (act === 'note') {
             openNoteSheet();
         } else if (act === 'translate') {
@@ -892,7 +921,7 @@
             if (b.dataset.act === 'save') {
                 const note = $('rd-note-text').value.trim();
                 if (sh._hl) updateHighlight(currentBookId, sh._hl.page, sh._hl.text, sh._hl.offset, { note });
-                else if (sh._range) handleTextSelection(sh._range, { color: HL_COLORS[0], note });
+                else if (sh._range) handleTextSelection(sh._range, { color: previewColor, note });
                 window.getSelection()?.removeAllRanges();
                 closeSheets();
                 showBookPage(bookPageIndex, 'none');
