@@ -556,6 +556,40 @@ body.med-scene-on .med-scene {
     fill: #c98fb2;
 }
 
+.ms-lotus.white {
+    fill: #fffaf3;
+    stroke: rgba(255, 170, 200, 0.7);
+}
+
+.med-scene[data-tod="night"] .ms-lotus.white {
+    fill: #d9dcef;
+}
+
+.ms-lotus-heart {
+    fill: #ffd166;
+}
+
+.ms-bud-stem {
+    fill: none;
+    stroke: var(--pad);
+    stroke-width: 1.4;
+    stroke-linecap: round;
+}
+
+/* Reed clumps standing in the water by the banks */
+.ms-plants {
+    left: 0;
+    right: 0;
+    top: var(--hz);
+    bottom: 0;
+}
+
+.ms-clump {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    overflow: visible;
+}
+
 /* Foreground reeds */
 .ms-reeds {
     bottom: -2px;

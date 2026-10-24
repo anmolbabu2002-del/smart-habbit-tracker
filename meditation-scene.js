@@ -174,11 +174,41 @@
     return `<svg class="ms-reeds ${flip ? "ms-reeds-r" : "ms-reeds-l"}" viewBox="0 0 140 200" preserveAspectRatio="xMidYMax meet">${blades}</svg>`;
   }
 
-  function lilyPad(x, y, w, lotus) {
-    const flower = lotus
-      ? `<g class="ms-lotus"><ellipse cx="22" cy="5" rx="3" ry="7" transform="rotate(-35 22 9)"/><ellipse cx="38" cy="5" rx="3" ry="7" transform="rotate(35 38 9)"/><ellipse cx="26" cy="3" rx="3.2" ry="8" transform="rotate(-12 26 9)"/><ellipse cx="34" cy="3" rx="3.2" ry="8" transform="rotate(12 34 9)"/><ellipse cx="30" cy="2" rx="3.4" ry="8.5"/></g>`
-      : "";
-    return `<svg class="ms-pad" style="left:${x}%;top:${y}%;width:${w}px;animation-delay:${r1(-Math.random() * 6)}s" viewBox="0 -8 60 30"><path d="M30,12 L55.1,14.3 A26,9 0 1,1 55.1,9.7 Z"/>${flower}</svg>`;
+  const LOTUS_PETALS = `<ellipse cx="22" cy="5" rx="3" ry="7" transform="rotate(-35 22 9)"/><ellipse cx="38" cy="5" rx="3" ry="7" transform="rotate(35 38 9)"/><ellipse cx="26" cy="3" rx="3.2" ry="8" transform="rotate(-12 26 9)"/><ellipse cx="34" cy="3" rx="3.2" ry="8" transform="rotate(12 34 9)"/><ellipse cx="30" cy="2" rx="3.4" ry="8.5"/>`;
+
+  // flower: "pink" | "white" | "bud" | "" (just a pad)
+  function lilyPad(x, y, flower) {
+    const w = r1(18 + y * 0.62); // farther pads (higher up the lake) are smaller
+    let top = "";
+    if (flower === "pink" || flower === "white") {
+      top = `<g class="ms-lotus${flower === "white" ? " white" : ""}">${LOTUS_PETALS}</g><circle class="ms-lotus-heart" cx="30" cy="7" r="1.8"/>`;
+    } else if (flower === "bud") {
+      top = `<path class="ms-bud-stem" d="M36,12 Q38,3 37,-3"/><ellipse class="ms-lotus" cx="37" cy="-6" rx="2.6" ry="5.2"/>`;
+    }
+    return `<svg class="ms-pad" style="left:${x}%;top:${y}%;width:${w}px;animation-delay:${r1(-Math.random() * 6)}s" viewBox="0 -14 60 36"><path d="M30,12 L55.1,14.3 A26,9 0 1,1 55.1,9.7 Z"/>${top}</svg>`;
+  }
+
+  // Pads hug the shores and the near water; the middle stays open for the controls and glitter
+  const PADS = [
+    [4, 16, "bud"], [10, 21, ""], [16, 15, ""], [78, 22, ""], [84, 17, "white"], [91, 24, ""],
+    [2, 42, "pink"], [9, 49, ""], [18, 45, "bud"], [80, 52, ""], [88, 45, "pink"], [93, 57, "white"],
+    [2, 65, "white"], [14, 70, "pink"], [24, 80, ""], [6, 86, ""], [90, 72, ""], [74, 76, "bud"],
+    [82, 88, "pink"], [30, 91, "white"], [62, 93, "bud"]
+  ];
+
+  // Small clumps of reeds standing in the water near the banks (x, waterline y, height px)
+  function reedClump(x, y, h, seed) {
+    const rnd = seeded(seed);
+    let blades = "";
+    for (let i = 0; i < 7; i++) {
+      const bx = 6 + i * 4 + rnd() * 3;
+      const bh = 30 + rnd() * 28;
+      const bend = (rnd() - 0.5) * 14;
+      const delay = r1(rnd() * -4);
+      blades += `<path class="ms-blade" style="animation-delay:${delay}s" d="M${r1(bx)},60 Q${r1(bx + bend * 0.3)},${r1(60 - bh * 0.6)} ${r1(bx + bend)},${r1(60 - bh)} Q${r1(bx + bend * 0.3 + 2)},${r1(60 - bh * 0.6)} ${r1(bx + 3)},60Z"/>`;
+      if (i === 2 || i === 5) blades += `<g class="ms-blade" style="animation-delay:${delay}s"><path class="ms-stem" d="M${r1(bx + 1.5)},60 L${r1(bx + 1.5 + bend * 0.4)},${r1(52 - bh)}"/><rect class="ms-cattail" x="${r1(bx + bend * 0.4)}" y="${r1(52 - bh)}" width="3.2" height="11" rx="1.6"/></g>`;
+    }
+    return `<svg class="ms-clump" style="left:${x}%;top:${y}%;height:${h}px" viewBox="0 0 40 60">${blades}</svg>`;
   }
 
   // ── build ────────────────────────────────────────────
@@ -261,9 +291,10 @@
       <div class="ms-glints">${glints}</div>
       <div class="ms-mist"><i></i><i></i></div>
       <div class="ms-lake">
-        ${lilyPad(14, 70, 70, true)}${lilyPad(24, 80, 46, false)}${lilyPad(6, 86, 56, false)}${lilyPad(74, 76, 52, false)}${lilyPad(82, 88, 64, true)}
+        ${PADS.map(([x, y, f]) => lilyPad(x, y, f)).join("")}
       </div>
       <svg class="ms-banks" ${view}>${banks}</svg>
+      <div class="ms-plants">${reedClump(1, 13, 54, 5)}${reedClump(13, 33, 46, 8)}${reedClump(91, 15, 50, 13)}${reedClump(85, 38, 42, 17)}</div>
       <svg class="ms-front" ${view}><path class="ms-tree-front" d="${frontLayer(W, H, S)}"/></svg>
       ${reeds(false)}${reeds(true)}
       <div class="ms-flies"></div>
