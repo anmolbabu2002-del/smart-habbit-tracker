@@ -4549,7 +4549,7 @@ function getBookHighlights(bookId) {
   } catch { return {}; }
 }
 
-function saveHighlight(bookId, pageIndex, highlightText, offset = -1) {
+function saveHighlight(bookId, pageIndex, highlightText, offset = -1, extra = {}) {
   if (!highlightText || !highlightText.trim()) return;
   try {
     const all = JSON.parse(appStorage.getItem('bookHighlights') || '{}');
@@ -4559,11 +4559,25 @@ function saveHighlight(bookId, pageIndex, highlightText, offset = -1) {
     // Avoid exact duplicates at the exact same location
     const exists = all[bookId][pageIndex].some(h => h.text === highlightText && (h.offset === offset || offset === -1));
     if (!exists) {
-      all[bookId][pageIndex].push({ text: highlightText, offset, ts: Date.now() });
+      all[bookId][pageIndex].push({ text: highlightText, offset, ts: Date.now(), ...extra });
     }
     appStorage.setItem('bookHighlights', JSON.stringify(all));
     bookHighlights = all[bookId];
   } catch (e) { console.warn('Highlight save error:', e); }
+}
+
+// Change a saved highlight's colour or note
+function updateHighlight(bookId, pageIndex, highlightText, offset, patch) {
+  try {
+    const all = JSON.parse(appStorage.getItem('bookHighlights') || '{}');
+    const list = all[bookId] && all[bookId][pageIndex];
+    if (!list) return;
+    const h = list.find(x => x.text === highlightText && (offset === -1 || String(x.offset) === String(offset)));
+    if (!h) return;
+    Object.assign(h, patch);
+    appStorage.setItem('bookHighlights', JSON.stringify(all));
+    bookHighlights = all[bookId];
+  } catch (e) { console.warn('Highlight update error:', e); }
 }
 
 function removeHighlight(bookId, pageIndex, highlightText, offset = -1) {
@@ -4595,7 +4609,7 @@ function applyHighlightsToPage(pageIndex) {
   // For EPUB & Text: use TreeWalker to mark text in the existing HTML/DOM without destroying structure
   // Sort backwards by offset so DOM mutations don't alter earlier indices
   const sorted = [...highlights].sort((a, b) => b.text.length - a.text.length); 
-  sorted.forEach(h => markTextInElement(pageEl, h.text, h.offset));
+  sorted.forEach(h => markTextInElement(pageEl, h.text, h.offset, h));
 
   // Add click handlers to remove highlights
   pageEl.querySelectorAll('.book-highlight').forEach(span => {
@@ -4613,7 +4627,7 @@ function applyHighlightsToPage(pageIndex) {
 
 // Mark text inside a DOM tree without destroying HTML structure (for EPUB highlights)
 // Uses extractContents + wrapper to support large cross-node selections
-function markTextInElement(root, searchText, targetOffset = -1) {
+function markTextInElement(root, searchText, targetOffset = -1, hl = null) {
   if (!searchText) return;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
   const textNodes = [];
@@ -4668,6 +4682,8 @@ function markTextInElement(root, searchText, targetOffset = -1) {
     if (targetOffset !== -1 && targetOffset !== undefined) {
       span.dataset.hlOffset = targetOffset;
     }
+    if (hl && hl.color) span.style.setProperty('--hl-bg', hl.color);
+    if (hl && hl.note) span.classList.add('has-note');
     const fragment = range.extractContents();
     span.appendChild(fragment);
     range.insertNode(span);
@@ -4676,7 +4692,7 @@ function markTextInElement(root, searchText, targetOffset = -1) {
   }
 }
 
-function handleTextSelection(overrideRange = null) {
+function handleTextSelection(overrideRange = null, extra = {}) {
   if (!currentBookId) return;
   const selection = window.getSelection();
   if (!overrideRange && (!selection || selection.isCollapsed)) return;
@@ -4701,7 +4717,7 @@ function handleTextSelection(overrideRange = null) {
     console.warn("Offset fallback used", e);
   }
 
-  saveHighlight(currentBookId, bookPageIndex, selectedText, offset);
+  saveHighlight(currentBookId, bookPageIndex, selectedText, offset, extra);
   if (!overrideRange && selection) selection.removeAllRanges();
 
   // Re-render page with precisely tracked highlight applied
@@ -4920,6 +4936,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Stop ongoing TTS immediately before translating
     if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (window.NeuralTTS && NeuralTTS.isActive()) NeuralTTS.pause();
 
     const statusEl = document.getElementById('translate-status');
     if (statusEl) statusEl.textContent = "Translating...";
@@ -4929,7 +4946,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (statusEl) statusEl.textContent = "Translation applied.";
 
     // Resume TTS reading the NEW translated text if it was active
-    if (window._ttsAutoReadAfterTurn && typeof window._ttsAutoReadAfterTurn === 'function') {
+    if (window.NeuralTTS && NeuralTTS.isActive()) {
+      NeuralTTS.restartPage();
+    } else if (window._ttsAutoReadAfterTurn && typeof window._ttsAutoReadAfterTurn === 'function') {
       // A small delay to ensure DOM is updated completely
       setTimeout(window._ttsAutoReadAfterTurn, 200);
     }
@@ -5747,69 +5766,55 @@ async function splitTextIntoPages(fullText) {
   }
 }
 
+// Puts page `index` into the reader element (no animation)
+async function renderBookPageContent(index) {
+  const pageEl = document.getElementById("reader-text");
+  if (!pageEl) return;
+  if (bookType === 'epub') {
+    pageEl.className = 'book-page-display epub-mode';
+    pageEl.innerHTML = bookPages[index];
+  } else if (bookType === 'pdf') {
+    pageEl.className = 'book-page-display pdf-mode';
+    await renderPdfPage(index, pageEl);
+  } else {
+    pageEl.className = 'book-page-display';
+    pageEl.textContent = bookPages[index];
+  }
+  pageEl.scrollTop = 0;
+}
+
+// After a page is on screen: progress, highlights, translation, then let listeners know
+async function finishBookPageShow(afterTurn) {
+  updateReaderProgress();
+  await applyTranslationToCurrentPage();
+  if (afterTurn && typeof window._ttsAutoReadAfterTurn === 'function') window._ttsAutoReadAfterTurn();
+  document.dispatchEvent(new CustomEvent('readerpageshown', { detail: { index: bookPageIndex } }));
+}
+
 /**
- * Displays a specific page with optional fold animation.
- * direction: 'next', 'prev', or 'none'
+ * Displays a specific page. direction: 'next', 'prev', or 'none'.
+ * Page-turn animation comes from ReaderTurn (reader-plus.js) when available.
  */
 async function showBookPage(index, direction) {
   const pageEl = document.getElementById("reader-text");
   if (!pageEl || index < 0 || index >= bookPages.length) return;
 
-  async function renderPageContent() {
-    if (bookType === 'epub') {
-      pageEl.className = 'book-page-display epub-mode';
-      pageEl.innerHTML = bookPages[index];
-    } else if (bookType === 'pdf') {
-      pageEl.className = 'book-page-display pdf-mode';
-      await renderPdfPage(index, pageEl);
-    } else {
-      pageEl.className = 'book-page-display';
-      pageEl.textContent = bookPages[index];
-    }
-    pageEl.scrollTop = 0;
-  }
-
-  if (direction === 'none') {
+  if (direction === 'none' || !window.ReaderTurn) {
     pageEl.style.transition = 'none';
-    pageEl.style.transform = 'rotateY(0deg)';
+    pageEl.style.transform = 'none';
     pageEl.style.opacity = '1';
-    await renderPageContent();
-    updateReaderProgress();
-    await applyTranslationToCurrentPage();
+    await renderBookPageContent(index);
+    await finishBookPageShow(direction !== 'none');
     return;
   }
 
   isAnimating = true;
-
-  // Phase 1: Fold the current page away
-  pageEl.style.transition = 'transform 0.25s ease-in, opacity 0.25s ease-in';
-  pageEl.style.transform = direction === 'next' ? 'rotateY(-85deg)' : 'rotateY(85deg)';
-  pageEl.style.opacity = '0';
-
-  await new Promise(r => setTimeout(r, 260));
-
-  // Phase 2: Swap content while hidden
-  await renderPageContent();
-
-  // Position the new page on the opposite side
-  pageEl.style.transition = 'none';
-  pageEl.style.transform = direction === 'next' ? 'rotateY(85deg)' : 'rotateY(-85deg)';
-  void pageEl.offsetHeight;
-
-  // Phase 3: Fold the new page in
-  pageEl.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
-  pageEl.style.transform = 'rotateY(0deg)';
-  pageEl.style.opacity = '1';
-
-  updateReaderProgress();
-  setTimeout(async () => {
+  try {
+    await window.ReaderTurn.animate(direction, () => renderBookPageContent(index));
+  } finally {
     isAnimating = false;
-    await applyTranslationToCurrentPage();
-    // TTS hook: auto-read current page if TTS is active
-    if (window._ttsAutoReadAfterTurn && typeof window._ttsAutoReadAfterTurn === 'function') {
-      window._ttsAutoReadAfterTurn();
-    }
-  }, 320);
+  }
+  await finishBookPageShow(true);
 }
 
 function goNextPage() {
@@ -5927,6 +5932,7 @@ document.addEventListener("DOMContentLoaded", function () {
     bookPageIndex = Math.min(bookPageIndex, bookPages.length - 1);
     await showBookPage(bookPageIndex, 'none');
   }
+  window.rePaginateBook = rePaginateBook;
 
   // Tap zones → fold page turn
   document.getElementById("reader-prev-zone")?.addEventListener("click", () => {
@@ -5938,19 +5944,7 @@ document.addEventListener("DOMContentLoaded", function () {
     goNextPage();
   });
 
-  // Swipe gesture support for mobile
-  let touchStartX = 0;
-  const stage = document.getElementById("reader-content-container");
-  stage?.addEventListener("touchstart", (e) => {
-    touchStartX = e.changedTouches[0].clientX;
-  }, { passive: true });
-  stage?.addEventListener("touchend", (e) => {
-    if (typeof highlightMode !== "undefined" && highlightMode) return; // Prevent swipe if highlighting
-    const diff = touchStartX - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 50) { // Minimum swipe distance
-      if (diff > 0) goNextPage(); else goPrevPage();
-    }
-  }, { passive: true });
+  // (Swipes and drags are handled by the page-curl engine in reader-plus.js)
 
   // Re-paginate book when screen rotates or resizes (debounced)
   let readerResizeTimer = null;
@@ -5976,8 +5970,9 @@ document.addEventListener("DOMContentLoaded", function () {
   if (hlBtn) {
     // CRITICAL FIX: The Ghost Memory system passes the range natively, skipping volatile window.getSelection() bugs!
     const handleHlBtnTouch = (e) => {
-      // If we have a ghost selection stored in memory, save it directly without toggling modes!
-      if (lastValidSelectionRange) {
+      // If we have a ghost selection stored in memory (and text is still selected), save it directly
+      const liveSel = window.getSelection();
+      if (lastValidSelectionRange && liveSel && !liveSel.isCollapsed) {
         handleTextSelection(lastValidSelectionRange);
         if (typeof showNotification === 'function') showNotification('✨ Highlight saved!');
         
@@ -5988,7 +5983,11 @@ document.addEventListener("DOMContentLoaded", function () {
         return; 
       }
 
-      // Otherwise, assume they tapped to toggle the visible mode instructions
+      // Otherwise open the highlights notebook (reader-plus.js); old toggle as a fallback
+      if (typeof window.openHighlightsNotebook === 'function') {
+        window.openHighlightsNotebook();
+        return;
+      }
       highlightMode = !highlightMode;
       const modal = document.getElementById('reader-modal');
       if (highlightMode) {

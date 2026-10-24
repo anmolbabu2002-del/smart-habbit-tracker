@@ -72,6 +72,10 @@ function getCoolVoiceName(voice) {
 }
 
 // ===================== VOICE LOADING =====================
+function ttsVoiceKey(v) {
+    return v.isNeural ? 'neural:' + v.id : v.isCloud ? 'cloud:' + v.lang : 'device:' + v.name;
+}
+
 function loadTTSVoices() {
     const allVoices = ttsState.synth.getVoices();
     const cloudVoices = [
@@ -86,9 +90,10 @@ function loadTTSVoices() {
         { isCloud: true, lang: 'zh-CN', name: '☁️ Chinese (Cloud)' }
     ];
 
-    ttsState.voices = [...cloudVoices, ...allVoices];
+    const neuralVoices = (window.NEURAL_VOICES || []).map(v => ({ isNeural: true, id: v.id, lang: v.lang, name: v.label }));
+    const devicePart = [...cloudVoices, ...allVoices];
 
-    ttsState.voices.sort((a, b) => {
+    devicePart.sort((a, b) => {
         if (a.isCloud && !b.isCloud) return -1;
         if (!a.isCloud && b.isCloud) return 1;
         const aQ = /Natural|Premium/i.test(a.name) ? 0 : /Google/i.test(a.name) ? 1 : 2;
@@ -99,6 +104,7 @@ function loadTTSVoices() {
         if (aLang !== bLang) return aLang - bLang;
         return a.name.localeCompare(b.name);
     });
+    ttsState.voices = [...neuralVoices, ...devicePart];
 
     const select = document.getElementById('tts-voice-select');
     if (!select) return;
@@ -113,27 +119,32 @@ function loadTTSVoices() {
     let lastLangCode = '';
     let currentOptgroup = null;
 
+    const neuralReady = window.NeuralTTS && NeuralTTS.available !== false;
     ttsState.voices.forEach((voice, i) => {
-        const langCode = voice.lang.substring(0, 2).toLowerCase();
+        const langCode = voice.isNeural ? 'neural' : voice.lang.substring(0, 2).toLowerCase();
         if (langCode !== lastLangCode) {
             currentOptgroup = document.createElement('optgroup');
-            currentOptgroup.label = langNames[langCode] || `🌐 ${voice.lang}`;
+            currentOptgroup.label = voice.isNeural
+                ? (neuralReady ? '✨ Microsoft Neural — studio quality, plays in background' : '✨ Microsoft Neural — add a free Azure key to unlock')
+                : langNames[langCode] || `🌐 ${voice.lang}`;
             select.appendChild(currentOptgroup);
             lastLangCode = langCode;
         }
         const opt = document.createElement('option');
-        opt.textContent = voice.isCloud ? voice.name : getCoolVoiceName(voice);
+        opt.textContent = voice.isNeural ? `✨ ${voice.name}` : voice.isCloud ? voice.name : getCoolVoiceName(voice);
         opt.value = String(i);
         (currentOptgroup || select).appendChild(opt);
     });
 
-    const savedIdx = localStorage.getItem('ttsVoiceIdx');
-    if (savedIdx && parseInt(savedIdx) < ttsState.voices.length) {
-        select.value = savedIdx;
-    } else {
-        select.selectedIndex = 0;
+    // Restore the saved voice by name; default to Microsoft neural when it's set up, else the best device voice
+    const savedKey = localStorage.getItem('ttsVoiceKey');
+    let idx = savedKey ? ttsState.voices.findIndex(v => ttsVoiceKey(v) === savedKey) : -1;
+    if (idx < 0 || (ttsState.voices[idx].isNeural && !neuralReady)) {
+        idx = ttsState.voices.findIndex(v => (neuralReady ? v.isNeural : !v.isNeural));
     }
-    ttsState.selectedVoice = ttsState.voices[parseInt(select.value) || 0] || null;
+    select.value = String(Math.max(0, idx));
+    ttsState.selectedVoice = ttsState.voices[Math.max(0, idx)] || null;
+    if (ttsState.selectedVoice && ttsState.selectedVoice.isNeural && window.NeuralTTS) NeuralTTS.setVoice(ttsState.selectedVoice.id);
     ttsState._voicesLoaded = true;
 }
 
@@ -471,6 +482,7 @@ function _stopKeepAlive() {
 // ===================== FORCE CLEAN STOP =====================
 // Guaranteed clean state reset — called when anything goes wrong
 function _forceCleanStop() {
+    if (window.NeuralTTS && NeuralTTS.isActive()) NeuralTTS.stop();
     try { ttsState.synth.cancel(); } catch (e) {}
     if (ttsState._cloudAudio) {
         try { ttsState._cloudAudio.pause(); } catch (e) {}
@@ -882,6 +894,13 @@ function onPageReadingComplete() {
 
 // ===================== TTS PLAYBACK =====================
 function playTTS() {
+    if (ttsState.selectedVoice && ttsState.selectedVoice.isNeural && window.NeuralTTS) {
+        try { ttsState.synth.cancel(); } catch (e) {}
+        NeuralTTS.setVoice(ttsState.selectedVoice.id);
+        NeuralTTS.setSpeed(ttsState.speed);
+        NeuralTTS.start();
+        return;
+    }
     // Always fully cancel before starting fresh
     try { ttsState.synth.cancel(); } catch (e) {}
     if (ttsState._cloudAudio) {
@@ -925,6 +944,10 @@ function stopTTS() {
 }
 
 function toggleTTS() {
+    if (window.NeuralTTS && NeuralTTS.isActive()) {
+        NeuralTTS.toggle();
+        return;
+    }
     if (!ttsState.isPlaying) {
         // Start fresh
         playTTS();
@@ -987,6 +1010,7 @@ function toggleTTS() {
 }
 
 window._ttsAutoReadAfterTurn = function() {
+    if (window.NeuralTTS && NeuralTTS.isActive()) return; // it follows 'readerpageshown' itself
     if (ttsState.isPlaying && ttsState._continuousMode && !ttsState.isPaused) {
         ttsState._isTransitioning = false;
         setTimeout(() => {
@@ -1041,7 +1065,21 @@ function setupMediaSession() {
 
 // ===================== INITIALIZATION =====================
 function initTTS() {
+    const savedSpeed = parseFloat(localStorage.getItem('ttsSpeed'));
+    if (savedSpeed >= 0.5 && savedSpeed <= 2.5) {
+        ttsState.speed = savedSpeed;
+        const range = document.getElementById('tts-speed-range');
+        const label = document.getElementById('tts-speed-val');
+        if (range) range.value = String(savedSpeed);
+        if (label) label.textContent = `${savedSpeed.toFixed(1)}x`;
+    }
+    if (localStorage.getItem('ttsAutoTurn') === '0') {
+        ttsState.autoTurn = false;
+        const t = document.getElementById('tts-auto-turn-toggle');
+        if (t) t.checked = false;
+    }
     loadTTSVoices();
+    if (window.NeuralTTS) NeuralTTS.checkAvailable().then(loadTTSVoices);
     if (speechSynthesis.onvoiceschanged !== undefined) {
         speechSynthesis.onvoiceschanged = loadTTSVoices;
     }
@@ -1100,7 +1138,7 @@ function initTTS() {
     document.getElementById('tts-voice-select')?.addEventListener('change', (e) => {
         const idx = parseInt(e.target.value) || 0;
         ttsState.selectedVoice = ttsState.voices[idx] || null;
-        localStorage.setItem('ttsVoiceIdx', String(idx));
+        if (ttsState.selectedVoice) localStorage.setItem('ttsVoiceKey', ttsVoiceKey(ttsState.selectedVoice));
 
         if (ttsState.isPlaying) {
             const wasContinuous = ttsState._continuousMode;
@@ -1115,7 +1153,13 @@ function initTTS() {
         ttsState.speed = parseFloat(e.target.value) || 1.0;
         const label = document.getElementById('tts-speed-val');
         if (label) label.textContent = `${ttsState.speed.toFixed(1)}x`;
+        localStorage.setItem('ttsSpeed', String(ttsState.speed));
 
+        // Audio voices change speed instantly, no restart needed
+        if (window.NeuralTTS && NeuralTTS.isActive()) {
+            NeuralTTS.setSpeed(ttsState.speed);
+            return;
+        }
         if (ttsState.isPlaying) {
             const wasContinuous = ttsState._continuousMode;
             stopTTS();
@@ -1127,6 +1171,7 @@ function initTTS() {
 
     document.getElementById('tts-auto-turn-toggle')?.addEventListener('change', (e) => {
         ttsState.autoTurn = e.target.checked;
+        localStorage.setItem('ttsAutoTurn', e.target.checked ? '1' : '0');
     });
 
     document.getElementById('reader-close-btn')?.addEventListener('click', stopTTS);
