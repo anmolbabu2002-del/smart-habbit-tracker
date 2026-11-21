@@ -1,0 +1,161 @@
+# Builds the Ultradian Android app (Capacitor) on GitHub's servers — no laptop needed.
+# Every push to main makes a new signed APK and puts it on the Releases page:
+#   https://github.com/anmolbabu2002-del/smart-habbit-tracker/releases/latest/download/Ultradian.apk
+#
+# One-time setup: add the repository secret ANDROID_KEYSTORE_BASE64
+# (Settings → Secrets and variables → Actions → New repository secret).
+# Every build is signed with that same key, so new versions install over the old one
+# and your data is kept. Never lose or change that key.
+#
+# The Capacitor project (app-android/) is created fresh on each run; nothing extra
+# needs to live in the repo. Big .mp3/.mp4 files are left out of the APK and stream
+# from ultradiann.netlify.app instead (see the top of storage.js).
+
+name: Build Android app
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'netlify/**'
+      - 'netlify.toml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # The keystore file (kept in the secret) is what's private; this password only unlocks it.
+      KEYSTORE_PASSWORD: ultradian-sideload
+      KEY_ALIAS: ultradian
+    defaults:
+      run:
+        working-directory: app-android
+
+    steps:
+      - name: Check the signing key secret
+        working-directory: .
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::error::Add the ANDROID_KEYSTORE_BASE64 secret (Settings → Secrets and variables → Actions), then run this workflow again."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Set up the Capacitor project
+        working-directory: .
+        run: |
+          mkdir -p app-android
+          cat > app-android/package.json <<'JSON'
+          {
+            "name": "ultradian-android",
+            "private": true,
+            "dependencies": {
+              "@capacitor/android": "^7.0.0",
+              "@capacitor/core": "^7.0.0",
+              "@capacitor/filesystem": "^7.0.0",
+              "@capacitor/share": "^7.0.0"
+            },
+            "devDependencies": {
+              "@capacitor/assets": "^3.0.5",
+              "@capacitor/cli": "^7.0.0"
+            }
+          }
+          JSON
+          cat > app-android/capacitor.config.json <<'JSON'
+          {
+            "appId": "com.anmoljha.ultradian",
+            "appName": "Ultradian",
+            "webDir": "www",
+            "server": { "androidScheme": "https" },
+            "android": { "backgroundColor": "#121212" }
+          }
+          JSON
+          node - <<'JS'
+          const fs = require('fs');
+          const skip = new Set(['.git', '.github', '.gitignore', '.netlify', '.vscode', '_archive',
+            'app-android', 'netlify', 'netlify.toml', 'node_modules']);
+          fs.mkdirSync('app-android/www', { recursive: true });
+          for (const name of fs.readdirSync('.')) {
+            if (skip.has(name) || /\.(md|mp3|mp4)$/i.test(name)) continue;
+            fs.cpSync(name, 'app-android/www/' + name, { recursive: true });
+          }
+          JS
+          ls app-android/www
+          du -sh app-android/www
+
+      - name: Install Capacitor
+        run: npm install --no-audit --no-fund
+
+      - name: Create the Android project
+        run: npx cap add android
+
+      - name: App icon
+        continue-on-error: true
+        run: |
+          mkdir -p assets
+          cp ../icon-512-v2.png assets/icon-only.png
+          npx capacitor-assets generate --android \
+            --iconBackgroundColor '#121212' --iconBackgroundColorDark '#121212' \
+            --splashBackgroundColor '#121212' --splashBackgroundColorDark '#121212'
+
+      - name: Sync web files and plugins
+        run: npx cap sync android
+
+      - name: Set version number
+        run: |
+          sed -i -E "s/versionCode [0-9]+/versionCode ${{ github.run_number }}/; s/versionName \"[^\"]*\"/versionName \"1.0.${{ github.run_number }}\"/" android/app/build.gradle
+          grep -nE "versionCode|versionName" android/app/build.gradle
+
+      - name: Build signed APK
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_B64" | tr -d ' \r\n' | base64 -d > "$RUNNER_TEMP/ultradian.jks"
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon \
+            -Pandroid.injected.signing.store.file="$RUNNER_TEMP/ultradian.jks" \
+            -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEYSTORE_PASSWORD"
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/Ultradian.apk"
+          rm -f "$RUNNER_TEMP/ultradian.jks"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ultradian-apk
+          path: Ultradian.apk
+
+      - name: Publish to Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-app
+          name: Ultradian Android app
+          make_latest: true
+          files: Ultradian.apk
+          body: |
+            Latest build: version 1.0.${{ github.run_number }} (commit ${{ github.sha }}).
+            On your phone, download **Ultradian.apk** below and open it to install or update.
+            Updates install over the old version and keep your data.

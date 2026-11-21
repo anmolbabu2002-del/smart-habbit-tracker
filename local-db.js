@@ -6,12 +6,18 @@
 //     every change is saved there automatically, uploaded books included.
 //   • Daily backup mode (e.g. Chrome on Android without folder access): once a day the
 //     app saves a backup file to Downloads.
+//   • Android app mode (the Capacitor build): data lives in the app's own storage, which
+//     clearing Chrome can't touch. A backup copy is also written to Documents/Ultradian
+//     once a day, so data survives an uninstall or a new phone.
 // After Chrome is cleared, "Restore from backup" brings everything back.
 
 (function () {
     const PREFS_KEY = 'localDbPrefs';
     const DATA_FILE = 'ultradian-data.json';
-    const supportsFolder = typeof window.showDirectoryPicker === 'function';
+    const isNative = !!window.ULTRADIAN_NATIVE;
+    const supportsFolder = !isNative && typeof window.showDirectoryPicker === 'function';
+    const NATIVE_DIR = 'Ultradian';      // inside the phone's Documents folder
+    const NATIVE_KEEP = 7;               // daily backups to keep
     const notify = (m) => { if (typeof showNotification === 'function') showNotification(m); };
 
     let prefs = { daily: true, lastDay: '', lastAt: 0, lastHash: '' };
@@ -110,15 +116,70 @@
 
     const today = () => new Date().toISOString().slice(0, 10);
 
+    // ── Android app: write backups to Documents/Ultradian ──
+    const nativeCall = (plugin, method, opts) => window.ultradianNative(plugin, method, opts);
+
+    async function pruneNativeBackups() {
+        try {
+            const res = await nativeCall('Filesystem', 'readdir', { path: NATIVE_DIR, directory: 'DOCUMENTS' });
+            const names = (res.files || []).map(f => (typeof f === 'string' ? f : f.name))
+                .filter(n => /^ultradian-backup-.*\.json$/.test(n)).sort().reverse();
+            for (const name of names.slice(NATIVE_KEEP)) {
+                await nativeCall('Filesystem', 'deleteFile', { path: `${NATIVE_DIR}/${name}`, directory: 'DOCUMENTS' }).catch(() => {});
+            }
+        } catch (e) { /* folder unreadable — nothing to prune */ }
+    }
+
+    // Returns where the file went: 'documents', 'shared' or throws.
+    async function saveNativeBackup(json) {
+        const stamp = today();
+        const tryWrite = (name) => nativeCall('Filesystem', 'writeFile', {
+            path: `${NATIVE_DIR}/${name}`, data: json, directory: 'DOCUMENTS', encoding: 'utf8', recursive: true
+        });
+        try {
+            await tryWrite(`ultradian-backup-${stamp}.json`);
+        } catch (e) {
+            // A same-named file left by an earlier install can't be overwritten; use a new name
+            try {
+                await tryWrite(`ultradian-backup-${stamp}-${Date.now().toString(36)}.json`);
+            } catch (e2) {
+                // Older Android without Documents access: hand the file to the share sheet instead
+                const tmp = await nativeCall('Filesystem', 'writeFile', {
+                    path: `ultradian-backup-${stamp}.json`, data: json, directory: 'CACHE', encoding: 'utf8'
+                });
+                await nativeCall('Share', 'share', { title: 'Ultradian backup', files: [tmp.uri] });
+                return 'shared';
+            }
+        }
+        pruneNativeBackups();
+        return 'documents';
+    }
+
     async function backupNow(silent) {
         const backup = await fullBackup();
-        downloadJson(backup, `ultradian-backup-${today()}.json`);
+        let where = 'downloads';
+        if (isNative) {
+            try {
+                where = await saveNativeBackup(JSON.stringify(backup));
+            } catch (e) {
+                console.warn('[LocalDB] native backup failed', e);
+                if (!silent) notify('⚠️ Couldn\'t save the backup file. Please try again.');
+                return false;
+            }
+        } else {
+            downloadJson(backup, `ultradian-backup-${today()}.json`);
+        }
         prefs.lastDay = today();
         prefs.lastAt = Date.now();
         prefs.lastHash = hash(dataJson());
         savePrefs();
         renderCard();
-        if (!silent) notify('💾 Backup saved to your Downloads');
+        if (!silent) {
+            notify(where === 'documents' ? '💾 Backup saved to Documents/Ultradian'
+                : where === 'shared' ? '💾 Backup ready — save it somewhere safe'
+                : '💾 Backup saved to your Downloads');
+        }
+        return where;
     }
 
     // ── folder mode ──
@@ -232,7 +293,8 @@
         checkedDay = today(); // check once per day per visit
         if (!appStorage.getItem('habitAppState')) return;
         if (prefs.lastHash && prefs.lastHash === hash(dataJson())) return; // nothing new since the last backup
-        backupNow(true).then(() => notify('💾 Today\'s backup was saved to Downloads'));
+        if (isNative) { backupNow(true); return; } // quiet: the data is already safe inside the app
+        backupNow(true).then((ok) => { if (ok) notify('💾 Today\'s backup was saved to Downloads'); });
     }
 
     // ── restore from a file (welcome screen + settings) ──
@@ -273,7 +335,10 @@
         const card = document.getElementById('ldb-card');
         if (!card) return;
         let status;
-        if (dir && folderOk) status = `✅ Auto-saving to your <b>${dir.name}</b> folder · saved ${timeAgo(prefs.lastAt)}`;
+        if (isNative) status = `✅ Saved inside the Ultradian app — clearing Chrome won't touch it.<br>${prefs.daily
+            ? `📁 Daily backup copy in <b>Documents/Ultradian</b> · last ${timeAgo(prefs.lastAt)}`
+            : '⚠️ Daily backup copy is off — uninstalling the app would erase your data'}`;
+        else if (dir && folderOk) status = `✅ Auto-saving to your <b>${dir.name}</b> folder · saved ${timeAgo(prefs.lastAt)}`;
         else if (dir) status = `⏸️ Auto-save to <b>${dir.name}</b> is paused — tap <b>Resume</b> to allow it again`;
         else if (prefs.daily) status = `✅ A backup is saved to <b>Downloads</b> once a day · last ${timeAgo(prefs.lastAt)}`;
         else status = '⚠️ No automatic backup — clearing Chrome would erase your data';
@@ -287,8 +352,10 @@
                 <button type="button" data-ldb="backup">💾 Back up now</button>
                 <button type="button" data-ldb="restore">📥 Restore from backup</button>
             </div>
-            ${dir ? '' : `<label class="ldb-toggle"><input type="checkbox" data-ldb="daily" ${prefs.daily ? 'checked' : ''}> Save a backup to Downloads every day</label>`}
-            <p class="ldb-hint">Clearing Chrome's "cookies and site data" wipes the app's memory, but these files stay on your phone. After clearing, open the app and tap <b>Restore from backup</b>.</p>`;
+            ${dir ? '' : `<label class="ldb-toggle"><input type="checkbox" data-ldb="daily" ${prefs.daily ? 'checked' : ''}> Save a backup to ${isNative ? 'Documents' : 'Downloads'} every day</label>`}
+            <p class="ldb-hint">${isNative
+                ? 'Your data stays in the app until you uninstall it or clear its storage in Android settings. Moving phones or reinstalling? Open the app and tap <b>Restore from backup</b>, then pick the newest file in Documents/Ultradian.'
+                : 'Clearing Chrome\'s "cookies and site data" wipes the app\'s memory, but these files stay on your phone. After clearing, open the app and tap <b>Restore from backup</b>.'}</p>`;
     }
 
     function buildCard() {
@@ -360,6 +427,8 @@
             if (dir) await resumeFolder(false);
         }
         renderCard();
+        // In the Android app the daily copy needs no tap, so check shortly after start
+        if (isNative) setTimeout(maybeDailyBackup, 5000);
         // Daily backup is a download, which needs a tap: run it on the first tap of the day
         document.addEventListener('pointerdown', () => setTimeout(maybeDailyBackup, 1500), { capture: true });
         document.addEventListener('visibilitychange', () => { if (document.hidden && dir && folderOk) saveToFolder(); });

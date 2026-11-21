@@ -1,3 +1,85 @@
+/* ==================== ANDROID APP MODE ====================
+ * storage.js loads before the other app scripts, so this runs first.
+ * When Ultradian runs as the installed Android app (Capacitor build in app-android/),
+ * its files are served from the phone itself (https://localhost), so:
+ *   • /.netlify/functions/* calls (AI, quiz, TTS, book proxy) go to the live site,
+ *     where the API keys stay hidden
+ *   • .mp3/.mp4 files aren't packaged (≈150 MB); they stream from the live site
+ *   • Android's WebView has no Notification API, so it gets a safe stand-in
+ * On the website nothing here changes anything.
+ * ========================================================== */
+(function () {
+  const REMOTE = 'https://ultradiann.netlify.app';
+  const C = window.Capacitor;
+  let isNative = false;
+  try {
+    if (C && typeof C.isNativePlatform === 'function') isNative = C.isNativePlatform();
+    else if (C && typeof C.getPlatform === 'function') isNative = C.getPlatform() !== 'web';
+    else isNative = !!window.androidBridge;
+  } catch (e) { isNative = !!window.androidBridge; }
+  window.ULTRADIAN_NATIVE = isNative;
+
+  // Call a Capacitor plugin method without a bundler. Rejects outside the app.
+  window.ultradianNative = function (plugin, method, options) {
+    const cap = window.Capacitor;
+    if (!isNative || !cap) return Promise.reject(new Error('Not running in the Android app'));
+    const p = cap.Plugins && cap.Plugins[plugin];
+    if (p && typeof p[method] === 'function') return p[method](options || {});
+    if (typeof cap.nativePromise === 'function') return cap.nativePromise(plugin, method, options || {});
+    return Promise.reject(new Error(plugin + ' plugin is not available'));
+  };
+
+  if (!isNative) return;
+  document.documentElement.classList.add('is-native-app');
+
+  function fixUrl(url) {
+    if (typeof url !== 'string' || !url) return url;
+    if (url.startsWith('/.netlify/functions/')) return REMOTE + url;
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(url) && !url.startsWith('//') && /\.(mp3|mp4)(\?|#|$)/i.test(url)) {
+      return REMOTE + '/' + url.replace(/^\.?\//, '');
+    }
+    return url;
+  }
+
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = function (input, init) {
+    if (typeof input === 'string') input = fixUrl(input);
+    else if (input instanceof URL) input = fixUrl(input.href.replace(location.origin, ''));
+    else if (input instanceof Request) {
+      const u = new URL(input.url);
+      if (u.origin === location.origin && u.pathname.startsWith('/.netlify/functions/')) {
+        input = new Request(REMOTE + u.pathname + u.search, input);
+      }
+    }
+    return nativeFetch(input, init);
+  };
+
+  const NativeAudio = window.Audio;
+  function AppAudio(src) { return arguments.length ? new NativeAudio(fixUrl(src)) : new NativeAudio(); }
+  AppAudio.prototype = NativeAudio.prototype;
+  window.Audio = AppAudio;
+
+  const srcProp = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'src');
+  if (srcProp && srcProp.set) {
+    Object.defineProperty(HTMLMediaElement.prototype, 'src', {
+      configurable: true,
+      enumerable: srcProp.enumerable,
+      get: srcProp.get,
+      set(value) { srcProp.set.call(this, fixUrl(value)); }
+    });
+  }
+
+  if (!('Notification' in window)) {
+    function AppNotification() { /* system notifications aren't wired up in the app yet */ }
+    AppNotification.permission = 'denied';
+    AppNotification.requestPermission = function (cb) {
+      if (typeof cb === 'function') cb('denied');
+      return Promise.resolve('denied');
+    };
+    window.Notification = AppNotification;
+  }
+})();
+
 /* ==================== APP STORAGE ====================
  * Synchronous wrapper over localStorage + localForage backup.
  * 
