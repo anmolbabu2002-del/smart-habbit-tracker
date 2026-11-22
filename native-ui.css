@@ -1,0 +1,1108 @@
+/* ==================== NATIVE UI LAYER ====================
+ * Android-style look for phones (installed app + phone browser).
+ * Everything is scoped to html.nui, which native-ui.js sets only on
+ * phone-sized touch screens and in the Android app — desktop is unchanged.
+ * Loaded last so it wins over styles.css and the inline <style> blocks.
+ * Uses the theme variables (--primary, --bg-card, --text-main…) so every
+ * theme, including Custom, keeps working.
+ * ========================================================== */
+
+html.nui {
+    --nui-top: env(safe-area-inset-top, 0px);
+    --nui-bottom: env(safe-area-inset-bottom, 0px);
+    --nui-pad: 16px;
+    --nui-radius: 20px;
+    --nui-radius-sm: 14px;
+    --nui-nav-h: 80px;
+    --nui-ease: cubic-bezier(0.2, 0, 0, 1);
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior-y: none;
+}
+
+/* Colours derived from the theme. Declared on <body> because the themes set
+   their variables on body.theme-* — on <html> they'd always resolve to light. */
+html.nui body {
+    --nui-surface: var(--bg-card, #fff);
+    --nui-tint: color-mix(in srgb, var(--primary, #FF8C42) 14%, transparent);
+    --nui-tint-strong: color-mix(in srgb, var(--primary, #FF8C42) 24%, transparent);
+    --nui-outline: color-mix(in srgb, var(--text-main, #1A1A2E) 10%, transparent);
+}
+
+/* ---------- App-like touch behaviour ---------- */
+html.nui body {
+    overscroll-behavior-y: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    font-family: 'Nunito', 'Roboto', system-ui, -apple-system, sans-serif;
+}
+
+html.nui input,
+html.nui textarea,
+html.nui select,
+html.nui [contenteditable="true"],
+html.nui .nui-selectable,
+html.nui .ai-message,
+html.nui .message-content,
+html.nui .journal-entry-content,
+html.nui [class*="reader-text"],
+html.nui [class*="reader-content"] {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+}
+
+html.nui *,
+html.nui *::before,
+html.nui *::after {
+    -webkit-tap-highlight-color: transparent;
+}
+
+html.nui button,
+html.nui [onclick],
+html.nui [role="button"],
+html.nui a,
+html.nui label,
+html.nui .sp-item,
+html.nui .game-card {
+    touch-action: manipulation;
+    cursor: default;
+}
+
+/* Press feedback: things shrink a touch under your finger, like native buttons.
+   `scale` (not transform) so existing transforms keep working. */
+html.nui :is(button, .sp-item, .game-card, .stat-card, .theme-btn, .settings-action-btn,
+    .bloom-card[onclick], .productivity-tips-card, .dc-mini-container, .hub-category-card,
+    [class*="-card"][onclick]) {
+    transition: scale 0.18s var(--nui-ease), background-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+html.nui :is(button, .sp-item, .game-card, .theme-btn, .settings-action-btn):active:not(:disabled) {
+    scale: 0.95;
+}
+
+html.nui :is(.stat-card, .bloom-card[onclick], .productivity-tips-card, .dc-mini-container,
+    .hub-category-card, [class*="-card"][onclick]):active {
+    scale: 0.98;
+}
+
+/* Websites show hover lifts; apps don't. Neutralise hover-only motion on touch. */
+@media (hover: none) {
+    html.nui :is(button, .sp-item, .game-card, .stat-card, .bloom-card, .theme-btn):hover {
+        transform: none;
+    }
+}
+
+/* Thin, invisible scrollbars like Android */
+html.nui ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+
+/* ---------- Pages & transitions ---------- */
+html.nui .page {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 var(--nui-pad) calc(var(--nui-nav-h) + var(--nui-bottom) + 24px) !important;
+    box-sizing: border-box;
+}
+
+/* While a game is open the (empty) games page must take no room:
+   the game screens are its siblings and would be pushed down */
+html.nui body.game-active #brain-games-page {
+    padding: 0 !important;
+}
+
+html.nui .page.active {
+    animation: nui-fade-through 0.26s var(--nui-ease) backwards;
+}
+
+html.nui[data-nav="forward"] .page.active {
+    animation: nui-push 0.32s var(--nui-ease) backwards;
+}
+
+html.nui[data-nav="back"] .page.active {
+    animation: nui-pop 0.28s var(--nui-ease) backwards;
+}
+
+@keyframes nui-fade-through {
+    from { opacity: 0; transform: scale(0.985); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes nui-push {
+    from { opacity: 0; transform: translateX(48px); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes nui-pop {
+    from { opacity: 0; transform: translateX(-32px); }
+    to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html.nui .page.active { animation: none !important; }
+}
+
+/* The original ✕ buttons are replaced by the app bar's back arrow */
+html.nui .nui-hidden-close {
+    display: none !important;
+}
+
+/* ---------- Top app bar ---------- */
+html.nui .nui-appbar {
+    position: sticky;
+    top: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 64px;
+    margin: 0 calc(-1 * var(--nui-pad)) 8px;
+    padding: calc(var(--nui-top) + 4px) 8px 4px 4px;
+    box-sizing: border-box;
+    background: var(--bg-body, var(--bg-main, #F0F4FA));
+    background-attachment: fixed;
+    transition: box-shadow 0.25s ease, background-color 0.25s ease;
+}
+
+html.nui.nui-scrolled .page.active > .nui-appbar,
+html.nui.nui-scrolled #games-hub-view > .nui-appbar {
+    box-shadow: 0 1px 0 var(--nui-outline), 0 6px 16px -12px rgba(0, 0, 0, 0.35);
+}
+
+html.nui .nui-appbar-tab {
+    padding-left: var(--nui-pad);
+    min-height: 72px;
+}
+
+html.nui .nui-appbar .nui-title {
+    flex: 1;
+    min-width: 0;
+    margin: 0 !important;
+    padding: 0 8px !important;
+    font-size: 22px !important;
+    line-height: 1.25 !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.2px !important;
+    text-align: left !important;
+    color: var(--text-main) !important;
+    background: none !important;
+    -webkit-text-fill-color: currentColor !important;
+    text-shadow: none !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    position: static !important;
+    transform: none !important;
+    animation: none !important;
+    opacity: 1 !important;
+}
+
+html.nui .nui-appbar-tab .nui-title {
+    font-size: 28px !important;
+    padding-left: 0 !important;
+}
+
+html.nui .nui-back,
+html.nui .nui-appbar .nui-action {
+    flex: none;
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    border: none !important;
+    border-radius: 50% !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--text-main) !important;
+    font-size: 20px !important;
+    position: static !important;
+    transform: none !important;
+}
+
+html.nui .nui-back:active,
+html.nui .nui-appbar .nui-action:active {
+    background: var(--nui-outline) !important;
+}
+
+/* ---------- Bottom navigation bar (Material 3) ---------- */
+html.nui .nav-bar {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    top: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    margin: 0 !important;
+    transform: none !important;
+    display: flex !important;
+    justify-content: space-around !important;
+    align-items: flex-start !important;
+    gap: 0 !important;
+    padding: 12px 0 calc(16px + var(--nui-bottom)) !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: color-mix(in srgb, var(--nui-surface) 94%, var(--primary, #FF8C42) 6%) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: 0 -1px 0 var(--nui-outline) !important;
+    z-index: 900 !important;
+}
+
+html.nui .nav-bar .nav-btn {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--text-light, #4A4A5A) !important;
+    transform: none !important;
+}
+
+html.nui .nav-bar .nav-btn::before,
+html.nui .nav-bar .nav-btn::after {
+    display: none !important;
+}
+
+html.nui .nav-bar .nav-btn:active {
+    scale: 1;
+}
+
+html.nui .nav-bar .nav-icon {
+    width: 64px !important;
+    height: 32px !important;
+    border-radius: 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transform: none !important;
+    transition: background-color 0.3s var(--nui-ease), width 0.3s var(--nui-ease) !important;
+}
+
+html.nui .nav-bar .nav-btn:active .nav-icon {
+    background: var(--nui-outline) !important;
+}
+
+html.nui .nav-bar .nav-btn.active .nav-icon {
+    background: var(--nui-tint-strong) !important;
+    animation: nui-pill 0.35s var(--nui-ease);
+}
+
+@keyframes nui-pill {
+    from { width: 32px; }
+    to { width: 64px; }
+}
+
+html.nui .nav-bar .nav-icon svg {
+    width: 24px !important;
+    height: 24px !important;
+    filter: none !important;
+    transform: none !important;
+}
+
+html.nui .nav-bar .nav-btn.active .nav-icon svg {
+    stroke-width: 2.4;
+}
+
+html.nui .nav-bar .nav-label {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.2px !important;
+    margin: 0 !important;
+    white-space: nowrap;
+    color: inherit !important;
+    opacity: 1 !important;
+}
+
+html.nui .nav-bar .nav-btn.active {
+    color: var(--text-main) !important;
+}
+
+html.nui .nav-bar .nav-btn.active .nav-label {
+    font-weight: 800 !important;
+}
+
+html.nui .nav-bar .nav-btn.active .nav-icon {
+    color: var(--text-main) !important;
+}
+
+/* ---------- Cards, buttons and fields ---------- */
+html.nui .page :is(.bloom-card, .stat-card, .vitality-dashboard-section, .big-goal-container,
+    .settings-container > .theme-selector, .water-container, .sleep-container, .pomodoro-container,
+    .mood-tracker-container, .journal-controls) {
+    border-radius: var(--nui-radius) !important;
+}
+
+html.nui .page :is(input[type="text"], input[type="number"], input[type="date"], input[type="time"],
+    input[type="search"], input:not([type]), select, textarea) {
+    min-height: 48px;
+    border-radius: var(--nui-radius-sm) !important;
+    font-size: 16px !important;   /* 16px stops the keyboard from zooming the page */
+    box-sizing: border-box;
+}
+
+html.nui .page :is(input, select, textarea):focus {
+    outline: 2px solid var(--primary) !important;
+    outline-offset: 0;
+}
+
+/* =============================================================
+ * HOME
+ * ============================================================= */
+html.nui #main {
+    padding-top: 0 !important;
+}
+
+html.nui #main .bloom-hero {
+    margin: 0 calc(-1 * var(--nui-pad)) !important;
+    border-radius: 0 0 28px 28px !important;
+    overflow: hidden;
+}
+
+html.nui #main .bloom-hero-top {
+    padding-top: calc(var(--nui-top) + 16px) !important;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+}
+
+html.nui #main .bloom-greeting {
+    font-size: 26px !important;
+    line-height: 1.2 !important;
+}
+
+/* One column, like a phone app — two squeezed columns read as a shrunken website */
+html.nui #main .bloom-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    grid-template-columns: none !important;
+    padding: 0 !important;
+    margin: 12px 0 0 !important;
+}
+
+html.nui #main .bloom-grid-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100% !important;
+    margin: 0 !important;
+}
+
+html.nui #main .bloom-card {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    box-sizing: border-box;
+    padding: 18px !important;
+    border-radius: var(--nui-radius) !important;
+    background: var(--nui-surface) !important;
+    border: 1px solid var(--nui-outline) !important;
+    box-shadow: none !important;
+}
+
+html.nui #main .bloom-card-title {
+    font-size: 18px !important;
+    font-weight: 800 !important;
+    margin: 0 0 12px !important;
+    text-align: left !important;
+}
+
+html.nui #main .bloom-tasks-card {
+    min-height: 0 !important;
+}
+
+/* Tools: four in a row */
+html.nui #main .sp-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 8px !important;
+}
+
+html.nui #main .sp-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 4px 0 !important;
+    margin: 0 !important;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+html.nui #main .sp-icon {
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 18px !important;
+    font-size: 28px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: var(--nui-tint) !important;
+    box-shadow: none !important;
+}
+
+html.nui #main .sp-icon > * {
+    font-size: 28px !important;
+}
+
+html.nui #main .sp-label {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: var(--text-main) !important;
+}
+
+html.nui #main .bloom-progress-strip,
+html.nui #main .dc-mini-container {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    border-radius: var(--nui-radius) !important;
+}
+
+html.nui #main .bloom-progress-strip {
+    margin-top: 12px !important;
+}
+
+html.nui #main .dc-mini-container {
+    margin-top: 12px !important;
+}
+
+html.nui #main .productivity-tips-card {
+    text-align: left !important;
+}
+
+/* =============================================================
+ * DASHBOARD
+ * ============================================================= */
+html.nui #dashboard-page .stats-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+    margin: 12px 0 !important;
+}
+
+html.nui #dashboard-page .stat-card {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    padding: 16px !important;
+    margin: 0 !important;
+    min-height: 0 !important;
+    background: var(--nui-surface) !important;
+    border: 1px solid var(--nui-outline) !important;
+    box-shadow: none !important;
+}
+
+html.nui #dashboard-page .stat-card .stat-icon,
+html.nui #dashboard-page .stat-card > :first-child {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    font-size: 24px !important;
+    border-radius: 14px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: var(--nui-tint) !important;
+    margin: 0 !important;
+}
+
+html.nui #dashboard-page .stat-info {
+    width: 100%;
+}
+
+html.nui #dashboard-page .stat-info h3,
+html.nui #dashboard-page .stat-info .stat-value,
+html.nui #dashboard-page .stat-info > :first-child {
+    font-size: 22px !important;
+    line-height: 1.2 !important;
+}
+
+html.nui #dashboard-page .big-goal-container {
+    margin: 0 0 4px !important;
+    padding: 18px !important;
+    box-shadow: none !important;
+}
+
+html.nui #dashboard-page .vitality-dashboard-section {
+    margin: 12px 0 0 !important;
+    box-shadow: none !important;
+    border: 1px solid var(--nui-outline) !important;
+}
+
+/* =============================================================
+ * MIND GAMES
+ * ============================================================= */
+html.nui #games-hub-view > p {
+    text-align: left !important;
+    margin: -8px 0 16px !important;
+    padding: 0 !important;
+    font-size: 15px;
+}
+
+html.nui #games-hub-view .games-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 20px 12px !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+html.nui #games-hub-view .game-card {
+    width: auto !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+}
+
+html.nui #games-hub-view .game-card > div:first-child {
+    width: 84px !important;
+    height: 84px !important;
+    border-radius: 26px !important;
+}
+
+html.nui #games-hub-view .game-card > span {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+}
+
+/* =============================================================
+ * SETTINGS — grouped list, like Android settings
+ * ============================================================= */
+html.nui #settings-page .settings-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    max-width: none !important;
+}
+
+html.nui #settings-page .settings-container > h3,
+html.nui #settings-page .settings-container h3 {
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.4px !important;
+    text-transform: none !important;
+    color: var(--primary) !important;
+    margin: 24px 4px 10px !important;
+    padding: 0 !important;
+    text-align: left !important;
+    background: none !important;
+    -webkit-text-fill-color: currentColor !important;
+}
+
+html.nui #settings-page .theme-selector {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 10px !important;
+    padding: 12px !important;
+    margin: 0 !important;
+    background: var(--nui-surface) !important;
+    border: 1px solid var(--nui-outline) !important;
+    border-radius: var(--nui-radius) !important;
+    box-shadow: none !important;
+}
+
+html.nui #settings-page .theme-btn {
+    min-height: 56px !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 8px 6px !important;
+    border-radius: 16px !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    line-height: 1.15 !important;
+    white-space: normal !important;
+    box-shadow: none !important;
+    outline: none !important;
+    transform: none !important;
+}
+
+html.nui #settings-page .theme-btn.active {
+    box-shadow: 0 0 0 3px var(--nui-surface), 0 0 0 5px var(--primary) !important;
+    border-color: transparent !important;
+}
+
+html.nui #settings-page .settings-toggle-row,
+html.nui #settings-page [class*="sound"][class*="row"],
+html.nui #settings-page .settings-action-btn {
+    background: var(--nui-surface) !important;
+    border: 1px solid var(--nui-outline) !important;
+    border-radius: var(--nui-radius) !important;
+    box-shadow: none !important;
+}
+
+html.nui #settings-page .settings-action-btn {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+    min-height: 56px !important;
+    margin: 0 0 8px !important;
+    padding: 0 18px !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: var(--text-main) !important;
+    text-align: left !important;
+}
+
+html.nui #settings-page .settings-action-btn::after {
+    content: '›';
+    margin-left: auto;
+    font-size: 22px;
+    color: var(--text-muted);
+}
+
+/* =============================================================
+ * SECONDARY PAGES (Pomodoro, Water, Journal, Mood, Sleep, Streak)
+ * ============================================================= */
+html.nui :is(#water-page, #pomodoro-page, #sleep-page, #journal-page, #mood-page, #streak-page) :is(
+    .water-container, .pomodoro-container, .sleep-container, .mood-tracker-container) {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* Water: goal row on one line, quick-add buttons as a 2×2 grid */
+html.nui #water-page .water-goal-section {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    grid-template-areas: "label label" "input btn";
+    gap: 8px 10px !important;
+    align-items: center !important;
+    padding: 16px !important;
+    margin: 0 0 16px !important;
+    background: var(--nui-surface) !important;
+    border: 1px solid var(--nui-outline) !important;
+    border-radius: var(--nui-radius) !important;
+}
+
+html.nui #water-page .water-goal-section label {
+    grid-area: label;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    color: var(--text-light) !important;
+    margin: 0 !important;
+}
+
+html.nui #water-page .water-goal-section input {
+    grid-area: input;
+    width: 100% !important;
+    margin: 0 !important;
+}
+
+html.nui #water-page .water-goal-section button {
+    grid-area: btn;
+    margin: 0 !important;
+    min-height: 48px !important;
+    padding: 0 20px !important;
+    border-radius: 24px !important;
+}
+
+html.nui #water-page .water-buttons,
+html.nui #water-page .quick-add-buttons,
+html.nui #water-page [class*="water-quick"] {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+}
+
+html.nui #water-page :is(.water-buttons, .quick-add-buttons, [class*="water-quick"]) button {
+    width: 100% !important;
+    margin: 0 !important;
+    min-height: 56px !important;
+    border-radius: 18px !important;
+}
+
+/* Pomodoro: style chips scroll sideways in one row */
+html.nui #pomodoro-page .timer-type-selector {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    overflow-x: auto !important;
+    margin: 0 calc(-1 * var(--nui-pad)) 16px !important;
+    padding: 2px var(--nui-pad) !important;
+    scrollbar-width: none;
+}
+
+html.nui #pomodoro-page .timer-type-btn {
+    flex: none !important;
+    min-height: 40px !important;
+    padding: 0 16px !important;
+    border-radius: 12px !important;
+    font-size: 14px !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+}
+
+/* Journal editor card fits the screen */
+html.nui #journal-page .journal-controls {
+    margin: 0 0 12px !important;
+}
+
+/* Generic: primary action buttons get a consistent height */
+html.nui .page:not(#main):not(#brain-games-page):not(#meditation-page):not(#library-page) :is(.primary-btn, .water-btn, .journal-btn, #start-timer, #reset-timer, #startTimer, #resetTimer) {
+    min-height: 48px !important;
+    border-radius: 24px !important;
+    font-weight: 800 !important;
+    box-shadow: none !important;
+}
+
+/* =============================================================
+ * ANMOL AI — full-screen chat
+ * ============================================================= */
+html.nui #anmol-ai-page {
+    padding: 0 !important;
+}
+
+/* =============================================================
+ * FULL-SCREEN SCENES (meditation, library, games): clear the status bar
+ * ============================================================= */
+html.nui #library-page .lib-top-nav {
+    padding-top: calc(var(--nui-top) + 8px) !important;
+}
+
+html.nui #meditation-page .close-btn,
+html.nui #meditation-page #closeMeditation {
+    top: calc(var(--nui-top) + 12px) !important;
+}
+
+html.nui :is(#neuro-link-view, #cross-zero-game-view, #omniscient-game-view, #matrix-game-view,
+    #stroop-game-view, #tug-game-view, #math-missile-view, #pattern-prophet-view) {
+    padding-top: var(--nui-top) !important;
+    box-sizing: border-box;
+}
+
+/* =============================================================
+ * Detail screens hide the bottom tabs, like Android apps do
+ * ============================================================= */
+html.nui .nav-bar {
+    transition: transform 0.3s var(--nui-ease) !important;
+}
+
+html.nui.nui-detail .nav-bar {
+    transform: translateY(110%) !important;
+    pointer-events: none;
+}
+
+html.nui.nui-detail .page.active {
+    padding-bottom: calc(var(--nui-bottom) + 24px) !important;
+}
+
+/* Home hero runs edge to edge, under the status bar */
+html.nui #main .bloom-hero {
+    width: calc(100% + 2 * var(--nui-pad)) !important;
+    max-width: none !important;
+    margin: 0 calc(-1 * var(--nui-pad)) !important;
+    left: auto !important;
+    top: auto !important;
+    box-sizing: border-box;
+}
+
+/* Pomodoro: timer first, controls underneath (like the Clock app) */
+html.nui #pomodoro-page .pomodoro-container {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+html.nui #pomodoro-page .pomodoro-display {
+    order: -1;
+    margin: 0 0 16px !important;
+    padding: 0 !important;
+}
+
+html.nui #pomodoro-page .timer-animation {
+    zoom: 0.6;
+}
+
+html.nui #pomodoro-page .pomodoro-timer {
+    font-size: 64px !important;
+    line-height: 1.1 !important;
+    margin: 8px 0 0 !important;
+}
+
+html.nui #pomodoro-page .time-controls {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    margin: 0 0 12px !important;
+}
+
+html.nui #pomodoro-page .time-controls > * {
+    width: 100% !important;
+    margin: 0 !important;
+    min-height: 52px !important;
+    box-sizing: border-box;
+}
+
+html.nui #pomodoro-page .time-controls .pomodoro-btn {
+    border-radius: 26px !important;
+    font-size: 17px !important;
+    font-weight: 800 !important;
+    box-shadow: none !important;
+}
+
+html.nui #pomodoro-page .time-controls .pomodoro-btn.hidden {
+    display: none !important;
+}
+
+/* Water: quick-add buttons as a 2×2 grid */
+html.nui #water-page .water-add-section {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    margin: 16px 0 !important;
+}
+
+html.nui #water-page .water-add-btn {
+    width: 100% !important;
+    margin: 0 !important;
+    min-height: 64px !important;
+    border-radius: 20px !important;
+    font-size: 17px !important;
+    box-shadow: none !important;
+}
+
+html.nui #water-page .water-progress {
+    margin: 0 !important;
+}
+
+html.nui #water-page .water-glass {
+    zoom: 0.75;
+}
+
+/* The web layout pads the body by 5px; apps go edge to edge */
+html.nui body {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+html.nui #main .bloom-hero {
+    padding-top: 0 !important;
+    border-radius: 0 0 28px 28px !important;
+}
+
+/* =============================================================
+ * ANMOL AI — full-screen chat with a flat top bar
+ * ============================================================= */
+html.nui #anmol-ai-page.active {
+    padding: 0 !important;
+    min-height: 0;
+}
+
+html.nui #anmol-ai-page .ai-chat-container {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 100% !important;
+    max-height: none !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    z-index: 50;
+}
+
+html.nui #anmol-ai-page .ai-chat-header {
+    flex: none;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    padding: calc(var(--nui-top) + 8px) 8px 10px !important;
+    box-shadow: none !important;
+}
+
+html.nui #anmol-ai-page .ai-header-btn,
+html.nui #anmol-ai-page .ai-close-btn {
+    width: 44px !important;
+    height: 44px !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+html.nui #anmol-ai-page .ai-header-btn:active,
+html.nui #anmol-ai-page .ai-close-btn:active {
+    background: rgba(255, 255, 255, 0.2) !important;
+}
+
+html.nui #anmol-ai-page .ai-chat-messages {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    padding: 12px 12px 16px !important;
+}
+
+html.nui #anmol-ai-page .ai-chat-input-area,
+html.nui #anmol-ai-page .ai-input-area,
+html.nui #anmol-ai-page [class*="chat-input"] {
+    flex: none;
+    padding-bottom: calc(10px + var(--nui-bottom)) !important;
+}
+
+/* The greeting's source indentation was showing up as big gaps */
+html.nui .ai-msg-bubble {
+    white-space: pre-line !important;
+}
+
+html.nui .ai-msg-bubble {
+    border-radius: 20px !important;
+    font-size: 15.5px !important;
+}
+
+/* =============================================================
+ * SLEEP — factor toggles as compact chips
+ * ============================================================= */
+html.nui #sleep-page #sleep-factors {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+}
+
+html.nui #sleep-page .sleep-factor-btn {
+    width: 100% !important;
+    min-height: 44px !important;
+    margin: 0 !important;
+    padding: 0 12px !important;
+    border-radius: 12px !important;
+    font-size: 14px !important;
+}
+
+/* Section titles inside secondary pages read like Android list headers */
+html.nui :is(#mood-page, #sleep-page, #water-page, #journal-page, #streak-page) h2 {
+    text-align: left;
+}
+
+html.nui #anmol-ai-page .ai-chat-container {
+    padding: 0 !important;
+}
+
+html.nui #sleep-page .sleep-container > div {
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box;
+}
+
+/* Nav bar: opaque like Material (themes with translucent cards would show content through) */
+html.nui .nav-bar {
+    backdrop-filter: blur(24px) saturate(1.4) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(1.4) !important;
+}
+
+/* Quote card follows the theme's card colour */
+html.nui #main .bloom-progress-strip {
+    background: var(--nui-surface) !important;
+    border: 1px solid var(--nui-outline) !important;
+    box-shadow: none !important;
+}
+
+/* In-app toasts clear the status bar */
+html.nui .in-app-notification {
+    top: calc(var(--nui-top) + 12px) !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    max-width: none !important;
+    border-radius: 18px !important;
+}
+
+/* Journal editor: a full-screen writing sheet instead of a floating web popup */
+html.nui .journal-editor:not(.hidden) {
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    height: 100% !important;
+    box-sizing: border-box !important;
+    transform: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: calc(var(--nui-top) + 16px) var(--nui-pad) calc(var(--nui-bottom) + 16px) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    animation: nui-sheet-up 0.3s var(--nui-ease) backwards;
+}
+
+@keyframes nui-sheet-up {
+    from { opacity: 0; translate: 0 40px; }
+    to { opacity: 1; translate: 0 0; }
+}
+
+html.nui .journal-editor-buttons {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+}
+
+html.nui .journal-editor-buttons .journal-btn {
+    width: 100% !important;
+    margin: 0 !important;
+    min-height: 48px !important;
+    border-radius: 24px !important;
+}
+
+/* A backdrop-filter on a page makes it the frame for position:fixed children,
+   so full-screen popups inside it got squeezed to the page's height. Pages fill
+   the screen on phones, so the blur showed nothing anyway. */
+html.nui .page {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* Journal list controls fit the screen width */
+html.nui #journal-page .journal-controls,
+html.nui #journal-page .journal-search-container {
+    width: 100% !important;
+    max-width: none !important;
+    box-sizing: border-box !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+html.nui #journal-page .journal-search-container input {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+/* Delete label was red on a red button */
+html.nui #deleteJournal,
+html.nui .journal-editor-buttons .danger {
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+}
