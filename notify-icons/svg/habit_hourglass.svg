@@ -1,0 +1,9 @@
+<!-- 6:30 PM: time is moving — hourglass -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs><linearGradient id="g-hourglass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbbf24"/><stop offset="1" stop-color="#d97706"/></linearGradient></defs>
+  <circle cx="128" cy="128" r="128" fill="url(#g-hourglass)"/>
+  <path d="M84 60h88M84 196h88" stroke="#fff" stroke-width="14" stroke-linecap="round"/>
+  <path d="M94 62c0 40 34 48 34 66s-34 26-34 66h68c0-40-34-48-34-66s34-26 34-66z" fill="none" stroke="#fff" stroke-width="12" stroke-linejoin="round"/>
+  <path d="M106 186c4-18 22-24 22-34 0 10 18 16 22 34z" fill="#fff"/>
+  <path d="M110 84h36c-4 12-18 18-18 24 0-6-14-12-18-24z" fill="#fff" opacity=".9"/>
+</svg>

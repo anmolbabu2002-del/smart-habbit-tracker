@@ -67,6 +67,7 @@ jobs:
               "@capacitor/core": "^7.0.0",
               "@capacitor/filesystem": "^7.0.0",
               "@capacitor/haptics": "^7.0.0",
+              "@capacitor/local-notifications": "^7.0.0",
               "@capacitor/share": "^7.0.0"
             },
             "devDependencies": {
@@ -117,6 +118,16 @@ jobs:
           npx capacitor-assets generate --android \
             --iconBackgroundColor '#121212' --iconBackgroundColorDark '#121212' \
             --splashBackgroundColor '#121212' --splashBackgroundColorDark '#121212'
+
+      - name: Habit reminder icons and exact-time alarms
+        run: |
+          # Notification icons drawn in notify-icons/svg, rendered to PNG in notify-icons/android
+          cp -r ../notify-icons/android/. android/app/src/main/res/
+          ls android/app/src/main/res/drawable-nodpi
+          # Let reminders fire on the minute even in battery saver (allowed for sideloaded apps)
+          manifest=android/app/src/main/AndroidManifest.xml
+          sed -i 's#</manifest>#    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />\n</manifest>#' "$manifest"
+          grep -n "EXACT_ALARM" "$manifest"
 
       - name: Sync web files and plugins
         run: npx cap sync android

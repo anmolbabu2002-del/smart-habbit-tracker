@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ultradian-v46';
+const CACHE_NAME = 'ultradian-v47';
 
 // ═══ CORE APP SHELL (HTML, CSS, JS) ═══
 const CORE_ASSETS = [
@@ -34,7 +34,14 @@ const FEATURE_ASSETS = [
   './castle-3d.js?v=4.5',
   './hero-landscape-3d.js',
   './focus-gym.js',
-  './focus-gym.css'
+  './focus-gym.css',
+  './habit-reminders.js',
+  './habit-reminders.css',
+  './notify-icons/web/habit_sprout.png',
+  './notify-icons/web/habit_hourglass.png',
+  './notify-icons/web/habit_flame.png',
+  './notify-icons/web/habit_alarm.png',
+  './notify-icons/web/badge.png'
 ];
 
 // ═══ ICONS & APP IMAGES ═══
@@ -194,6 +201,9 @@ self.addEventListener('fetch', event => {
 // ═══════ NOTIFICATION CLICK ═══════
 self.addEventListener('notificationclick', event => {
   event.notification.close();
+  const data = event.notification.data || {};
+  const action = event.action || 'open';
+  const isHabit = data.kind === 'habit';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
@@ -202,11 +212,15 @@ self.addEventListener('notificationclick', event => {
           const client = windowClients[i];
           const clientUrl = new URL(client.url);
           if (clientUrl.origin === location.origin) {
+            // Habit reminder: the open app shows your habits (or marks the one left as done)
+            if (isHabit) client.postMessage({ type: 'habit-notification', action, data });
             if ('focus' in client) return client.focus();
           }
         }
         if (clients.openWindow) {
-          return clients.openWindow('./');
+          if (!isHabit) return clients.openWindow('./');
+          const q = new URLSearchParams({ habit: action, name: data.habit || '', date: data.date || '' });
+          return clients.openWindow('./?' + q.toString());
         }
       })
   );

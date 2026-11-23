@@ -1,0 +1,33 @@
+/* habit-reminders.css — Settings card and the one-time offer for habit reminders */
+.hr-card { margin: 26px 0 8px; }
+.hr-box { background: var(--card-bg, var(--bg-card)); border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px; }
+.hr-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; cursor: pointer; }
+.hr-row b { display: block; color: var(--text-main); font-size: 0.95rem; }
+.hr-row small { display: block; color: var(--text-muted); font-size: 0.8rem; margin-top: 2px; }
+.hr-switch { position: relative; flex-shrink: 0; width: 48px; height: 28px; }
+.hr-switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.hr-switch i { position: absolute; inset: 0; border-radius: 99px; background: #cbd5e1; transition: background 0.2s; pointer-events: none; }
+.hr-switch i::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: transform 0.2s; }
+.hr-switch input:checked + i { background: #10b981; }
+.hr-switch input:checked + i::after { transform: translateX(20px); }
+.hr-switch input:focus-visible + i { outline: 2px solid #10b981; outline-offset: 2px; }
+.hr-times { list-style: none; margin: 14px 0 6px; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; transition: opacity 0.2s; }
+.hr-card.off .hr-times { opacity: 0.45; }
+.hr-times li { display: grid; grid-template-columns: 30px 1fr; column-gap: 8px; align-items: center; padding: 8px; border-radius: 12px; background: var(--bg-input); min-width: 0; }
+.hr-times svg { width: 30px; height: 30px; grid-row: span 2; }
+.hr-times b { font-size: 0.82rem; color: var(--text-main); white-space: nowrap; }
+.hr-times span { font-size: 0.75rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hr-status { margin: 10px 2px; font-size: 0.82rem; color: var(--text-light); line-height: 1.45; }
+.hr-test { width: 100%; padding: 11px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-main); font: inherit; font-weight: 700; cursor: pointer; }
+.hr-card.off .hr-test { display: none; }
+
+.hr-offer { position: fixed; inset: 0; z-index: 99999; background: rgba(15, 23, 42, 0.45); display: flex; align-items: flex-end; justify-content: center; padding: 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px) + var(--sab, 0px)); animation: hr-fade 0.2s ease; }
+.hr-offer-card { width: 100%; max-width: 400px; background: var(--card-bg, #fff); color: var(--text-main); border-radius: 22px; padding: 22px 20px 16px; text-align: center; box-shadow: 0 20px 50px -20px rgba(0,0,0,0.45); animation: hr-up 0.25s ease; }
+.hr-offer-card svg { width: 64px; height: 64px; margin-bottom: 8px; }
+.hr-offer-card b { display: block; font-size: 1.15rem; }
+.hr-offer-card p { margin: 6px 0 16px; color: var(--text-muted); font-size: 0.92rem; line-height: 1.45; }
+.hr-offer-card div { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; }
+.hr-offer-card button { padding: 13px; border-radius: 14px; border: 1px solid var(--border); background: var(--bg-input, #f1f5f9); color: var(--text-main); font: inherit; font-weight: 700; cursor: pointer; }
+.hr-offer-card .hr-yes { background: #10b981; border-color: #10b981; color: #fff; }
+@keyframes hr-fade { from { opacity: 0; } }
+@keyframes hr-up { from { transform: translateY(30px); opacity: 0; } }

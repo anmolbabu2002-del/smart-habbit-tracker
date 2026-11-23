@@ -509,124 +509,7 @@ function endMeditationSession(completed) {
 }
 
 
-function getReminderPreferences() {
-  const raw = appStorage.getItem("reminderPreferences");
-  if (!raw) {
-    return { taskReminders: false, waterReminders: false };
-  }
-  try {
-    const parsed = JSON.parse(raw);
-    return {
-      taskReminders: !!parsed.taskReminders,
-      waterReminders: !!parsed.waterReminders
-    };
-  } catch {
-    return { taskReminders: false, waterReminders: false };
-  }
-}
-
-function setReminderPreferences(prefs) {
-  appStorage.setItem(
-    "reminderPreferences",
-    JSON.stringify({
-      taskReminders: !!prefs.taskReminders,
-      waterReminders: !!prefs.waterReminders
-    })
-  );
-}
-
-function runNotificationSetupIfNeeded() {
-  if (!("Notification" in window)) return;
-  if (appStorage.getItem("notificationSetupDone") === "1") return;
-
-  // Don't ambush brand-new users: wait until they've registered a name and
-  // come back for a second session. "Not now" snoozes for 3 days.
-  if (!appStorage.getItem("userName")) return;
-  const launches = parseInt(appStorage.getItem("appLaunchCount") || "0", 10) + 1;
-  appStorage.setItem("appLaunchCount", String(launches));
-  if (launches < 2) return;
-  const snoozedUntil = parseInt(appStorage.getItem("notificationSetupSnoozedUntil") || "0", 10);
-  if (Date.now() < snoozedUntil) return;
-
-  const overlay = document.createElement("div");
-  overlay.className = "notification-setup-overlay";
-
-  overlay.innerHTML = `
-    <div class="notification-setup-card" role="dialog" aria-modal="true">
-      <div class="notification-setup-title">Enable reminders?</div>
-      <div class="notification-setup-desc">
-        If you allow notifications, I can remind you about unfinished tasks and your daily water goal.
-      </div>
-      <div class="notification-setup-options">
-        <label class="notification-setup-option">
-          <input type="checkbox" id="notif-task" checked>
-          <div>
-            <div style="font-weight: 700; color: #3a3a3a;">Task reminders</div>
-            <div style="color: #6a7a8c;">Get notified if you still have incomplete tasks.</div>
-          </div>
-        </label>
-        <label class="notification-setup-option">
-          <input type="checkbox" id="notif-water" checked>
-          <div>
-            <div style="font-weight: 700; color: #3a3a3a;">Water reminders</div>
-            <div style="color: #6a7a8c;">Every 3 hours: “Water time!” + how much is left.</div>
-          </div>
-        </label>
-      </div>
-      <div class="notification-setup-actions">
-        <button type="button" class="notification-setup-btn secondary" id="notif-skip">Not now</button>
-        <button type="button" class="notification-setup-btn primary" id="notif-enable">Enable</button>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(overlay);
-
-  const enableBtn = overlay.querySelector("#notif-enable");
-  const skipBtn = overlay.querySelector("#notif-skip");
-  const taskCb = /** @type {HTMLInputElement | null} */ (overlay.querySelector("#notif-task"));
-  const waterCb = /** @type {HTMLInputElement | null} */ (overlay.querySelector("#notif-water"));
-
-  const finalize = (prefs) => {
-    setReminderPreferences(prefs);
-    appStorage.setItem("notificationSetupDone", "1");
-    overlay.remove();
-  };
-
-  if (skipBtn) {
-    skipBtn.addEventListener("click", () => {
-      setReminderPreferences({ taskReminders: false, waterReminders: false });
-      appStorage.setItem("notificationSetupSnoozedUntil", String(Date.now() + 3 * 24 * 60 * 60 * 1000));
-      overlay.remove();
-    });
-  }
-
-  if (enableBtn) {
-    enableBtn.addEventListener("click", async () => {
-      const prefs = {
-        taskReminders: !!(taskCb && taskCb.checked),
-        waterReminders: !!(waterCb && waterCb.checked)
-      };
-
-      finalize(prefs);
-
-      if (Notification.permission === "default") {
-        try {
-          const permission = await Notification.requestPermission();
-          if (permission === "granted") {
-            showNotification("✅ Notifications enabled.");
-          } else if (permission === "denied") {
-            showNotification("⚠️ Notifications blocked in your browser settings.");
-          }
-        } catch (e) {
-          console.error("Notification permission error", e);
-        }
-      } else if (Notification.permission === "denied") {
-        showNotification("⚠️ Notifications are blocked in your browser settings.");
-      }
-    });
-  }
-}
+// Reminders: the only phone notifications are habit reminders (habit-reminders.js)
 
 // --- Personalization ---
 function getUserName() {
@@ -3617,15 +3500,6 @@ function setWaterGoal() {
   }
 }
 
-function checkWaterNotifications() {
-  const prefs = getReminderPreferences();
-  if (!prefs.waterReminders) return;
-  if (waterGoal <= 0) return;
-  if (waterConsumed >= waterGoal) return;
-  const remaining = Math.max(0, waterGoal - waterConsumed);
-  showNotification(`💧 Water time! ${remaining}ml is left from your water goal yet to drink.`);
-}
-
 // ==================== POMODORO TIMER ====================
 let pomodoroTimer = null;
 let pomodoroTimeLeft = 25 * 60; // 25 minutes in seconds
@@ -4051,37 +3925,8 @@ function showPomodoroSuccessAnimation() {
 }
 
 // ==================== NOTIFICATIONS ====================
+// In-app message (toast). The app's only phone notifications are habit reminders (habit-reminders.js).
 function showNotification(message) {
-  const options = {
-    body: message,
-    icon: 'icon-192.png',
-    badge: 'icon-192.png',
-    vibrate: [200, 100, 200],
-    data: {
-      url: window.location.origin + '/index.html'
-    }
-  };
-
-  // While the app is open, the in-app toast below is enough. System-tray
-  // notifications are only for reminders that fire while the app is in the background.
-  const appVisible = document.visibilityState === "visible";
-  const canNotify = "Notification" in window && Notification.permission === "granted";
-
-  if (appVisible || !canNotify) {
-    // skip system notification
-  } else if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.ready.then(registration => {
-      registration.showNotification("Ultradian", options);
-    }).catch(e => {
-      // Fallback to basic window Notification if SW registration isn't ready
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("Ultradian", options);
-      }
-    });
-  } else {
-    new Notification("Ultradian", options);
-  }
-
   // Also show in-app notification
   const notification = document.createElement("div");
   notification.className = "in-app-notification";
@@ -4097,217 +3942,6 @@ function showNotification(message) {
     setTimeout(() => notification.remove(), 300);
   }, 3000);
 }
-
-// ==================== TASK REMINDERS ====================
-function checkTaskReminders() {
-  const prefs = getReminderPreferences();
-  if (!prefs.taskReminders) return;
-  const checkboxes = document.querySelectorAll("#task input[type='checkbox']");
-  const incompleteTasks = Array.from(checkboxes).filter(
-    cb => !(/** @type {HTMLInputElement} */ (cb)).checked
-  );
-
-  if (incompleteTasks.length > 0) {
-    const name = getUserName();
-    const namePart = name ? `${name}, ` : "";
-    showNotification(
-      `📋 ${namePart}Reminder: You have ${incompleteTasks.length} incomplete task(s). Don't forget to complete them!`
-    );
-  }
-}
-
-const morningInspirationIdeas = [
-  "Start your day with a 5-minute deep focus session.",
-  "Log your first glass of water to keep your hydration streak alive!",
-  "What's the one 'Big Win' task you want to crush today?",
-  "Take a moment for a 4-7-8 breathing exercise to center yourself.",
-  "Your streak is looking great! Let's keep it going today.",
-  "A productive day starts with a clear plan. Check your task list!",
-  "Try a 'Quick Focus' session for that one task you've been putting off.",
-  "How about a mid-morning stretch and a water break?",
-  "Remember: Consistency is the key to building lasting habits.",
-  "Turn your phone to Zen Mode and focus on your top priority for 20 minutes.",
-  "Success is the sum of small efforts repeated daily. What's one small win?",
-  "Check your progress in the 3D Castle—every task helps it grow!",
-  "Is it time for a hydration check-in? 💧",
-  "Use the Pomodoro timer to power through your next 25 minutes.",
-  "A clear mind is a productive mind. Try the meditation page!",
-  "Challenge yourself: Can you complete 3 tasks before lunch? 🚀",
-  "Your future self will thank you for the habits you build today.",
-  "Log your current mood—how are you feeling this morning?",
-  "Small steps lead to big victories. Check off your first task!",
-  "Ready to level up? Let's tackle something challenging today.",
-  "Focus on the process, not just the result. Enjoy your work!",
-  "Deep breaths in, distractions out. You've got this! 🌟",
-  "Don't forget to use a lifeline if you feel stuck today.",
-  "Great things never came from comfort zones. Let's do this!",
-  "Your 3-day streak is just the beginning. Keep it up!",
-  "Stay hydrated, stay focused. Drink some water now! 💧",
-  "Mindfulness matters. Take 60 seconds to just breathe.",
-  "Productivity is being able to do things that you were never able to do before.",
-  "Organized life, organized mind. Is your task list ready?",
-  "Let's make today count! Pick your focus task now. 🎯"
-];
-
-/**
- * Checks if it is 10 AM or later and sends a daily inspiration notification.
- * Ensures the notification is only sent once per day.
- */
-function check10AMNotifications() {
-  const now = new Date();
-  const currentHour = now.getHours();
-  const todayDate = now.toDateString();
-  const lastNotifDate = appStorage.getItem("last10AMNotifDate");
-
-  // Trigger if it's 10 AM (10:00) or later AND we haven't sent today's notification yet
-  if (currentHour >= 10 && lastNotifDate !== todayDate) {
-    const name = getUserName();
-    const namePart = name ? `${name}, ` : "";
-
-    // Pick a random idea from the 30 inspirations
-    const randomIndex = Math.floor(Math.random() * morningInspirationIdeas.length);
-    const idea = morningInspirationIdeas[randomIndex];
-
-    showNotification(`🌅 Good morning ${namePart}${idea}`);
-
-    // Mark today's notification as sent
-    appStorage.setItem("last10AMNotifDate", todayDate);
-  }
-}
-
-/**
- * Checks if it is 5 PM or later and sends a daily summary/reminder notification.
- * Ensures the notification is only sent once per day.
- */
-function check5PMNotifications() {
-  const now = new Date();
-  const currentHour = now.getHours();
-  const todayDate = now.toDateString();
-  const lastNotifDate = appStorage.getItem("last5PMNotifDate");
-
-  // Trigger if it's 5 PM (17:00) or later AND we haven't sent today's notification yet
-  if (currentHour >= 17 && lastNotifDate !== todayDate) {
-    // Select all task checkboxes (excluding bulk selection checkboxes if any)
-    const checkboxes = document.querySelectorAll("#task input[type='checkbox']:not(.task-select-cb)");
-
-    // Only proceed if there are tasks to check
-    if (checkboxes.length === 0) return;
-
-    const incompleteTasks = Array.from(checkboxes).filter(
-      cb => !(/** @type {HTMLInputElement} */ (cb)).checked
-    );
-
-    const name = getUserName();
-    const namePart = name ? `${name}, ` : "";
-
-    if (incompleteTasks.length === 0) {
-      showNotification(`🎉 ${namePart}You're doing great! Let's take it to the next level.`);
-    } else {
-      showNotification(`📋 ${namePart}Task completion reminder: You have ${incompleteTasks.length} tasks left to do.`);
-    }
-
-    // Mark today's notification as sent
-    appStorage.setItem("last5PMNotifDate", todayDate);
-  }
-}
-
-/**
- * Schedules a true background notification on the device for a specific future timestamp.
- * This works natively on Android via PWABuilder relying on the Notification Triggers API.
- */
-function scheduleFutureNotification(id, title, options, timestampMs) {
-  if (!('serviceWorker' in navigator) || !('showTrigger' in Notification.prototype)) return;
-
-  navigator.serviceWorker.ready.then(registration => {
-    registration.showNotification(title, {
-      ...options,
-      tag: id,
-      showTrigger: new TimestampTrigger(timestampMs)
-    }).catch(e => console.warn("Failed scheduling trigger:", e));
-  });
-}
-
-function scheduleNext10AMNotification() {
-  // Only supported on compatible Chrome environments
-  if (!('showTrigger' in Notification.prototype)) return;
-
-  const now = new Date();
-  let target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0, 0, 0);
-
-  // If it's already past 10 AM, schedule for tomorrow
-  if (now.getTime() >= target.getTime()) {
-    target.setDate(target.getDate() + 1);
-  }
-
-  const name = getUserName();
-  const namePart = name ? `${name}, ` : "";
-  const randomIndex = Math.floor(Math.random() * morningInspirationIdeas.length);
-  const idea = morningInspirationIdeas[randomIndex];
-
-  scheduleFutureNotification(
-    "morning-inspiration",
-    "Ultradian",
-    {
-      body: `🌅 Good morning ${namePart}${idea}`,
-      icon: 'icon-192.png',
-      badge: 'icon-192.png',
-      vibrate: [200, 100, 200],
-      data: { url: window.location.origin + '/index.html' }
-    },
-    target.getTime()
-  );
-}
-
-function scheduleNext5PMNotification() {
-  if (!('showTrigger' in Notification.prototype)) return;
-
-  const now = new Date();
-  let target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17, 0, 0, 0);
-
-  if (now.getTime() >= target.getTime()) {
-    target.setDate(target.getDate() + 1); // schedule for tomorrow
-  }
-
-  const name = getUserName();
-  const namePart = name ? `${name}, ` : "";
-
-  scheduleFutureNotification(
-    "evening-summary",
-    "Ultradian",
-    {
-      body: `📋 Evening check-in ${namePart}Time to update your tasks and wrap up the day!`,
-      icon: 'icon-192.png',
-      badge: 'icon-192.png',
-      vibrate: [200, 100, 200],
-      data: { url: window.location.origin + '/index.html' }
-    },
-    target.getTime()
-  );
-}
-
-// For manual user testing
-window.testScheduledNotification = function () {
-  if (!('showTrigger' in Notification.prototype)) {
-    alert("Scheduled Notification Triggers API is not supported on this device/browser.");
-    return;
-  }
-  const now = new Date();
-  const target = new Date(now.getTime() + 60000); // 1 minute from now
-  alert("Scheduling test notification for 60 seconds from now. You can completely close the app now.");
-
-  scheduleFutureNotification(
-    "test-notification",
-    "Ultradian Test",
-    {
-      body: `Testing background triggering! Your app effectively woke up the phone.`,
-      icon: 'icon-192.png',
-      badge: 'icon-192.png',
-      vibrate: [200, 100, 200],
-      data: { url: window.location.origin + '/index.html' }
-    },
-    target.getTime()
-  );
-};
 
 // ==================== LIBRARY (GUTENBERG) ====================
 let currentBookId = null;
@@ -6565,28 +6199,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  runNotificationSetupIfNeeded();
-
   updateWaterDisplay();
-
-  // Set up periodic checks
-  setInterval(checkWaterNotifications, 3 * 60 * 60 * 1000);
-  setInterval(checkTaskReminders, 3 * 60 * 60 * 1000);
-
-  // Daily checks for notifications (runs every minute to catch the precise time)
-  check10AMNotifications();
-  check5PMNotifications();
-
-  // Schedule true background triggers for when the app is fully closed (Android only)
-  scheduleNext10AMNotification();
-  scheduleNext5PMNotification();
-
-  setInterval(() => {
-    check10AMNotifications();
-    check5PMNotifications();
-    scheduleNext10AMNotification(); // Refresh scheduled targets
-    scheduleNext5PMNotification();
-  }, 60000);
 
   // Check daily streak on load
   checkDailyStreak();
@@ -7443,13 +7056,6 @@ function startNewPomodoro() {
       }
       updateNewTimerDisplay();
 
-      // Play notification sound or show alert
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('Pomodoro Timer', {
-          body: isBreakTime ? 'Break time!' : 'Focus session complete!',
-          icon: '🍅'
-        });
-      }
     }
   }, 1000);
 }
@@ -9523,6 +9129,7 @@ let _habitsLoadedFromForage = false;
             appStorage.setItem("userHabits", JSON.stringify(userHabits));
             processHabitsNewDay();
             renderHabits();
+            if (window.HabitReminders) window.HabitReminders.sync();
         } else if (userHabits.length > 0 && !_habitsLoadedFromForage) {
             await localforage.setItem("userHabits", userHabits);
         }
@@ -9533,6 +9140,8 @@ let _habitsLoadedFromForage = false;
 
 function saveUserHabits() {
     appStorage.setItem("userHabits", JSON.stringify(userHabits));
+    // Reschedule habit reminders so they always match what's left today
+    if (window.HabitReminders) window.HabitReminders.sync();
     if (typeof localforage !== 'undefined') {
         localforage.setItem("userHabits", userHabits).catch(e =>
             console.warn("[Habits] localForage save failed", e)
