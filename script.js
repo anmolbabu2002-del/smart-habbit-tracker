@@ -4337,8 +4337,8 @@ function saveBookToHistory(id, title, url, coverUrl, pageIndex, totalPages) {
     pageIndex, totalPages,
     lastRead: Date.now()
   });
-  // Keep only last 5
-  if (history.length > 5) history = history.slice(0, 5);
+  // Keep the 10 most recent
+  if (history.length > 10) history = history.slice(0, 10);
   appStorage.setItem('bookHistory', JSON.stringify(history));
 }
 
@@ -4996,9 +4996,54 @@ function getCustomBooks() {
   catch { return []; }
 }
 
-function saveCustomBook(title, text) {
-  const books = getCustomBooks();
-  const id = 'custom_' + Date.now();
+// Unique even when several books are added in the same millisecond
+function newCustomBookId() {
+  const taken = new Set(getCustomBooks().map(b => String(b.id)));
+  let id;
+  do { id = 'custom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7); } while (taken.has(id));
+  return id;
+}
+
+// Book text lives in IndexedDB (as UTF-8, like EPUB/PDF files) instead of localStorage,
+// whose ~5 MB is shared with all the app's data — one long book could fill it and stop
+// habits from saving. Stored under customBookBinary_ so backups include it.
+async function storeCustomBookText(id, text) {
+  if (typeof localforage === 'undefined') {
+    appStorage.setItem(`customBookText_${id}`, text);
+    return;
+  }
+  await appStorage.setBinaryItem(`customBookBinary_${id}`, new TextEncoder().encode(text).buffer);
+}
+
+async function loadCustomBookText(id) {
+  const legacy = appStorage.getItem(`customBookText_${id}`);
+  if (legacy) return legacy;
+  const data = await appStorage.getBinaryItem(`customBookBinary_${id}`);
+  if (data == null) return null;
+  if (typeof data === 'string') return data;
+  return new TextDecoder().decode(data);
+}
+
+// Move text books saved by older versions out of localStorage (frees space for app data)
+async function migrateCustomBookTexts() {
+  if (typeof localforage === 'undefined') return;
+  for (const book of getCustomBooks()) {
+    const key = `customBookText_${book.id}`;
+    const text = localStorage.getItem(key);
+    if (!text) continue;
+    try {
+      await storeCustomBookText(book.id, text);
+      // Only drop the old copy once the new one reads back identical
+      const stored = await appStorage.getBinaryItem(`customBookBinary_${book.id}`);
+      if (stored && typeof stored !== 'string' && new TextDecoder().decode(stored) === text) appStorage.removeItem(key);
+    } catch (e) {
+      console.warn('Could not move book to IndexedDB, keeping it where it is:', e);
+    }
+  }
+}
+
+async function saveCustomBook(title, text) {
+  const id = newCustomBookId();
   const emoji = customBookEmojis[Math.floor(Math.random() * customBookEmojis.length)];
   const book = {
     id,
@@ -5008,15 +5053,15 @@ function saveCustomBook(title, text) {
     charCount: text.length,
     addedAt: Date.now()
   };
+  await storeCustomBookText(id, text);
+  const books = getCustomBooks();
   books.push(book);
   appStorage.setItem('customBooks', JSON.stringify(books));
-  appStorage.setItem(`customBookText_${id}`, text);
   return book;
 }
 
 async function saveCustomBookBinary(title, fileType, arrayBuffer) {
-  const books = getCustomBooks();
-  const id = 'custom_' + Date.now();
+  const id = newCustomBookId();
   const emoji = fileType === 'pdf' ? '📄' : '📚';
   const book = {
     id,
@@ -5026,9 +5071,11 @@ async function saveCustomBookBinary(title, fileType, arrayBuffer) {
     charCount: arrayBuffer.byteLength,
     addedAt: Date.now()
   };
+  // Store the file first, so a failed write never leaves an empty book on the shelf
+  await appStorage.setBinaryItem(`customBookBinary_${id}`, arrayBuffer);
+  const books = getCustomBooks();
   books.push(book);
   appStorage.setItem('customBooks', JSON.stringify(books));
-  await appStorage.setBinaryItem(`customBookBinary_${id}`, arrayBuffer);
   return book;
 }
 
@@ -5039,6 +5086,8 @@ function deleteCustomBook(id) {
   appStorage.removeItem(`customBookText_${id}`);
   appStorage.removeBinaryItem(`customBookBinary_${id}`);
   appStorage.removeItem(`bookmark_${id}`);
+  appStorage.removeItem(`bookpos_${id}`);
+  try { removeFinishedBooks([String(id)]); } catch (e) { }
   try {
     const allHL = JSON.parse(appStorage.getItem('bookHighlights') || '{}');
     if (allHL[id]) {
@@ -5054,7 +5103,12 @@ function deleteCustomBook(id) {
 }
 
 // ==================== EPUB PARSER ====================
+// Picture URLs from the last opened EPUB, released when the next book opens
+let epubObjectUrls = [];
+
 async function parseEpubFile(arrayBuffer) {
+  epubObjectUrls.forEach(u => URL.revokeObjectURL(u));
+  epubObjectUrls = [];
   const zip = await JSZip.loadAsync(arrayBuffer);
   const parser = new DOMParser();
 
@@ -5111,7 +5165,9 @@ async function parseEpubFile(arrayBuffer) {
         const imgFile = zip.file(imgPath) || zip.file(decodeURIComponent(imgPath));
         if (imgFile) {
           const blob = await imgFile.async('blob');
-          img.setAttribute('src', URL.createObjectURL(blob));
+          const url = URL.createObjectURL(blob);
+          epubObjectUrls.push(url);
+          img.setAttribute('src', url);
         }
       }
     }
@@ -5125,6 +5181,7 @@ async function parseEpubFile(arrayBuffer) {
         if (imgFile) {
           const blob = await imgFile.async('blob');
           const url = URL.createObjectURL(blob);
+          epubObjectUrls.push(url);
           img.setAttribute('xlink:href', url);
           img.setAttribute('href', url);
         }
@@ -5147,11 +5204,16 @@ async function parseEpubFile(arrayBuffer) {
   return chapters;
 }
 
+// Each pagination gets a number; only the newest one may publish its pages, so a
+// re-flow (rotation, font size) racing a book that's opening can't mix the two up
+let paginationRun = 0;
+
 // ==================== HTML SUB-PAGINATOR (for EPUB) ====================
 async function splitHtmlIntoPages(chaptersHtml) {
   const container = document.getElementById('reader-content-container');
   const pageEl = document.getElementById('reader-text');
   if (!container || !pageEl) return;
+  const run = ++paginationRun;
 
   const measurer = pageEl.cloneNode(false);
   measurer.id = '';
@@ -5175,11 +5237,11 @@ async function splitHtmlIntoPages(chaptersHtml) {
   const avail = container.clientHeight - padT - padB;
   if (avail <= 0 || mWidth <= 0) {
     container.removeChild(measurer);
-    bookPages = chaptersHtml.length > 0 ? chaptersHtml : ['No content found.'];
+    if (run === paginationRun) bookPages = chaptersHtml.length > 0 ? chaptersHtml : ['No content found.'];
     return;
   }
 
-  bookPages = [];
+  const pages = []; // published to bookPages only if no newer pagination started
   for (const chapterHtml of chaptersHtml) {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = chapterHtml;
@@ -5198,19 +5260,19 @@ async function splitHtmlIntoPages(chaptersHtml) {
         if (currentNodes.length > 1) {
           measurer.removeChild(clone);
           currentNodes.pop();
-          bookPages.push(measurer.innerHTML);
+          pages.push(measurer.innerHTML);
           measurer.innerHTML = '';
           currentNodes = [];
           const nc = nodes[i].cloneNode(true);
           measurer.appendChild(nc);
           currentNodes.push(nc);
           if (measurer.scrollHeight > avail) {
-            bookPages.push(measurer.innerHTML);
+            pages.push(measurer.innerHTML);
             measurer.innerHTML = '';
             currentNodes = [];
           }
         } else {
-          bookPages.push(measurer.innerHTML);
+          pages.push(measurer.innerHTML);
           measurer.innerHTML = '';
           currentNodes = [];
         }
@@ -5218,12 +5280,13 @@ async function splitHtmlIntoPages(chaptersHtml) {
       if (i % 50 === 0 && i > 0) await new Promise(r => setTimeout(r, 0));
     }
     if (measurer.innerHTML.trim()) {
-      bookPages.push(measurer.innerHTML);
+      pages.push(measurer.innerHTML);
     }
     measurer.innerHTML = '';
   }
   container.removeChild(measurer);
-  if (bookPages.length === 0) bookPages = ['This book appears to be empty.'];
+  if (pages.length === 0) pages.push('This book appears to be empty.');
+  if (run === paginationRun) bookPages = pages;
 }
 
 // ==================== PDF RENDERER ====================
@@ -5371,11 +5434,13 @@ async function openCustomBook(id, title, emoji) {
   const percentEl = document.getElementById("reader-percent");
   if (percentEl) percentEl.textContent = "PAGE 1";
 
+  const token = ++readerLoadToken;
   currentBookId = id;
   currentBookTitle = title;
   currentBookUrl = '__custom__';
   currentBookCover = '';
   bookPages = [];
+  bookSource = null;
   bookPageIndex = 0;
   highlightMode = false;
   pdfDoc = null;
@@ -5394,6 +5459,8 @@ async function openCustomBook(id, title, emoji) {
       if (!arrayBuffer) throw new Error('EPUB data not found in storage.');
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
       const chapters = await parseEpubFile(arrayBuffer);
+      if (token !== readerLoadToken) return;
+      bookSource = { chapters };
       await splitHtmlIntoPages(chapters);
 
     } else if (fileType === 'pdf') {
@@ -5401,21 +5468,23 @@ async function openCustomBook(id, title, emoji) {
       if (!arrayBuffer) throw new Error('PDF data not found in storage.');
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
       const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-      pdfDoc = await loadingTask.promise;
+      const doc = await loadingTask.promise;
+      if (token !== readerLoadToken) { doc.destroy(); return; }
+      pdfDoc = doc;
       bookPages = Array.from({ length: pdfDoc.numPages }, (_, i) => i);
 
     } else {
-      const text = appStorage.getItem(`customBookText_${id}`);
+      const text = await loadCustomBookText(id);
       if (!text) throw new Error('Book text not found.');
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      if (token !== readerLoadToken) return;
+      bookSource = { text };
       await splitTextIntoPages(text);
     }
+    if (token !== readerLoadToken) return;
 
     document.getElementById("reader-loading").style.display = "none";
-    const savedPage = appStorage.getItem(`bookmark_${id}`);
-    if (savedPage) {
-      bookPageIndex = Math.min(parseInt(savedPage) || 0, bookPages.length - 1);
-    }
+    bookPageIndex = savedReadingPage(id);
     await showBookPage(bookPageIndex, 'none');
     saveBookToHistory(id, title, '__custom__', emoji, bookPageIndex, bookPages.length);
 
@@ -5426,15 +5495,18 @@ async function openCustomBook(id, title, emoji) {
       setTimeout(() => { hint.style.display = "none"; }, 3500);
     }
   } catch (err) {
+    if (token !== readerLoadToken) return;
     console.error('Book open error:', err);
     document.getElementById("reader-loading").style.display = "none";
     document.getElementById("reader-text").textContent = "Failed to open book: " + err.message;
   }
 }
+let librarySearchSeq = 0;
 async function searchLibrary() {
   const inputEl = document.getElementById("library-search-input");
   if (!inputEl) return;
   const query = inputEl.value.trim();
+  const seq = ++librarySearchSeq;
   const resultsContainer = document.getElementById("library-results");
   const statusEl = document.getElementById("library-status");
 
@@ -5461,6 +5533,8 @@ async function searchLibrary() {
   try {
     const res = await fetch(`https://gutendex.com/books/?search=${encodeURIComponent(query)}`);
     const data = await res.json();
+    // A newer search (or a cleared box) has taken over
+    if (seq !== librarySearchSeq || inputEl.value.trim() !== query) return;
 
     resultsContainer.innerHTML = "";
 
@@ -5509,6 +5583,7 @@ async function searchLibrary() {
     });
 
   } catch (err) {
+    if (seq !== librarySearchSeq || inputEl.value.trim() !== query) return;
     resultsContainer.innerHTML = "";
     statusEl.innerHTML = "Failed to connect to the library. Are you online?";
     statusEl.style.display = "block";
@@ -5518,6 +5593,72 @@ async function searchLibrary() {
 let bookPages = [];    // Array of text chunks (one per page)
 let bookPageIndex = 0; // Current page
 let isAnimating = false;
+// The whole book as loaded, so re-paginating (font size, rotation) starts from the original
+// text instead of re-splitting already-split pages
+let bookSource = null; // { text } for text books, { chapters } for EPUB
+// Bumped whenever a book starts opening or the reader closes; a slower, older load that
+// finishes later sees the mismatch and stops instead of replacing the open book
+let readerLoadToken = 0;
+
+// Reading position as a share of the book (0–1), so it survives re-pagination on another
+// screen size, a rotation or a font change. Page numbers alone don't.
+function pageStartFraction(index) {
+  let before = 0, total = 0;
+  for (let i = 0; i < bookPages.length; i++) {
+    const n = String(bookPages[i]).length;
+    if (i < index) before += n;
+    total += n;
+  }
+  return total ? before / total : 0;
+}
+
+function pageAtFraction(fraction) {
+  let total = 0;
+  for (const p of bookPages) total += String(p).length;
+  const target = fraction * total + 0.5;
+  let acc = 0;
+  for (let i = 0; i < bookPages.length; i++) {
+    acc += String(bookPages[i]).length;
+    if (acc > target) return i;
+  }
+  return Math.max(0, bookPages.length - 1);
+}
+
+function savedReadingPage(id) {
+  if (bookType !== 'pdf') {
+    const f = parseFloat(appStorage.getItem(`bookpos_${id}`));
+    if (f >= 0 && f <= 1) return pageAtFraction(f);
+  }
+  const saved = appStorage.getItem(`bookmark_${id}`);
+  return saved ? Math.max(0, Math.min(parseInt(saved) || 0, bookPages.length - 1)) : 0;
+}
+
+// Online classics are kept on the device after the first download, so they reopen
+// instantly and offline. The most recently opened few are kept.
+const BOOK_CACHE_MAX = 12;
+async function touchBookCache(id, text) {
+  if (typeof localforage === 'undefined') return;
+  try {
+    if (text != null) await localforage.setItem(`bookCache_${id}`, text);
+    let index = (await localforage.getItem('bookCacheIndex')) || [];
+    if (!Array.isArray(index)) index = [];
+    index = [String(id), ...index.filter(x => x !== String(id))];
+    for (const old of index.slice(BOOK_CACHE_MAX)) await localforage.removeItem(`bookCache_${old}`);
+    await localforage.setItem('bookCacheIndex', index.slice(0, BOOK_CACHE_MAX));
+  } catch (e) { /* caching is best-effort */ }
+}
+
+async function getCachedBookText(id) {
+  if (typeof localforage === 'undefined') return null;
+  try {
+    const text = await localforage.getItem(`bookCache_${id}`);
+    if (typeof text === 'string' && text.length > 500) {
+      touchBookCache(id);
+      return text;
+    }
+  } catch (e) { /* not cached */ }
+  return null;
+}
 
 async function openReader(id, title, url, coverUrl) {
   document.getElementById("reader-modal").classList.remove("hidden");
@@ -5528,11 +5669,13 @@ async function openReader(id, title, url, coverUrl) {
   const percentEl = document.getElementById("reader-percent");
   if (percentEl) percentEl.textContent = "PAGE 1";
 
+  const token = ++readerLoadToken;
   currentBookId = id;
   currentBookTitle = title;
   currentBookUrl = url;
   currentBookCover = coverUrl || 'icon-192.png';
   bookPages = [];
+  bookSource = null;
   bookPageIndex = 0;
   highlightMode = false;
   bookType = 'text';
@@ -5544,91 +5687,27 @@ async function openReader(id, title, url, coverUrl) {
   bookHighlights = getBookHighlights(id);
 
   try {
-    let secureUrl = url.replace("http://", "https://");
-
-    // Our own Netlify proxy first (fast, reliable); public proxies only as backup
-    const proxies = [
-      `/.netlify/functions/book-proxy?url=${encodeURIComponent(secureUrl)}`,
-      `https://api.allorigins.win/get?url=${encodeURIComponent(secureUrl)}`,
-      `https://api.allorigins.win/raw?url=${encodeURIComponent(secureUrl)}`,
-      `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(secureUrl)}`,
-      `https://corsproxy.io/?${encodeURIComponent(secureUrl)}`
-    ];
-
-    let text = null;
-    for (const proxy of proxies) {
-      const controller = new AbortController();
-      // Books are large, 8s is too short for a public proxy. Give it 25 seconds.
-      const timer = setTimeout(() => controller.abort(), 25000);
-      try {
-        const res = await fetch(proxy, { signal: controller.signal });
-
-        if (res.ok) {
-          if (proxy.includes('/get?url=')) {
-            const json = await res.json();
-            text = json.contents;
-          } else {
-            text = await res.text();
-          }
-          clearTimeout(timer);
-          if (text && text.length > 500) break; // Ensure we got a real book text
-          text = null;
-        } else {
-          clearTimeout(timer);
-        }
-      } catch (e) {
-        clearTimeout(timer);
-        console.warn("Proxy failed, trying next...", proxy);
-      }
-    }
-
-    if (!text) {
-      throw new Error("All proxies failed.");
-    }
-
-    // Clean up the text
-    if (url.includes(".html")) {
-      const doc = new DOMParser().parseFromString(text, 'text/html');
-      text = doc.body.innerText || doc.body.textContent || text;
-    }
-
-    // Strip Gutenberg header/footer boilerplate
-    const startMarker = text.indexOf('*** START OF');
-    if (startMarker !== -1) {
-      const afterMarker = text.indexOf('***', startMarker + 12);
-      if (afterMarker !== -1) {
-        text = text.substring(afterMarker + 3);
-      }
-    }
-    const endMarker = text.indexOf('*** END OF');
-    if (endMarker !== -1) {
-      text = text.substring(0, endMarker);
-    }
-
-    // Clean Gutenberg hard-wrapped lines while preserving true paragraphs
-    text = text.replace(/\r\n/g, '\n')
-      .replace(/([^\n])\n([^\n])/g, '$1 $2')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
+    let text = await getCachedBookText(id);
+    if (token !== readerLoadToken) return;
+    if (!text) text = await downloadBookText(id, url, () => token !== readerLoadToken);
+    if (token !== readerLoadToken) return;
+    bookSource = { text };
 
     // Split text into pages that fit the screen
     await splitTextIntoPages(text);
+    if (token !== readerLoadToken) return;
 
     document.getElementById("reader-loading").style.display = "none";
 
-    // Restore bookmark from appStorage (migrate old localStorage bookmarks)
-    let savedPage = appStorage.getItem(`bookmark_${id}`);
-    if (!savedPage) {
-      // Check old localStorage bookmark and migrate
-      savedPage = localStorage.getItem(`bookmark_${id}`);
-      if (savedPage) {
-        appStorage.setItem(`bookmark_${id}`, savedPage);
+    // Migrate bookmarks saved in localStorage by old versions
+    if (!appStorage.getItem(`bookmark_${id}`)) {
+      const oldPage = localStorage.getItem(`bookmark_${id}`);
+      if (oldPage) {
+        appStorage.setItem(`bookmark_${id}`, oldPage);
         localStorage.removeItem(`bookmark_${id}`);
       }
     }
-    if (savedPage) {
-      bookPageIndex = Math.min(parseInt(savedPage) || 0, bookPages.length - 1);
-    }
+    bookPageIndex = savedReadingPage(id);
 
     showBookPage(bookPageIndex, 'none');
 
@@ -5644,10 +5723,87 @@ async function openReader(id, title, url, coverUrl) {
     }
 
   } catch (err) {
+    if (token !== readerLoadToken) return;
     console.error("Book load error:", err);
     document.getElementById("reader-loading").style.display = "none";
-    document.getElementById("reader-text").textContent = "Failed to load book. This may be caused by a network issue or the text source being temporarily unavailable.\n\nPlease check your internet connection and try again.";
+    document.getElementById("reader-text").textContent = navigator.onLine === false
+      ? "You're offline, and this book hasn't been downloaded yet.\n\nBooks you've opened before are saved on your device and open without internet."
+      : "Failed to load book. This may be caused by a network issue or the text source being temporarily unavailable.\n\nPlease check your internet connection and try again.";
   }
+}
+
+// Downloads a Gutenberg book, cleans it up and saves it on the device for next time
+async function downloadBookText(id, url, cancelled) {
+  let secureUrl = url.replace("http://", "https://");
+
+  // Our own Netlify proxy first (fast, reliable); public proxies only as backup
+  const proxies = [
+    `/.netlify/functions/book-proxy?url=${encodeURIComponent(secureUrl)}`,
+    `https://api.allorigins.win/get?url=${encodeURIComponent(secureUrl)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(secureUrl)}`,
+    `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(secureUrl)}`,
+    `https://corsproxy.io/?${encodeURIComponent(secureUrl)}`
+  ];
+
+  let text = null;
+  for (const proxy of proxies) {
+    if (cancelled()) return null;
+    const controller = new AbortController();
+    // Books are large, 8s is too short for a public proxy. Give it 25 seconds.
+    const timer = setTimeout(() => controller.abort(), 25000);
+    try {
+      const res = await fetch(proxy, { signal: controller.signal });
+
+      if (res.ok) {
+        if (proxy.includes('/get?url=')) {
+          const json = await res.json();
+          text = json.contents;
+        } else {
+          text = await res.text();
+        }
+        clearTimeout(timer);
+        if (text && text.length > 500) break; // Ensure we got a real book text
+        text = null;
+      } else {
+        clearTimeout(timer);
+      }
+    } catch (e) {
+      clearTimeout(timer);
+      console.warn("Proxy failed, trying next...", proxy);
+    }
+  }
+
+  if (!text) {
+    throw new Error("All proxies failed.");
+  }
+
+  // Clean up the text
+  if (url.includes(".html")) {
+    const doc = new DOMParser().parseFromString(text, 'text/html');
+    text = doc.body.innerText || doc.body.textContent || text;
+  }
+
+  // Strip Gutenberg header/footer boilerplate
+  const startMarker = text.indexOf('*** START OF');
+  if (startMarker !== -1) {
+    const afterMarker = text.indexOf('***', startMarker + 12);
+    if (afterMarker !== -1) {
+      text = text.substring(afterMarker + 3);
+    }
+  }
+  const endMarker = text.indexOf('*** END OF');
+  if (endMarker !== -1) {
+    text = text.substring(0, endMarker);
+  }
+
+  // Clean Gutenberg hard-wrapped lines while preserving true paragraphs
+  text = text.replace(/\r\n/g, '\n')
+    .replace(/([^\n])\n([^\n])/g, '$1 $2')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  touchBookCache(id, text);
+  return text;
 }
 
 /**
@@ -5660,6 +5816,7 @@ async function splitTextIntoPages(fullText) {
   const container = document.getElementById("reader-content-container");
   const pageEl = document.getElementById("reader-text");
   if (!container || !pageEl) return;
+  const run = ++paginationRun;
 
   const measurer = pageEl.cloneNode(false);
   measurer.id = '';
@@ -5700,11 +5857,11 @@ async function splitTextIntoPages(fullText) {
   // Failsafe if div is completely hidden (prevents infinite loop freezing)
   if (availableHeight <= 0 || measuredWidth <= 0) {
     container.removeChild(measurer);
-    bookPages = [fullText];
+    if (run === paginationRun) bookPages = [fullText];
     return;
   }
 
-  bookPages = [];
+  const pages = []; // published to bookPages only if no newer pagination started
 
   // Estimate chars per page to provide a fast initial bounds for binary search
   const fontSize = parseFloat(cs.fontSize) || 16;
@@ -5762,23 +5919,22 @@ async function splitTextIntoPages(fullText) {
     }
 
     const pageText = fullText.substring(startIndex, bestEnd).trim();
-    bookPages.push(pageText || " ");
+    pages.push(pageText || " ");
 
     // Skip the cutting character, avoid infinite loops on weird strings
     startIndex = bestEnd + 1;
     if (startIndex <= bestEnd) startIndex = bestEnd + 1;
 
     // Yield to main thread every 15 pages to keep the UI from freezing
-    if (bookPages.length % 15 === 0) {
+    if (pages.length % 15 === 0) {
       await new Promise(r => setTimeout(r, 0));
     }
   }
 
   container.removeChild(measurer);
 
-  if (bookPages.length === 0) {
-    bookPages = [fullText || "This book appears to be empty."];
-  }
+  if (pages.length === 0) pages.push(fullText || "This book appears to be empty.");
+  if (run === paginationRun) bookPages = pages;
 }
 
 // Puts page `index` into the reader element (no animation)
@@ -5860,6 +6016,7 @@ function updateReaderProgress() {
 
     // Save bookmark to appStorage
     appStorage.setItem(`bookmark_${currentBookId}`, bookPageIndex.toString());
+    if (bookType !== 'pdf') appStorage.setItem(`bookpos_${currentBookId}`, pageStartFraction(bookPageIndex).toFixed(6));
     // Update reading history with current position
     saveBookToHistory(currentBookId, currentBookTitle, currentBookUrl, currentBookCover, bookPageIndex, total);
 
@@ -5892,6 +6049,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const recs = document.getElementById("library-recommendations");
     const hist = document.getElementById("reading-history-section");
     const myBooks = document.getElementById("my-books-section");
+    const finished = document.getElementById("finished-books-section");
     const results = document.getElementById("library-results");
     const status = document.getElementById("library-status");
 
@@ -5899,6 +6057,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (recs) recs.style.display = 'none';
       if (hist) hist.style.display = 'none';
       if (myBooks) myBooks.style.display = 'none';
+      if (finished) finished.style.display = 'none';
 
       // Live dynamic search while typing (debounce)
       clearTimeout(librarySearchTimeout);
@@ -5907,6 +6066,8 @@ document.addEventListener("DOMContentLoaded", function () {
       }, 600);
     } else {
       clearTimeout(librarySearchTimeout);
+      librarySearchSeq++; // drop any search still on its way
+      if (finished && getFinishedBooks().length > 0) finished.style.display = 'block';
       if (recs) recs.style.display = 'block';
       if (hist && hist.querySelector('#reading-history-list').children.length > 0) hist.style.display = 'block';
       if (myBooks) myBooks.style.display = 'block';
@@ -5920,6 +6081,7 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   document.getElementById("reader-close-btn")?.addEventListener("click", () => {
+    readerLoadToken++; // a book still loading shouldn't pop back up or change history
     document.getElementById("reader-modal").classList.add("hidden");
     highlightMode = false;
     document.getElementById('reader-modal')?.classList.remove('highlight-mode-active');
@@ -5937,14 +6099,19 @@ document.addEventListener("DOMContentLoaded", function () {
   // Font size changes re-paginate the entire book
   async function rePaginateBook() {
     if (bookPages.length === 0 || bookType === 'pdf') return; // PDF pages are fixed
+    // A closed reader is re-split anyway when the next book opens
+    if (document.getElementById('reader-modal')?.classList.contains('hidden')) return;
+    const token = readerLoadToken;
+    const run = paginationRun + 1;
+    // Keep the reader on the same passage, not the same page number
+    const position = pageStartFraction(bookPageIndex);
     if (bookType === 'epub') {
-      const allHtml = [...bookPages]; // pages are already HTML chunks
-      await splitHtmlIntoPages(allHtml);
+      await splitHtmlIntoPages((bookSource && bookSource.chapters) || [...bookPages]);
     } else {
-      const fullText = bookPages.join('\n');
-      await splitTextIntoPages(fullText);
+      await splitTextIntoPages(bookSource && typeof bookSource.text === 'string' ? bookSource.text : bookPages.join('\n'));
     }
-    bookPageIndex = Math.min(bookPageIndex, bookPages.length - 1);
+    if (token !== readerLoadToken || run !== paginationRun) return;
+    bookPageIndex = pageAtFraction(position);
     await showBookPage(bookPageIndex, 'none');
   }
   window.rePaginateBook = rePaginateBook;
@@ -6250,7 +6417,12 @@ document.addEventListener("DOMContentLoaded", function () {
         alert('Please provide the book text.');
         return;
       }
-      saveCustomBook(title, text);
+      try {
+        await saveCustomBook(title, text);
+      } catch (e) {
+        alert('Could not save this book — storage may be full.');
+        return;
+      }
     }
 
     document.getElementById('add-book-overlay').classList.add('hidden');
@@ -8236,8 +8408,13 @@ function renderWaterChart() {
 }
 
 // --- 10. BACKUP & RESTORE ---
-function exportData() {
-  const backup = {
+async function exportData() {
+  // Full backup (includes your own books) when available, else settings and progress only
+  let backup;
+  try {
+    if (typeof window.buildUltradianBackup === "function") backup = await window.buildUltradianBackup();
+  } catch (e) { console.warn("Full backup failed, exporting without book files:", e); }
+  if (!backup) backup = {
     app: "ultradian",
     version: 1,
     exportedAt: new Date().toISOString(),
@@ -8248,8 +8425,10 @@ function exportData() {
   const a = document.createElement("a");
   a.href = url;
   a.download = `habittracker_backup_${new Date().toISOString().split('T')[0]}.json`;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000); // revoking at once can cancel a large download
   showNotification("📤 Data exported successfully!");
 }
 
@@ -8281,7 +8460,12 @@ function importData(event) {
       return;
     }
 
-    await appStorage.importAll(Object.fromEntries(entries));
+    if (typeof window.restoreUltradianBackup === "function") {
+      // Also restores the book files a full backup carries
+      await window.restoreUltradianBackup(JSON.parse(e.target.result));
+    } else {
+      await appStorage.importAll(Object.fromEntries(entries));
+    }
     showNotification("📥 Data restored! Reloading...");
     setTimeout(() => location.reload(), 1500);
   };

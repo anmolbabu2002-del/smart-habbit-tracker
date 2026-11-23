@@ -102,6 +102,7 @@
         return true;
     }
     window.restoreUltradianBackup = restoreBackup;
+    window.buildUltradianBackup = fullBackup;
 
     function downloadJson(obj, name) {
         const url = URL.createObjectURL(new Blob([JSON.stringify(obj)], { type: 'application/json' }));
