@@ -12,8 +12,10 @@
 //
 // Android app: scheduled with the phone's own notification system (Capacitor
 // LocalNotifications), so they arrive with the app closed, the screen off or after a
-// restart. They're rebuilt every time a habit changes or the app opens, so they always
-// match what's left; finishing your last habit cancels the rest of today's.
+// restart. The only permission is "Allow notifications": no exact-alarm access, so Android
+// may deliver a reminder a few minutes late to save battery. They're rebuilt every time a
+// habit changes or the app opens, so they always match what's left; finishing your last
+// habit cancels the rest of today's.
 // Website: browsers can't schedule notifications for a closed page, so there they arrive
 // only while the app is open (in a tab or in the background).
 
