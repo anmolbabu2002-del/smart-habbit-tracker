@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ultradian-v45';
+const CACHE_NAME = 'ultradian-v46';
 
 // ═══ CORE APP SHELL (HTML, CSS, JS) ═══
 const CORE_ASSETS = [
@@ -33,11 +33,8 @@ const FEATURE_ASSETS = [
   './welcome-3d.js',
   './castle-3d.js?v=4.5',
   './hero-landscape-3d.js',
-  './math-missile.js',
-  './pattern-prophet.js',
-  './omniscient.js',
-  './cross-zero.js',
-  './neuro-link.js'
+  './focus-gym.js',
+  './focus-gym.css'
 ];
 
 // ═══ ICONS & APP IMAGES ═══
@@ -61,8 +58,6 @@ const CDN_ASSETS = [
   'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js',
-  'https://unpkg.com/react@18/umd/react.production.min.js',
-  'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
   'https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700&family=Playfair+Display:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&family=Cormorant+Garamond:wght@400;600;700&display=swap'
 ];
 
