@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ultradian-v44';
+const CACHE_NAME = 'ultradian-v48';
 
 // ═══ CORE APP SHELL (HTML, CSS, JS) ═══
 const CORE_ASSETS = [
@@ -10,6 +10,7 @@ const CORE_ASSETS = [
   './storage.js',
   './native-app.js',
   './native-app.css',
+  './native-speech.js',
   './quotes.js',
   './tips.js',
   './tts.js?v=1.0',
@@ -32,11 +33,15 @@ const FEATURE_ASSETS = [
   './welcome-3d.js',
   './castle-3d.js?v=4.5',
   './hero-landscape-3d.js',
-  './math-missile.js',
-  './pattern-prophet.js',
-  './omniscient.js',
-  './cross-zero.js',
-  './neuro-link.js'
+  './focus-gym.js',
+  './focus-gym.css',
+  './habit-reminders.js',
+  './habit-reminders.css',
+  './notify-icons/web/habit_sprout.png',
+  './notify-icons/web/habit_hourglass.png',
+  './notify-icons/web/habit_flame.png',
+  './notify-icons/web/habit_alarm.png',
+  './notify-icons/web/badge.png'
 ];
 
 // ═══ ICONS & APP IMAGES ═══
@@ -60,8 +65,6 @@ const CDN_ASSETS = [
   'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js',
-  'https://unpkg.com/react@18/umd/react.production.min.js',
-  'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
   'https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700&family=Playfair+Display:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&family=Cormorant+Garamond:wght@400;600;700&display=swap'
 ];
 
@@ -198,6 +201,9 @@ self.addEventListener('fetch', event => {
 // ═══════ NOTIFICATION CLICK ═══════
 self.addEventListener('notificationclick', event => {
   event.notification.close();
+  const data = event.notification.data || {};
+  const action = event.action || 'open';
+  const isHabit = data.kind === 'habit';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
@@ -206,11 +212,15 @@ self.addEventListener('notificationclick', event => {
           const client = windowClients[i];
           const clientUrl = new URL(client.url);
           if (clientUrl.origin === location.origin) {
+            // Habit reminder: the open app shows your habits (or marks the one left as done)
+            if (isHabit) client.postMessage({ type: 'habit-notification', action, data });
             if ('focus' in client) return client.focus();
           }
         }
         if (clients.openWindow) {
-          return clients.openWindow('./');
+          if (!isHabit) return clients.openWindow('./');
+          const q = new URLSearchParams({ habit: action, name: data.habit || '', date: data.date || '' });
+          return clients.openWindow('./?' + q.toString());
         }
       })
   );

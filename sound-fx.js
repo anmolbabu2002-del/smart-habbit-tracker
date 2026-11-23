@@ -124,7 +124,7 @@
     document.addEventListener('click', (e) => {
         const el = e.target.closest('button, [role="button"], a, .sp-item, .game-card, .hub-card, [onclick]');
         if (!el || el.disabled) return;
-        if (el.closest('.rd-player, #reader-content-container')) return; // reader has its own page sounds
+        if (el.closest('.rd-player, #reader-content-container, .fg-play')) return; // reader and drills make their own sounds
         play(soundForClick(el));
     }, true);
 

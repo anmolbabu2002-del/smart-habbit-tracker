@@ -61,11 +61,13 @@ jobs:
             "name": "ultradian-android",
             "private": true,
             "dependencies": {
+              "@capacitor-community/text-to-speech": "^6.1.0",
               "@capacitor/android": "^7.0.0",
               "@capacitor/app": "^7.0.0",
               "@capacitor/core": "^7.0.0",
               "@capacitor/filesystem": "^7.0.0",
               "@capacitor/haptics": "^7.0.0",
+              "@capacitor/local-notifications": "^7.0.0",
               "@capacitor/share": "^7.0.0"
             },
             "devDependencies": {
@@ -116,6 +118,13 @@ jobs:
           npx capacitor-assets generate --android \
             --iconBackgroundColor '#121212' --iconBackgroundColorDark '#121212' \
             --splashBackgroundColor '#121212' --splashBackgroundColorDark '#121212'
+
+      - name: Habit reminder icons
+        run: |
+          # Notification icons drawn in notify-icons/svg, rendered to PNG in notify-icons/android.
+          # Reminders need only the "Allow notifications" permission (no exact-alarm access).
+          cp -r ../notify-icons/android/. android/app/src/main/res/
+          ls android/app/src/main/res/drawable-nodpi
 
       - name: Sync web files and plugins
         run: npx cap sync android

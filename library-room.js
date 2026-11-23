@@ -190,6 +190,25 @@
             ${author ? `<span class="lr-gen-author">${esc(author)}</span>` : ''}</div>`;
     }
 
+    // Long-press (≈0.6 s without moving) → menu action; a scroll or drag cancels it
+    function addLongPress(btn, onLongPress) {
+        let timer = 0, x = 0, y = 0;
+        const cancel = () => clearTimeout(timer);
+        btn.addEventListener('pointerdown', (e) => {
+            btn._longPressed = false;
+            x = e.clientX; y = e.clientY;
+            cancel();
+            timer = setTimeout(() => {
+                btn._longPressed = true;
+                try { navigator.vibrate?.(15); } catch (err) { /* no vibration */ }
+                onLongPress();
+            }, 600);
+        });
+        btn.addEventListener('pointermove', (e) => { if (Math.abs(e.clientX - x) > 10 || Math.abs(e.clientY - y) > 10) cancel(); });
+        ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => btn.addEventListener(t, cancel));
+        btn.addEventListener('contextmenu', (e) => e.preventDefault());
+    }
+
     function faceOut(opts) {
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -199,7 +218,8 @@
         // Missing cover image -> a generated one
         const img = btn.querySelector('img');
         if (img) img.addEventListener('error', () => { img.outerHTML = coverArt(opts.title, opts.author, null, 0); }, { once: true });
-        btn.addEventListener('click', () => flourish(btn, opts.open));
+        btn.addEventListener('click', () => { if (btn._longPressed) { btn._longPressed = false; return; } flourish(btn, opts.open); });
+        if (opts.onLongPress) addLongPress(btn, opts.onLongPress);
         return btn;
     }
 
@@ -214,15 +234,8 @@
         const width = Math.max(30, Math.min(48, opts.width || 34 + (h % 4) * 4));
         btn.style.cssText = `--c:${color};--h:${height}px;--w:${width}px`;
         btn.innerHTML = `<span class="lr-band"></span><span class="lr-spine-title">${esc(opts.title)}</span><span class="lr-spine-mark">${esc(opts.mark || '')}</span><span class="lr-band lr-band-b"></span>`;
-        btn.addEventListener('click', () => { if (!btn._longPressed) flourish(btn, opts.open); btn._longPressed = false; });
-        if (opts.onLongPress) {
-            let timer = 0;
-            const cancel = () => clearTimeout(timer);
-            btn.addEventListener('pointerdown', () => { timer = setTimeout(() => { btn._longPressed = true; opts.onLongPress(); }, 650); });
-            btn.addEventListener('pointerup', cancel);
-            btn.addEventListener('pointerleave', cancel);
-            btn.addEventListener('contextmenu', (e) => { e.preventDefault(); });
-        }
+        btn.addEventListener('click', () => { if (btn._longPressed) { btn._longPressed = false; return; } flourish(btn, opts.open); });
+        if (opts.onLongPress) addLongPress(btn, opts.onLongPress);
         return btn;
     }
 
@@ -257,9 +270,17 @@
                 cover,
                 badge: `<span class="lr-progress"><i style="width:${pct}%"></i></span><span class="lr-pct">${pct}%</span>`,
                 caption: i === 0 ? 'Continue' : '',
-                open: () => openBook({ ...book, emoji: meta && meta.emoji })
+                open: () => openBook({ ...book, emoji: meta && meta.emoji }),
+                onLongPress: () => {
+                    if (!confirm(`Remove "${book.title}" from Continue reading? Your place in the book is kept.`)) return;
+                    const rest = getBookHistory().filter(b => String(b.id) !== String(book.id));
+                    appStorage.setItem('bookHistory', JSON.stringify(rest));
+                    window.renderReadingHistory();
+                }
             }));
         });
+        const hint = $('lr-history-hint');
+        if (hint) hint.hidden = history.length === 0;
         updateHero();
     };
 
@@ -273,7 +294,12 @@
         shelfRow(list);
         finished.forEach(book => list.appendChild(spine({
             id: book.id, title: book.title, finished: true, mark: '🏆',
-            open: () => openBook(book)
+            open: () => openBook(book),
+            onLongPress: () => {
+                if (!confirm(`Take "${book.title}" off the Finished shelf?`)) return;
+                removeFinishedBooks([String(book.id)]);
+                window.renderFinishedBooks();
+            }
         })));
     };
 
@@ -326,6 +352,7 @@
                         deleteCustomBook(book.id);
                         window.renderMyBooks();
                         window.renderReadingHistory();
+                        window.renderFinishedBooks();
                     }
                 }
             }));
@@ -632,16 +659,16 @@
         drawPreview();
         const ready = isPaste
             ? $('lr-paste-title').value.trim() && $('lr-paste-text').value.trim()
-            : addState.items.some(it => !it.failed && !it.status);
+            : addState.items.some(it => !it.failed && !it.status && !it.saved);
         const save = document.querySelector('#lr-add .lr-save');
         save.disabled = !ready;
-        const n = addState.items.filter(it => !it.failed && !it.status).length;
+        const n = addState.items.filter(it => !it.failed && !it.status && !it.saved).length;
         save.textContent = !isPaste && n > 1 ? `Add ${n} books` : 'Add to shelf';
     }
 
     function patchMeta(id, item) {
         const books = getCustomBooks();
-        const meta = books.find(b => b.id === id);
+        const meta = books.find(b => String(b.id) === String(id));
         if (!meta) return;
         const [a, b] = COVER_GRADIENTS[item.gradient || 0];
         Object.assign(meta, {
@@ -663,23 +690,28 @@
             if (addState.mode === 'paste') {
                 const title = $('lr-paste-title').value.trim();
                 const text = $('lr-paste-text').value.trim();
-                const book = saveCustomBook(title, text);
+                const book = await saveCustomBook(title, text);
                 patchMeta(book.id, { ...addState.paste, author: $('lr-paste-author').value.trim() });
                 added = 1;
             } else {
                 for (const item of addState.items) {
-                    if (item.failed || item.status) continue;
+                    if (item.failed || item.status || item.saved) continue;
                     status.textContent = `Adding “${item.title}”…`;
-                    const title = (item.title || baseName(item.file.name)).trim();
+                    const title = (item.title || baseName(item.file.name)).trim() || 'Untitled';
                     const book = item.kind === 'epub' || item.kind === 'pdf'
                         ? await saveCustomBookBinary(title, item.kind, item.buffer)
-                        : saveCustomBook(title, item.text);
+                        : await saveCustomBook(title, item.text);
                     patchMeta(book.id, item);
+                    item.saved = true; // a retry after a later failure won't add it twice
+                    item.buffer = null;
                     added++;
                 }
             }
         } catch (err) {
-            status.textContent = 'Storage is full — try a smaller file.';
+            console.error('Add book failed:', err);
+            const full = err && (err.name === 'QuotaExceededError' || /quota|full|space/i.test(err.message || ''));
+            status.textContent = (added ? `Added ${added}. ` : '') + (full ? 'Storage is full — try a smaller file or remove a book.' : 'Could not save this book — please try again.');
+            if (added) { window.renderMyBooks(); addState.items = addState.items.filter(it => !it.saved); refreshAdd(); }
             save.disabled = false;
             return;
         }
@@ -702,6 +734,7 @@
         nav?.insertAdjacentHTML('afterbegin', `<button id="lr-sound-btn" class="lib-nav-icon-btn" title="Room sounds">${MODE_LABEL[ambient.mode]}</button>`);
         $('lr-sound-btn')?.addEventListener('click', cycleAmbient);
         document.getElementById('my-books-section')?.insertAdjacentHTML('beforeend', '<p class="lr-hint" id="lr-mybooks-hint" hidden>Long-press a book to remove it.</p>');
+        document.getElementById('reading-history-section')?.insertAdjacentHTML('beforeend', '<p class="lr-hint" id="lr-history-hint" hidden>Long-press a cover to take it off this shelf.</p>');
         document.querySelector('#reading-history-section h3')?.replaceChildren('Continue reading');
         document.querySelector('#finished-books-section h3')?.replaceChildren('Finished');
         const discover = document.querySelector('#library-recommendations h3');
@@ -734,6 +767,11 @@
         window.renderFinishedBooks();
         window.renderMyBooks();
         window.renderRecommendations();
+        // Books saved by older versions sit in localStorage; move them to IndexedDB when idle
+        if (typeof migrateCustomBookTexts === 'function') {
+            const later = window.requestIdleCallback || ((fn) => setTimeout(fn, 3000));
+            later(() => migrateCustomBookTexts().catch(() => {}));
+        }
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

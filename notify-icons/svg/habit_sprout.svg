@@ -1,0 +1,9 @@
+<!-- 4 PM: a gentle start — sprout -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs><linearGradient id="g-sprout" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4ade80"/><stop offset="1" stop-color="#059669"/></linearGradient></defs>
+  <circle cx="128" cy="128" r="128" fill="url(#g-sprout)"/>
+  <path d="M128 196V122" stroke="#fff" stroke-width="14" stroke-linecap="round"/>
+  <path d="M128 130c-4-34-28-54-62-54 0 34 24 56 62 54z" fill="#fff"/>
+  <path d="M128 112c4-36 30-58 66-58 0 36-26 60-66 58z" fill="#ecfdf5"/>
+  <path d="M84 196h88" stroke="#fff" stroke-width="14" stroke-linecap="round" opacity=".85"/>
+</svg>

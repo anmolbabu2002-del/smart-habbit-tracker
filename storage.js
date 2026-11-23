@@ -92,6 +92,9 @@
  * Usage: Replace all `localStorage.xxx()` calls with `appStorage.xxx()`
  * ====================================================== */
 
+// Keys that live only in IndexedDB (never mirrored from localStorage)
+const IDB_ONLY_KEY = /^(customBookBinary_|bookCache_|bookCacheIndex$)/;
+
 const appStorage = {
   _ready: false,
 
@@ -125,10 +128,17 @@ const appStorage = {
         let restoredCount = 0;
         
         for (const key of keys) {
+          // Only mirrored settings belong in localStorage. Book files, cached books and other
+          // IndexedDB-only data must stay put: copying them here turned EPUB/PDF files into
+          // "{}", which the next background sync then wrote back over the real file.
+          if (IDB_ONLY_KEY.test(key)) continue;
           const val = await localforage.getItem(key);
-          if (val !== null && val !== undefined) {
-            localStorage.setItem(key, typeof val === "string" ? val : JSON.stringify(val));
+          if (typeof val !== "string") continue;
+          try {
+            localStorage.setItem(key, val);
             restoredCount++;
+          } catch (e) {
+            console.warn("[AppStorage] Could not restore", key, e);
           }
         }
 
@@ -153,6 +163,13 @@ const appStorage = {
   async _syncToBackup() {
     if (typeof localforage === "undefined") return;
     try {
+      // Junk copies left by older versions' restore must never overwrite the real files
+      const junk = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && IDB_ONLY_KEY.test(key)) junk.push(key);
+      }
+      junk.forEach(key => localStorage.removeItem(key));
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key) {
@@ -210,7 +227,7 @@ const appStorage = {
     const data = {};
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key) data[key] = localStorage.getItem(key);
+      if (key && !IDB_ONLY_KEY.test(key)) data[key] = localStorage.getItem(key);
     }
     return data;
   },
@@ -225,6 +242,7 @@ const appStorage = {
       await localforage.clear().catch(() => {});
     }
     for (const [key, value] of Object.entries(data)) {
+      if (IDB_ONLY_KEY.test(key)) continue; // book files are restored separately
       this.setItem(key, value);
     }
   },
