@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ultradian-v44';
+const CACHE_NAME = 'ultradian-v45';
 
 // ═══ CORE APP SHELL (HTML, CSS, JS) ═══
 const CORE_ASSETS = [
@@ -10,6 +10,7 @@ const CORE_ASSETS = [
   './storage.js',
   './native-app.js',
   './native-app.css',
+  './native-speech.js',
   './quotes.js',
   './tips.js',
   './tts.js?v=1.0',

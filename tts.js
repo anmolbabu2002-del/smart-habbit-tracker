@@ -3,8 +3,18 @@
 // Highlight color shared between TTS mode and manual pen highlighting
 // v2.0 — Robust rewrite: fixes stuck states, Chrome timeout, Android resume, highlight corruption
 
+// Stand-in for browsers/WebViews without a speech engine, so the voice list still loads
+// (cloud and Microsoft voices don't need it). The Android app normally gets the phone's
+// engine from native-speech.js instead.
+const _noSpeechEngine = {
+    speaking: false, paused: false, pending: false, onvoiceschanged: null,
+    getVoices() { return []; },
+    speak(u) { setTimeout(() => { if (u && typeof u.onerror === 'function') u.onerror({ error: 'synthesis-unavailable' }); }, 0); },
+    cancel() {}, pause() {}, resume() {}
+};
+
 const ttsState = {
-    synth: window.speechSynthesis,
+    synth: window.speechSynthesis || _noSpeechEngine,
     voices: [],
     selectedVoice: null,
     isPlaying: false,
@@ -43,6 +53,8 @@ function getCoolVoiceName(voice) {
     const n = voice.name;
     const lang = voice.lang;
 
+    if (n.startsWith('📱')) return n; // phone voices in the Android app are already named
+
     if (/hi[-_]?IN|Hindi/i.test(lang) || /Hindi/i.test(n)) {
         if (/Hemant/i.test(n))        return '🎵 Hemant — Deep Male (Hindi)';
         if (/Kalpana/i.test(n))       return '🎵 Kalpana — Soft Female (Hindi)';
@@ -77,7 +89,8 @@ function ttsVoiceKey(v) {
 }
 
 function loadTTSVoices() {
-    const allVoices = ttsState.synth.getVoices();
+    let allVoices = [];
+    try { allVoices = ttsState.synth.getVoices() || []; } catch (e) { console.warn('Device voices unavailable:', e); }
     const cloudVoices = [
         { isCloud: true, lang: 'en-US', name: '☁️ English (Cloud — Reliable)' },
         { isCloud: true, lang: 'hi-IN', name: '☁️ Hindi (Cloud — Reliable)' },
@@ -1080,8 +1093,8 @@ function initTTS() {
     }
     loadTTSVoices();
     if (window.NeuralTTS) NeuralTTS.checkAvailable().then(loadTTSVoices);
-    if (speechSynthesis.onvoiceschanged !== undefined) {
-        speechSynthesis.onvoiceschanged = loadTTSVoices;
+    if (ttsState.synth.onvoiceschanged !== undefined) {
+        ttsState.synth.onvoiceschanged = loadTTSVoices;
     }
     setTimeout(() => { if (!ttsState._voicesLoaded) loadTTSVoices(); }, 2000);
 
