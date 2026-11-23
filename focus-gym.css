@@ -244,3 +244,23 @@ body.fg-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
     .fg-screen, .fg-count b, .fg-score, .fg-st-word.pop, .shake, .fg-tug-in.ok { animation: none !important; transition: none !important; }
 }
+
+/* Logic Chain */
+.fg-lc-card { width: 100%; max-width: 400px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 18px; min-height: 230px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; }
+.fg-lc-prem { display: grid; gap: 8px; }
+.fg-lc-fact { margin: 0; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--c) 10%, var(--bg-input)); font-weight: 700; font-size: 1.05rem; letter-spacing: 0.01em; }
+.fg-lc-count { margin: 0; color: var(--text-muted); font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+.fg-lc-memo { margin: 0; color: var(--text-muted); font-size: 0.9rem; font-style: italic; text-align: center; padding: 18px 0; }
+.fg-lc-next { justify-self: end; border: none; background: none; color: var(--c); font: inherit; font-weight: 800; cursor: pointer; padding: 4px 2px; }
+.fg-lc-q { font-size: 1.3rem; font-weight: 800; text-align: center; color: var(--c); min-height: 1.6em; }
+.fg-lc-q.pop { animation: fg-pop 0.25s ease; }
+.fg-lc-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 400px; }
+.fg-lc-btns button { padding: 18px 8px; border-radius: 16px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-main); font: inherit; font-weight: 800; font-size: 1.15rem; cursor: pointer; }
+.fg-lc-btns button[data-a="yes"] { border-color: color-mix(in srgb, #16a34a 45%, var(--border)); color: #16a34a; }
+.fg-lc-btns button[data-a="no"] { border-color: color-mix(in srgb, #dc2626 45%, var(--border)); color: #dc2626; }
+.fg-lc-btns button:disabled { opacity: 0.4; cursor: default; }
+.fg-lc-btns button:active:not(:disabled) { transform: scale(0.96); }
+.fg-lc-fb { min-height: 3.4em; text-align: center; font-weight: 800; }
+.fg-lc-fb.ok { color: #16a34a; }
+.fg-lc-fb.no { color: #dc2626; }
+.fg-lc-fb small { display: block; margin-top: 4px; color: var(--text-light); font-weight: 600; font-size: 0.85rem; }

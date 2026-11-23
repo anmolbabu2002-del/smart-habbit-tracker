@@ -3,6 +3,7 @@
 // scores, and feeds a small daily workout.
 //
 //   Working memory   N-Back, Memory Matrix
+//   Reasoning        Logic Chain
 //   Focus            Schulte Table
 //   Impulse control  Go / No-Go, Color Clash (Stroop)
 //   Switching        Task Switch
@@ -27,6 +28,7 @@
     // ==================== SKILLS & DRILLS ====================
     const SKILLS = {
         memory: { name: 'Working memory', icon: '🧠', why: 'Hold plans, numbers and ideas in mind while you work.' },
+        reasoning: { name: 'Reasoning', icon: '🧩', why: 'Work things out from facts in your head — the core of what IQ tests measure.' },
         focus: { name: 'Focus', icon: '🎯', why: 'Lock onto what matters and scan quickly.' },
         control: { name: 'Impulse control', icon: '🛑', why: 'Resist distractions and automatic reactions.' },
         switching: { name: 'Switching', icon: '🔀', why: 'Move between tasks and lose less time doing it.' },
@@ -461,6 +463,158 @@
                     }));
                 });
             }
+            next();
+        }
+    });
+
+    // ==================== DRILL: LOGIC CHAIN (RELATIONAL REASONING) ====================
+    // Made-up words, so the answer can only come from the facts given — never from knowledge
+    const LC_WORDS = ['ZOF', 'KEP', 'LUM', 'DAX', 'VEB', 'MOK', 'TIV', 'GUP', 'RAZ', 'NEF', 'BOJ', 'WUG', 'FEP', 'HUZ', 'JAV', 'QIM',
+        'TOZ', 'CUV', 'ZID', 'POV', 'XEN', 'BIF', 'DUV', 'GAZ', 'MIP', 'ROV', 'SEB', 'TUF', 'VUD', 'JEK', 'PAZ', 'ZUK'];
+    const LC_COMPARE = [['heavier', 'lighter'], ['taller', 'shorter'], ['older', 'younger'], ['faster', 'slower'], ['brighter', 'darker']];
+    const LOGIC = [null,
+        { premises: 2, kinds: ['order'], shuffle: false, hidden: false },
+        { premises: 3, kinds: ['order'], shuffle: true, hidden: false },
+        { premises: 3, kinds: ['order'], shuffle: true, hidden: true },
+        { premises: 3, kinds: ['same'], shuffle: true, hidden: false },
+        { premises: 4, kinds: ['order', 'same'], shuffle: true, hidden: false },
+        { premises: 4, kinds: ['order', 'same'], shuffle: true, hidden: true },
+        { premises: 5, kinds: ['order', 'same'], shuffle: true, hidden: true },
+        { premises: 6, kinds: ['order', 'same'], shuffle: true, hidden: true }
+    ];
+
+    // Two items far enough apart that the answer needs a real chain of steps
+    function lcPair(count) {
+        let i, j;
+        do { i = rand(count); j = rand(count); } while (i === j || Math.abs(i - j) < 2);
+        return [i, j];
+    }
+
+    function logicProblem(cfg) {
+        const k = cfg.premises, names = shuffle(LC_WORDS).slice(0, k + 1);
+        let premises = [], q, answer, explain;
+        if (pick(cfg.kinds) === 'order') {
+            // names[0] has the most of the quality, names[k] the least
+            const [more, less] = pick(LC_COMPARE);
+            for (let i = 0; i < k; i++) {
+                premises.push(Math.random() < 0.5 ? `${names[i]} is ${more} than ${names[i + 1]}` : `${names[i + 1]} is ${less} than ${names[i]}`);
+            }
+            const [i, j] = lcPair(k + 1);
+            const rel = Math.random() < 0.5 ? more : less;
+            q = `Is ${names[i]} ${rel} than ${names[j]}?`;
+            answer = rel === more ? i < j : i > j;
+            explain = `From ${more} to ${less}: ${names.join(' › ')}`;
+        } else {
+            // Each item is on one of two sides; "same" keeps the side, "opposite" flips it
+            const side = [1];
+            for (let i = 1; i <= k; i++) side.push(Math.random() < 0.5 ? side[i - 1] : -side[i - 1]);
+            for (let i = 0; i < k; i++) {
+                const [a, b] = Math.random() < 0.5 ? [names[i], names[i + 1]] : [names[i + 1], names[i]];
+                premises.push(side[i] === side[i + 1] ? `${a} is the same as ${b}` : `${a} is the opposite of ${b}`);
+            }
+            const [i, j] = lcPair(k + 1);
+            const askSame = Math.random() < 0.5;
+            q = askSame ? `Is ${names[i]} the same as ${names[j]}?` : `Is ${names[i]} the opposite of ${names[j]}?`;
+            answer = askSame ? side[i] === side[j] : side[i] !== side[j];
+            const groupA = names.filter((_, x) => side[x] === side[i]), groupB = names.filter((_, x) => side[x] !== side[i]);
+            explain = `Same group: ${groupA.join(', ')}${groupB.length ? ` · Opposite: ${groupB.join(', ')}` : ''}`;
+        }
+        if (cfg.shuffle) premises = shuffle(premises);
+        return { premises, q, answer, explain };
+    }
+
+    DRILLS.push({
+        id: 'logic', name: 'Logic Chain', skill: 'reasoning', icon: '🧩', color: '#0d9488', minutes: 3, maxLevel: 8, unit: 'pts',
+        how: (lv) => {
+            const c = LOGIC[lv];
+            return `<p>You get a few facts about made-up things, like <b>“ZOF is heavier than KEP”</b>. Then a question: <b>Yes or No?</b></p>
+            <p>Nothing can be guessed from real-world knowledge — only worked out from the facts.${c.kinds.includes('same') ? ' <b>“Same”</b> keeps things in one group; <b>“opposite”</b> puts them in the other.' : ''}</p>
+            <p class="fg-how-small">Level ${lv}: ${c.premises} facts${c.shuffle ? ', in mixed-up order' : ''}${c.hidden ? ', shown one at a time and then hidden — hold them in your head' : ''}. 12 questions. Keyboard: Y / N${c.hidden ? ', Space for the next fact' : ''}.</p>`;
+        },
+        science: 'Relational reasoning — working out new facts from rules you hold in mind — is the core of fluid intelligence, what IQ tests like Raven\'s matrices measure most directly. Most brain-training gains stay close to the trained task, but reasoning training has the best long-term record: in the 10-year ACTIVE study, people trained in reasoning kept better reasoning skills years later, and studies of relational training (like SMART) reported gains on IQ tests, though those were small and are still debated. Hiding the facts at higher levels adds working-memory load, which is what makes it hard — and useful.',
+        run(ctx) {
+            const cfg = LOGIC[ctx.level], TOTAL = 12, READ_MS = 2400 + ctx.level * 150;
+            ctx.el.innerHTML = `<div class="fg-lc-card"><div class="fg-lc-prem"></div><div class="fg-lc-q"></div></div>
+                <div class="fg-lc-btns"><button type="button" data-a="yes">Yes</button><button type="button" data-a="no">No</button></div>
+                <div class="fg-lc-fb" aria-live="polite"></div>`;
+            const premEl = ctx.el.querySelector('.fg-lc-prem'), qEl = ctx.el.querySelector('.fg-lc-q'), fbEl = ctx.el.querySelector('.fg-lc-fb');
+            const btns = ctx.el.querySelector('.fg-lc-btns');
+            let n = 0, correct = 0, prob = null, state = 'idle', askedAt = 0, step = 0, stepTimer = null;
+            const times = [];
+            const setButtons = (on) => btns.querySelectorAll('button').forEach(b => { b.disabled = !on; });
+
+            function ask() {
+                state = 'answer';
+                qEl.textContent = prob.q;
+                qEl.classList.remove('pop'); void qEl.offsetWidth; qEl.classList.add('pop');
+                setButtons(true);
+                askedAt = performance.now();
+            }
+            // Hidden levels: one fact at a time, then the facts disappear
+            function showStep() {
+                if (stepTimer) ctx.cancel(stepTimer);
+                if (step >= prob.premises.length) {
+                    premEl.innerHTML = '<p class="fg-lc-memo">Facts hidden — answer from memory</p>';
+                    return ask();
+                }
+                premEl.innerHTML = `<p class="fg-lc-count">Fact ${step + 1} of ${prob.premises.length}</p>
+                    <p class="fg-lc-fact">${esc(prob.premises[step])}</p>
+                    <button type="button" class="fg-lc-next">Next ›</button>`;
+                premEl.querySelector('.fg-lc-next').addEventListener('click', () => { step++; showStep(); });
+                stepTimer = ctx.after(READ_MS, () => { step++; showStep(); });
+            }
+            function next() {
+                n++;
+                if (n > TOTAL) {
+                    const acc = correct / TOTAL;
+                    return ctx.finish({
+                        score: correct * 10 * (1 + 0.25 * (ctx.level - 1)), accuracy: acc,
+                        delta: correct >= 11 ? 1 : correct <= 7 ? -1 : 0,
+                        headline: 'Points (right answers × level)',
+                        stats: [['Right', `${correct}/${TOTAL}`], ['Per answer', times.length ? (avg(times) / 1000).toFixed(1) + 's' : '—'],
+                            ['Facts', cfg.premises], ['Facts shown', cfg.hidden ? 'From memory' : 'On screen']],
+                        insight: correct >= 11 ? 'Excellent reasoning — next level adds more facts or makes you hold them in memory.'
+                            : 'Tip: build a picture as you read — line things up from most to least, or sort them into two groups. Get 11 of 12 to move up.'
+                    });
+                }
+                ctx.status(`${n}/${TOTAL}`);
+                ctx.progress((n - 1) / TOTAL);
+                prob = logicProblem(cfg);
+                fbEl.textContent = '';
+                fbEl.className = 'fg-lc-fb';
+                qEl.textContent = '';
+                setButtons(false);
+                if (cfg.hidden) { state = 'reading'; step = 0; showStep(); }
+                else {
+                    premEl.innerHTML = prob.premises.map(p => `<p class="fg-lc-fact">${esc(p)}</p>`).join('');
+                    ask();
+                }
+            }
+            function answer(yes) {
+                if (state !== 'answer') return;
+                state = 'feedback';
+                setButtons(false);
+                times.push(performance.now() - askedAt);
+                if (yes === prob.answer) {
+                    correct++;
+                    ctx.good();
+                    fbEl.textContent = '✓ Correct';
+                    fbEl.className = 'fg-lc-fb ok';
+                    ctx.after(650, next);
+                } else {
+                    ctx.bad();
+                    fbEl.innerHTML = `✗ It's <b>${prob.answer ? 'Yes' : 'No'}</b><small>${esc(prob.explain)}</small>`;
+                    fbEl.className = 'fg-lc-fb no';
+                    ctx.after(2600, next);
+                }
+            }
+            btns.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b && !b.disabled) answer(b.dataset.a === 'yes'); });
+            ctx.keys((e) => {
+                const k = e.key.toLowerCase();
+                if (k === 'y' || k === 'arrowleft') answer(true);
+                else if (k === 'n' || k === 'arrowright') answer(false);
+                else if ((k === ' ' || k === 'enter') && state === 'reading') { e.preventDefault(); step++; showStep(); }
+            });
             next();
         }
     });
