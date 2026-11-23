@@ -62,8 +62,10 @@ jobs:
             "private": true,
             "dependencies": {
               "@capacitor/android": "^7.0.0",
+              "@capacitor/app": "^7.0.0",
               "@capacitor/core": "^7.0.0",
               "@capacitor/filesystem": "^7.0.0",
+              "@capacitor/haptics": "^7.0.0",
               "@capacitor/share": "^7.0.0"
             },
             "devDependencies": {
@@ -78,7 +80,7 @@ jobs:
             "appName": "Ultradian",
             "webDir": "www",
             "server": { "androidScheme": "https" },
-            "android": { "backgroundColor": "#121212" }
+            "android": { "backgroundColor": "#F0F4FA" }
           }
           JSON
           node - <<'JS'
@@ -99,6 +101,12 @@ jobs:
 
       - name: Create the Android project
         run: npx cap add android
+
+      - name: Add native code (edge-to-edge system bars)
+        run: |
+          dest=android/app/src/main/java/com/anmoljha/ultradian
+          cp ../.github/android/MainActivity.java ../.github/android/SystemBarsPlugin.java "$dest/"
+          ls "$dest"
 
       - name: App icon
         continue-on-error: true
@@ -128,11 +136,22 @@ jobs:
           fi
           cd android
           chmod +x gradlew
+          set +e
           ./gradlew assembleRelease --no-daemon \
             -Pandroid.injected.signing.store.file="$RUNNER_TEMP/ultradian.jks" \
             -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
-            -Pandroid.injected.signing.key.password="$KEYSTORE_PASSWORD"
+            -Pandroid.injected.signing.key.password="$KEYSTORE_PASSWORD" 2>&1 | tee "$RUNNER_TEMP/gradle.log"
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            # Surface compile errors as annotations (readable without opening the log)
+            grep -E "error:|e: |What went wrong|FAILURE" -A2 "$RUNNER_TEMP/gradle.log" | head -n 30 | while IFS= read -r line; do
+              [ -n "$line" ] && echo "::error::${line}"
+            done
+            rm -f "$RUNNER_TEMP/ultradian.jks"
+            exit "$status"
+          fi
           cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/Ultradian.apk"
           rm -f "$RUNNER_TEMP/ultradian.jks"
 

@@ -1,0 +1,111 @@
+/* native-app.css — makes Ultradian feel like a native Android app.
+ * Every rule is scoped to html.is-native-app (set in storage.js), so the website is unchanged.
+ * --sat / --sar / --sab / --sal are the status bar, side and navigation bar sizes,
+ * set by native-app.js from the Android side. */
+
+html.is-native-app {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;
+}
+
+/* No text selection, long-press menus or image dragging on UI — like native apps */
+html.is-native-app body {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    padding-top: calc(5px + var(--sat, 0px));
+    /* !important: styles.css sets this with env(), which Android WebView may not report */
+    padding-bottom: calc(98px + var(--sab, 0px)) !important;
+    padding-left: calc(5px + var(--sal, 0px));
+    padding-right: calc(5px + var(--sar, 0px));
+}
+
+html.is-native-app :is(input, textarea, select, [contenteditable]:not([contenteditable="false"]),
+    .ai-msg-bubble, #reader-text, .book-page-display, pre, code) {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+}
+
+html.is-native-app img {
+    -webkit-user-drag: none;
+}
+
+html.is-native-app ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    background: transparent;
+}
+
+/* Bottom tab bar sits above the gesture / button navigation area */
+html.is-native-app #main-nav {
+    padding-bottom: calc(8px + var(--sab, 0px)) !important;
+}
+
+/* Tab bar hides while typing, like native apps, and under the full-screen AI chat */
+html.is-native-app.native-keyboard-open #main-nav,
+html.is-native-app body:has(#anmol-ai-page.active) #main-nav {
+    display: none !important;
+}
+
+/* Full-screen overlays (marked by native-app.js) keep clear of the system bars */
+html.is-native-app .native-safe-top {
+    padding-top: calc(var(--native-pt, 0px) + var(--sat, 0px)) !important;
+    box-sizing: border-box !important; /* fit the padding inside 100vh-tall screens */
+}
+
+html.is-native-app .native-safe-bottom {
+    padding-bottom: calc(var(--native-pb, 0px) + var(--sab, 0px)) !important;
+    box-sizing: border-box !important;
+}
+
+/* Anmol AI chat: a full-height screen (100dvh in styles.css) that must fit between the bars */
+html.is-native-app #anmol-ai-page {
+    padding-bottom: calc(20px + var(--sab, 0px)) !important;
+}
+
+html.is-native-app #anmol-ai-page .ai-chat-container {
+    height: 100% !important;
+    max-height: 100% !important;
+}
+
+/* Touch feedback */
+html.is-native-app :is(button, [role="button"], .nav-btn):active {
+    filter: brightness(0.93);
+}
+
+html.is-native-app .nav-btn .nav-icon {
+    transition: transform 0.12s ease-out;
+}
+
+html.is-native-app .nav-btn:active .nav-icon {
+    transform: scale(0.86);
+}
+
+html.is-native-app .nav-btn.active .nav-icon {
+    animation: native-tab-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes native-tab-pop {
+    0% { transform: scale(0.8); }
+    100% { transform: scale(1); }
+}
+
+/* Screen change: quick fade, like switching tabs in a native app.
+   Opacity only — a transform would break fixed-position children during the animation. */
+html.is-native-app .page.native-page-enter {
+    animation: native-page-in 0.22s ease-out;
+}
+
+@keyframes native-page-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html.is-native-app .page.native-page-enter,
+    html.is-native-app .nav-btn.active .nav-icon {
+        animation: none;
+    }
+}
