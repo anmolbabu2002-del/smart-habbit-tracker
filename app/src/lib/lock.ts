@@ -17,8 +17,15 @@ export const LOCK_APPS = [
 const PLUGIN = 'UltradianHabitLock';
 
 const minutesNow = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
-export const pendingHabits = (s: State = getState()) => s.habits.filter(h => !h.history.includes(today()));
-const label = (h: { emoji: string; name: string }) => `${h.emoji ? h.emoji + ' ' : ''}${h.name.trim()}`;
+/** Habits that count today: ones added before today (a habit added today starts counting
+ *  tomorrow, so adding one late never breaks the streak or re-locks apps). On the very first
+ *  day, when every habit is new, they all count. */
+export function requiredHabits(s: State = getState(), day = today()) {
+  const old = s.habits.filter(h => h.createdAt < day);
+  return old.length ? old : s.habits;
+}
+export const pendingHabits = (s: State = getState()) => requiredHabits(s).filter(h => !h.history.includes(today()));
+const label = (h: { name: string }) => h.name.trim();
 
 /** Habits are holding the apps locked right now */
 export function habitLocked(s: State = getState()) {
@@ -42,13 +49,13 @@ export function syncLock() {
       enabled: s.lock.enabled,
       lockFrom: LOCK_FROM,
       today: today(),
-      habitCount: s.habits.length,
+      habitCount: requiredHabits(s).length,
       done: s.habits.length > 0 && left.length === 0,
       pending: left.map(label),
-      allHabits: s.habits.map(label),
+      allHabits: requiredHabits(s).map(label),
       blocked: LOCK_APPS.flatMap(x => x.pkgs),
       focusUntil: focusLockUntil(s),
-      focusLabel: a ? label({ emoji: a.emoji, name: a.label }) : ''
+      focusLabel: a ? a.label : ''
     }).catch(e => console.warn('Habit Lock: update failed', e));
   }, 250);
 }

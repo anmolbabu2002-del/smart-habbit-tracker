@@ -1,12 +1,12 @@
 // Everything that changes data goes through here, so the sounds, haptics, celebrations,
 // streak and Habit Lock always stay in step.
 import { getState, update, uid } from './store';
-import { today, weekOf, dueInfo } from './dates';
+import { today, weekOf, dueInfo, addDays } from './dates';
 import { play } from './sound';
 import { haptic } from './native';
 import { burst, party, praise, randomPraise, toast } from './celebrate';
 import { streakOf, stageIndex } from './streak';
-import { syncLock, habitLocked } from './lock';
+import { syncLock, habitLocked, requiredHabits } from './lock';
 import type { Color, Habit, State, Task } from './types';
 
 type At = { x: number; y: number };
@@ -14,6 +14,13 @@ const BRAND = ['#ff8c42', '#ffc800', '#12c79b', '#1cb0f6', '#a560e8', '#ff4b4b']
 
 // ── Habits ──
 export const doneToday = (h: Habit, day = today()) => h.history.includes(day);
+/** Days in a row this one habit was done (ending today, or yesterday if not done yet) */
+export function habitStreak(h: Habit, day = today()) {
+  const done = new Set(h.history);
+  let d = done.has(day) ? day : addDays(day, -1), n = 0;
+  while (done.has(d)) { n++; d = addDays(d, -1); }
+  return n;
+}
 export const passLeft = (s: State = getState()) => !s.passes[weekOf()];
 
 export function completeHabit(id: string, at?: At, viaPass = false) {
@@ -56,7 +63,7 @@ export function undoHabit(id: string) {
 /** Recompute today's "all done" state and throw the party once a day */
 export function afterHabitsChanged() {
   const s = getState(), day = today();
-  const perfect = s.habits.length > 0 && s.habits.every(h => doneToday(h, day));
+  const perfect = s.habits.length > 0 && requiredHabits(s, day).every(h => doneToday(h, day));
   const had = s.perfectDays.includes(day);
   if (perfect && !had) {
     const prev = streakOf(s);
@@ -68,7 +75,7 @@ export function afterHabitsChanged() {
     if (first) {
       const evolvedTo = stageIndex(streak) > stageIndex(prev) ? stageIndex(streak) : undefined;
       setTimeout(() => party({ kind: 'allDone', streak, prev, best: best && streak > 1, evolvedTo }), 650);
-      if (new Date().getHours() < 12) feat('early-bird', '🌅', 'Early bird', 'Every habit done before noon.');
+      if (new Date().getHours() < 12) feat('early-bird', 'sun', 'Early bird', 'Every habit done before noon.');
     }
   } else if (!perfect && had) {
     update(d => { d.perfectDays = d.perfectDays.filter(x => x !== day); });
@@ -76,16 +83,16 @@ export function afterHabitsChanged() {
   syncLock();
 }
 
-export function saveHabit(input: { id?: string; name: string; emoji: string; color: Color }) {
+export function saveHabit(input: { id?: string; name: string; icon: string; color: Color }) {
   const name = input.name.trim();
   if (!name) return;
   if (input.id) {
     const old = getState().habits.find(h => h.id === input.id);
     if (old && old.name !== name && habitLocked()) { lockedToast('Renaming habits'); return; }
-    update(s => { const h = s.habits.find(x => x.id === input.id); if (h) Object.assign(h, { name, emoji: input.emoji, color: input.color }); });
+    update(s => { const h = s.habits.find(x => x.id === input.id); if (h) Object.assign(h, { name, icon: input.icon, color: input.color }); });
     play('pop');
   } else {
-    update(s => { s.habits.push({ id: uid(), name, emoji: input.emoji, color: input.color, createdAt: today(), history: [] }); });
+    update(s => { s.habits.push({ id: uid(), name, icon: input.icon, color: input.color, createdAt: today(), history: [] }); });
     play('add');
     haptic.medium();
   }
@@ -103,7 +110,7 @@ export function deleteHabit(id: string) {
 export function lockedToast(what: string) {
   play('locked');
   haptic.warning();
-  toast(`🔒 ${what} is off until today’s habits are done`, 'lock');
+  toast(`${what} is off until today’s habits are done`, 'lock');
 }
 
 // ── Tasks ──
@@ -141,10 +148,10 @@ export function toggleTask(id: string, at?: At) {
   const s = getState();
   const dueNow = s.tasks.filter(x => { const g = dueInfo(x.due).group; return g === 'today' || g === 'overdue'; });
   if (t.due && dueNow.length > 1 && dueNow.every(x => x.doneAt)) {
-    setTimeout(() => { play('combo'); haptic.success(); toast('✨ Everything due today is done!', 'good'); }, 350);
+    setTimeout(() => { play('combo'); haptic.success(); toast('Everything due today is done!', 'good'); }, 350);
   }
   const n = s.tasksDone;
-  if ([10, 25, 50, 100, 250, 500, 1000].includes(n)) feat(`tasks-${n}`, '✅', `${n} tasks done`, n >= 100 ? 'You get things done. Seriously.' : 'Tick, tick, tick. Keep it rolling!');
+  if ([10, 25, 50, 100, 250, 500, 1000].includes(n)) feat(`tasks-${n}`, 'checklist', `${n} tasks done`, n >= 100 ? 'You get things done. Seriously.' : 'Tick, tick, tick. Keep it rolling!');
 }
 
 export function deleteTask(id: string) {
@@ -158,10 +165,10 @@ export function clearDone() {
 }
 
 // ── Milestones ("feats"): each celebrated once ──
-export function feat(id: string, emoji: string, title: string, text: string) {
+export function feat(id: string, icon: string, title: string, text: string) {
   if (getState().feats.includes(id)) return;
   update(s => { s.feats.push(id); });
-  setTimeout(() => party({ kind: 'feat', emoji, title, text }), 400);
+  setTimeout(() => party({ kind: 'feat', icon, title, text }), 400);
 }
 
 export const confettiColors = BRAND;

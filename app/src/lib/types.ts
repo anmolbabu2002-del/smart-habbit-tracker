@@ -4,7 +4,7 @@ export const COLORS: Color[] = ['orange', 'mint', 'blue', 'purple', 'yellow', 'r
 export interface Habit {
   id: string;
   name: string;
-  emoji: string;
+  icon: string;           // id from HabitIcon (our own drawings, no emoji)
   color: Color;
   createdAt: string;      // ymd
   history: string[];      // days it was done (ymd)
@@ -29,7 +29,7 @@ export interface FocusSession {
   minutes: number;        // minutes actually focused
   planned: number;
   label: string;
-  emoji: string;
+  icon: string;           // id from HabitIcon (our own drawings, no emoji)
   ref?: FocusRef;
   finished: boolean;      // ran to the end
 }
@@ -38,7 +38,7 @@ export interface ActiveFocus {
   start: number;
   planned: number;        // minutes
   label: string;
-  emoji: string;
+  icon: string;           // id from HabitIcon (our own drawings, no emoji)
   ref?: FocusRef;
   pausedAt?: number;
   pausedMs: number;

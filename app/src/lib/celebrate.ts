@@ -4,8 +4,8 @@ import { useSyncExternalStore } from 'react';
 
 export type Party =
   | { kind: 'allDone'; streak: number; prev: number; best: boolean; evolvedTo?: number }
-  | { kind: 'focus'; minutes: number; label: string; emoji: string; weekMinutes: number; finished: boolean }
-  | { kind: 'feat'; emoji: string; title: string; text: string }
+  | { kind: 'focus'; minutes: number; label: string; icon: string; weekMinutes: number; finished: boolean }
+  | { kind: 'feat'; icon: string; title: string; text: string }
   | { kind: 'evolve'; from: number; to: number };
 
 let queue: Party[] = [];
