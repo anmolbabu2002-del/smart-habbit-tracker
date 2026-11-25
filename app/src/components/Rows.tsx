@@ -1,45 +1,63 @@
-import { Camera, Check } from '@phosphor-icons/react';
+import { Camera, Check, Ticket } from '@phosphor-icons/react';
+import { motion } from 'motion/react';
+import { centerOf } from '../lib/celebrate';
+import { completeHabit, doneToday, habitStreak, toggleTask, undoHabit } from '../lib/actions';
+import { needsPhoto } from '../lib/proof';
+import { dueInfo, today } from '../lib/dates';
+import { play } from '../lib/sound';
+import { HabitIcon } from './HabitIcon';
+import { StreakFlame } from './StreakFlame';
+import type { Habit, Task } from '../lib/types';
 
-export type Habit = { id: string; name: string; emoji: string; color: string; proof: 'photo' | 'tick'; done: boolean; streak?: number };
-export type Task = { id: string; title: string; note?: string; due?: 'overdue' | 'today' | 'tomorrow' | string; done?: boolean };
+export function HabitRow({ h, isNew, onOpen, onProve }: { h: Habit; isNew?: boolean; onOpen: () => void; onProve: () => void }) {
+  const done = doneToday(h);
+  const photo = needsPhoto(h.name);
+  const viaPass = done && h.passDays?.includes(today());
+  const streak = habitStreak(h);
+  const sub = done ? (viaPass ? 'Free pass used' : 'Done today') : isNew ? 'New · counts from tomorrow' : photo ? 'Prove it with a photo' : 'Tap when done';
 
-export function HabitRow({ h }: { h: Habit }) {
   return (
-    <div className={'card habit' + (h.done ? ' done' : '')}>
-      <span className="habit-tile" style={{ background: `var(--${h.color}-soft)` }}>{h.emoji}</span>
-      <span className="habit-text">
-        <b>{h.name}</b>
-        <small>{h.done ? 'Done today' : h.proof === 'photo' ? '📷 Show it with a photo' : 'Tap when done'}</small>
-      </span>
-      {h.done ? (
-        <span className="check-done" aria-label="Done"><Check size={26} weight="bold" /></span>
-      ) : h.proof === 'photo' ? (
-        <button type="button" className="btn round" aria-label={`Prove ${h.name}`}><Camera size={26} weight="fill" /></button>
+    <motion.div layout className={'card habit' + (done ? ' done' : '')} style={{ ['--hc' as string]: `var(--${h.color})` }}>
+      <button type="button" className="habit-main" onClick={() => { play('tap'); onOpen(); }}>
+        <span className="habit-tile" style={{ background: `var(--${h.color}-soft)` }}><HabitIcon icon={h.icon} color={h.color} size={38} /></span>
+        <span className="habit-text">
+          <b>{h.name}</b>
+          <small>
+            {viaPass && <Ticket size={14} weight="fill" />}
+            {!done && photo && !isNew && <Camera size={14} weight="fill" />}
+            {sub}
+            {streak > 0 && <span className="mini-streak"><StreakFlame stage={2} size={16} still />{streak}</span>}
+          </small>
+        </span>
+      </button>
+      {done ? (
+        <motion.button key="done" type="button" className="check-done" aria-label={`Undo ${h.name}`}
+          initial={{ scale: 0.3, rotate: -30 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 500, damping: 14 }}
+          onClick={() => undoHabit(h.id)}>
+          <Check size={28} weight="bold" />
+        </motion.button>
+      ) : photo ? (
+        <button type="button" className="btn round" aria-label={`Prove ${h.name} with a photo`} onClick={() => { play('tap'); onProve(); }}><Camera size={26} weight="fill" /></button>
       ) : (
-        <button type="button" className="btn round ghost" aria-label={`Mark ${h.name} done`}><Check size={24} weight="bold" /></button>
+        <button type="button" className="btn round ghost" aria-label={`Mark ${h.name} done`} onClick={e => completeHabit(h.id, centerOf(e.currentTarget))}><Check size={26} weight="bold" /></button>
       )}
-    </div>
+    </motion.div>
   );
 }
 
-const DUE: Record<string, { label: string; cls: string }> = {
-  overdue: { label: 'Yesterday', cls: 'red' },
-  today: { label: 'Today', cls: 'orange' },
-  tomorrow: { label: 'Tomorrow', cls: 'blue' }
-};
-
-export function TaskRow({ t }: { t: Task }) {
-  const due = t.due ? DUE[t.due] || { label: t.due, cls: 'purple' } : null;
+export function TaskRow({ t, onOpen }: { t: Task; onOpen: () => void }) {
+  const due = dueInfo(t.due);
   return (
-    <div className={'task' + (t.done ? ' done' : '')}>
-      <button type="button" className={'task-check' + (t.done ? ' on' : '')} aria-label={t.done ? 'Completed' : 'Complete task'}>
-        {t.done && <Check size={18} weight="bold" />}
+    <motion.div layout className={'task' + (t.doneAt ? ' done' : '')} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 40 }}>
+      <button type="button" className={'task-check' + (t.doneAt ? ' on' : '')} aria-label={t.doneAt ? `Mark ${t.title} not done` : `Complete ${t.title}`}
+        onClick={e => toggleTask(t.id, centerOf(e.currentTarget))}>
+        {t.doneAt && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 600, damping: 15 }}><Check size={18} weight="bold" /></motion.span>}
       </button>
-      <span className="task-text">
+      <button type="button" className="task-text" onClick={() => { play('tap'); onOpen(); }}>
         <b>{t.title}</b>
         {t.note && <small>{t.note}</small>}
-      </span>
-      {due && !t.done && <span className={'due ' + due.cls}>{due.label}</span>}
-    </div>
+      </button>
+      {due.label && !t.doneAt && <span className={'due ' + due.tone}>{due.label}</span>}
+    </motion.div>
   );
 }

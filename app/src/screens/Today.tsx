@@ -1,64 +1,111 @@
-import { LockSimple, Lightning } from '@phosphor-icons/react';
+import { useState } from 'react';
+import { LockSimple, LockSimpleOpen, Plus, ArrowRight } from '@phosphor-icons/react';
+import { motion } from 'motion/react';
 import { Mascot } from '../components/Mascot';
-import { HabitRow, TaskRow, type Habit, type Task } from '../components/Rows';
+import { HabitRow, TaskRow } from '../components/Rows';
+import { StreakFlame } from '../components/StreakFlame';
+import { HabitEditor } from '../components/HabitEditor';
+import { TaskEditor } from '../components/TaskEditor';
+import { StreakSheet } from '../components/StreakSheet';
+import { useApp } from '../lib/store';
+import { doneToday } from '../lib/actions';
+import { requiredHabits, LOCK_FROM } from '../lib/lock';
+import { stageIndex, streakOf } from '../lib/streak';
+import { dueInfo, longDay, today } from '../lib/dates';
+import { play } from '../lib/sound';
+import type { Habit, Task } from '../lib/types';
 
-const HABITS: Habit[] = [
-  { id: '1', name: 'Workout', emoji: '💪', color: 'orange', proof: 'photo', done: false },
-  { id: '2', name: 'Read 10 pages', emoji: '📖', color: 'blue', proof: 'photo', done: true },
-  { id: '3', name: 'Meditate', emoji: '🧘', color: 'purple', proof: 'photo', done: false },
-  { id: '4', name: 'No sugar', emoji: '🍬', color: 'red', proof: 'tick', done: true },
-  { id: '5', name: 'Study 1 hour', emoji: '🧠', color: 'mint', proof: 'photo', done: false }
-];
-const TASKS: Task[] = [
-  { id: 'a', title: 'Finish DSA assignment', note: 'Graphs — Q3 to Q6', due: 'today' },
-  { id: 'b', title: 'Call the electrician', due: 'overdue' },
-  { id: 'c', title: 'Submit internship form', due: 'today', done: true }
-];
+export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFocus: () => void }) {
+  const s = useApp();
+  const [editHabit, setEditHabit] = useState<Habit | null | undefined>(undefined); // undefined = closed, null = new
+  const [editTask, setEditTask] = useState<Task | null | undefined>(undefined);
+  const [streakOpen, setStreakOpen] = useState(false);
 
-export function Today() {
-  const done = HABITS.filter(h => h.done).length;
-  const left = HABITS.length - done;
+  const day = today();
+  const required = requiredHabits(s);
+  const done = required.filter(h => doneToday(h)).length;
+  const left = required.length - done;
+  const allDone = required.length > 0 && left === 0;
+  const streak = streakOf(s);
+  const hasOld = s.habits.some(h => h.createdAt < day);
+  const afterFour = new Date().getHours() * 60 + new Date().getMinutes() >= LOCK_FROM;
+  const lockOn = s.lock.enabled;
+
+  const due = s.tasks.filter(t => { const g = dueInfo(t.due).group; return (g === 'today' || g === 'overdue') && (!t.doneAt || t.doneAt === day); })
+    .sort((a, b) => Number(!!a.doneAt) - Number(!!b.doneAt) || (a.due || '').localeCompare(b.due || ''));
+  const dueLeft = due.filter(t => !t.doneAt).length;
+
+  let title = `${left} ${left === 1 ? 'habit' : 'habits'} to go!`;
+  let line = lockOn ? (afterFour ? 'Your apps are locked until they’re done.' : 'Apps lock at 4 PM if they’re not done.') : 'You’ve got this.';
+  if (!s.habits.length) { title = 'Let’s build your day!'; line = 'Add a habit you want to do every day.'; }
+  else if (allDone) { title = 'All done for today!'; line = streak > 1 ? `That’s ${streak} days in a row.` : 'Come back tomorrow to start a streak.'; }
+  else if (done === 0 && left > 2) title = `${left} habits today`;
+
   return (
     <main className="screen">
       <header className="today-head">
         <div>
-          <small className="eyebrow">Wednesday · 26 Nov</small>
-          <h1>Hey Anmol! 👋</h1>
+          <small className="eyebrow">{longDay()}</small>
+          <h1>Hey {s.name || 'there'}!</h1>
         </div>
-        <span className="streak-pill" title="Focused today"><Lightning size={20} weight="fill" /> 1h 15m<small>focus</small></span>
+        <button type="button" className={'streak-pill' + (streak ? '' : ' cold')} onClick={() => { play('tap'); setStreakOpen(true); }} aria-label={`${streak} day streak`}>
+          <StreakFlame stage={stageIndex(streak)} size={34} />
+          <b>{streak}</b>
+        </button>
       </header>
 
-      <section className="card hero">
+      <section className={'card hero' + (allDone ? ' won' : '')}>
         <div className="hero-top">
-          <Mascot size={86} mood="cheer" className="bob" />
-          <div className="bubble">
-            <b>{left} habits to go!</b>
-            <span>Finish them to unlock your apps.</span>
+          <Mascot size={86} mood={allDone ? 'cheer' : afterFour && left ? 'focus' : 'happy'} className="bob" />
+          <div className="bubble"><b>{title}</b><span>{line}</span></div>
+        </div>
+        {required.length > 0 && (
+          <div className="hero-progress">
+            <div className="progress"><i style={{ width: `${(done / required.length) * 100}%` }} /></div>
+            <b>{done}/{required.length}</b>
           </div>
-        </div>
-        <div className="hero-progress">
-          <div className="progress"><i style={{ width: `${(done / HABITS.length) * 100}%` }} /></div>
-          <b>{done}/{HABITS.length}</b>
-        </div>
-        <div className="lock-pill">
-          <LockSimple size={18} weight="fill" />
-          5 apps locked until habits are done
-        </div>
+        )}
+        {lockOn && s.habits.length > 0 && (
+          <div className={'lock-pill' + (allDone ? ' open' : '')}>
+            {allDone ? <LockSimpleOpen size={18} weight="fill" /> : <LockSimple size={18} weight="fill" />}
+            {allDone ? 'Apps unlocked for today' : afterFour ? '5 apps locked until habits are done' : '5 apps lock at 4 PM'}
+          </div>
+        )}
       </section>
 
-      <h2 className="section-title">Habits <small>{done} of {HABITS.length}</small></h2>
-      <div className="stack">{HABITS.map(h => <HabitRow key={h.id} h={h} />)}</div>
+      <h2 className="section-title">Habits
+        <button type="button" className="add-mini" onClick={() => { play('tap'); setEditHabit(null); }} aria-label="Add habit"><Plus size={20} weight="bold" /></button>
+      </h2>
+      {s.habits.length ? (
+        <div className="stack">
+          {s.habits.map(h => <HabitRow key={h.id} h={h} isNew={hasOld && h.createdAt === day && !doneToday(h)} onOpen={() => setEditHabit(h)} onProve={() => onProve(h)} />)}
+        </div>
+      ) : (
+        <button type="button" className="card empty" onClick={() => { play('tap'); setEditHabit(null); }}>
+          <Plus size={22} weight="bold" /> Add your first habit
+        </button>
+      )}
 
-      <h2 className="section-title">Due today <small>{TASKS.filter(t => !t.done).length} left</small></h2>
-      <div className="card list">{TASKS.map(t => <TaskRow key={t.id} t={t} />)}</div>
+      <h2 className="section-title">Due today
+        {dueLeft > 0 ? <small>{dueLeft} left</small> : <button type="button" className="add-mini" onClick={() => { play('tap'); setEditTask(null); }} aria-label="Add task"><Plus size={20} weight="bold" /></button>}
+      </h2>
+      {due.length ? (
+        <motion.div layout className="card list">{due.map(t => <TaskRow key={t.id} t={t} onOpen={() => setEditTask(t)} />)}</motion.div>
+      ) : (
+        <button type="button" className="card empty soft" onClick={() => { play('tap'); setEditTask(null); }}>Nothing due today. Add a task</button>
+      )}
 
       <section className="card focus-cta">
         <div>
           <b>Ready for deep work?</b>
-          <span>50 minutes, apps locked, zero distractions.</span>
+          <span>Pick a task, lock the distractions, go.</span>
         </div>
-        <button type="button" className="btn big block">Start focus</button>
+        <button type="button" className="btn big block" onClick={() => { play('tap'); onFocus(); }}>Start focus <ArrowRight size={22} weight="bold" /></button>
       </section>
+
+      <HabitEditor open={editHabit !== undefined} habit={editHabit} onClose={() => setEditHabit(undefined)} />
+      <TaskEditor open={editTask !== undefined} task={editTask} defaultDue={day} onClose={() => setEditTask(undefined)} />
+      <StreakSheet open={streakOpen} onClose={() => setStreakOpen(false)} />
     </main>
   );
 }

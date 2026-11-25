@@ -75,8 +75,8 @@ export function StreakFlame({ stage, size = 40, still = false, locked = false }:
           </>
         ) : !locked && (
           <>
-            <path d={L.shape} transform={scaled(L.scale * 0.68)} fill={L.mid} className="f-inner" />
-            <path d={F1} transform={scaled(L.scale * 0.4)} fill={L.core} className="f-core" />
+            <g className="f-inner"><path d={L.shape} transform={scaled(L.scale * 0.68)} fill={L.mid} /></g>
+            <g className="f-core"><path d={F1} transform={scaled(L.scale * 0.4)} fill={L.core} /></g>
           </>
         )}
         {!locked && st === 'eternal' && (
