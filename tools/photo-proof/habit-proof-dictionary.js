@@ -1,4 +1,6 @@
-// habit-proof-dictionary.js — decides, from a habit's name, how it is proven:
+// habit-proof-dictionary.js — decides, from a habit's name, how it is proven.
+// KEEP IN SYNC with app/src/lib/proofDictionary.ts (the app's copy); this one feeds precompute.mjs.
+//
 //   'photo'  → a live photo checked on the phone (self-timer offered for workouts)
 //   'tick'   → a normal checkbox (things a photo can't show, and "avoid" habits)
 // and, for photo habits, what the photo should show. Used by habit-proof.js and by

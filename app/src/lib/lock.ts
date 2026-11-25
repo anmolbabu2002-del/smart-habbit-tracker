@@ -1,7 +1,7 @@
 // Habit Lock (Android app only): from 4 PM until every habit of the day is done, the social apps
 // below are covered by a lock screen. During a focus session with "Lock social apps" on, they are
 // locked until the timer ends. The blocking itself is native (.github/android/HabitLock*.java).
-import { native, isNative } from './native';
+import { native, isNative, listenNative } from './native';
 import { getState } from './store';
 import { today } from './dates';
 import type { State } from './types';
@@ -69,8 +69,7 @@ export const openOverlay = () => native(PLUGIN, 'openOverlaySettings');
 
 /** The lock screen's "Do it now" button opens the app on Today */
 export function onOpenHabits(cb: (app?: string) => void) {
-  const cap = (window as unknown as { Capacitor?: { Plugins?: Record<string, { addListener?: (e: string, f: (d: { app?: string }) => void) => void }> } }).Capacitor;
-  try { cap?.Plugins?.[PLUGIN]?.addListener?.('openHabits', d => cb(d?.app)); } catch { /* older build */ }
+  listenNative<{ app?: string }>(PLUGIN, 'openHabits', d => cb(d?.app));
 }
 
 // Notifications from the removed reminders feature: cancel any still scheduled, once.

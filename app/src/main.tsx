@@ -12,8 +12,19 @@ import { clearOldReminders, syncLock } from './lib/lock';
 import { backgroundDownload } from './lib/proof';
 import { afterHabitsChanged } from './lib/actions';
 import { dailyBackup } from './lib/backup';
+import { initSystemBars } from './lib/systemBars';
+import { isNative } from './lib/native';
+
+function serviceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  // The app's files are on the phone already; an old worker from the previous app isn't needed
+  if (isNative) { navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => {}); return; }
+  if (import.meta.env.PROD) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
 
 async function boot() {
+  initSystemBars();
+  serviceWorker();
   await restoreIfWiped(['ultradian.v2', 'journalEntries']);
   migrateFromV1();
   document.documentElement.dataset.theme = getState().theme;

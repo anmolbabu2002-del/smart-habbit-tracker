@@ -13,7 +13,7 @@ const MODES: Record<string, { label: string; sub: string; phases: Phase[] }> = {
   relax: { label: 'Relax', sub: '4 · 7 · 8', phases: [{ name: 'Breathe in', ms: 4000, scale: 1 }, { name: 'Hold', ms: 7000, scale: 1 }, { name: 'Breathe out', ms: 8000, scale: 0.55 }] },
   focus: { label: 'Focus', sub: 'Box 4 · 4 · 4 · 4', phases: [{ name: 'Breathe in', ms: 4000, scale: 1 }, { name: 'Hold', ms: 4000, scale: 1 }, { name: 'Breathe out', ms: 4000, scale: 0.55 }, { name: 'Hold', ms: 4000, scale: 0.55 }] }
 };
-const SOUNDS = [{ id: 'none', label: 'Silence' }, { id: 'nature.mp3', label: 'Nature' }, { id: 'deepfocus.mp3', label: 'Deep focus' }];
+const SOUNDS = [{ id: 'none', label: 'Silence' }, { id: 'nature.mp3', label: 'Nature' }, { id: 'deepfocus.mp3', label: 'Deep focus' }, { id: 'peaceful.mp4', label: 'Peaceful' }, { id: 'spiritual.mp4', label: 'Spiritual' }];
 const LENGTHS = [3, 5, 10, 15];
 
 export function Meditate({ onBack }: { onBack: () => void }) {

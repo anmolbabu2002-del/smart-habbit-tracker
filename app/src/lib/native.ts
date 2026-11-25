@@ -55,3 +55,14 @@ function notify(type: 'SUCCESS' | 'WARNING' | 'ERROR') {
 
 /** Big media files (meditation sounds) stream from the website instead of bloating the app */
 export const media = (file: string) => (isNative ? `${REMOTE}/media/${file}` : `media/${file}`);
+
+/** Listen to a native plugin event (Plugins proxy, or the bridge's callback API as a fallback) */
+export function listenNative<T = unknown>(plugin: string, eventName: string, cb: (data: T) => void) {
+  if (!isNative) return;
+  const c = cap() as Cap & { nativeCallback?: (p: string, m: string, o: unknown, cb: (d: T) => void) => void };
+  try {
+    const p = c?.Plugins?.[plugin] as unknown as { addListener?: (e: string, f: (d: T) => void) => void } | undefined;
+    if (p && typeof p.addListener === 'function') p.addListener(eventName, cb);
+    else c?.nativeCallback?.(plugin, 'addListener', { eventName }, cb);
+  } catch { /* plugin missing in an older build */ }
+}
