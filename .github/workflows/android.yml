@@ -6,9 +6,10 @@
 # ANDROID_KEYSTORE_BASE64 secret if you add one), so new versions install over the old
 # one and your data is kept. Never lose or change that key.
 #
-# The Capacitor project (app-android/) is created fresh on each run; nothing extra
-# needs to live in the repo. Big .mp3/.mp4 files are left out of the APK and stream
-# from ultradiann.netlify.app instead (see the top of storage.js).
+# The app itself is app/ (React + Vite). Each run builds it and wraps it in a Capacitor
+# project (app-android/) created fresh; nothing extra needs to live in the repo. The big
+# meditation sounds (app/public/media) are left out of the APK and stream from
+# ultradiann.netlify.app instead (see media() in app/src/lib/native.ts).
 
 name: Build Android app
 
@@ -47,6 +48,12 @@ jobs:
         with:
           node-version: 22
 
+      - name: Build the app
+        working-directory: app
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -82,19 +89,12 @@ jobs:
             "appName": "Ultradian",
             "webDir": "www",
             "server": { "androidScheme": "https" },
-            "android": { "backgroundColor": "#F0F4FA" }
+            "android": { "backgroundColor": "#F7F9FC" }
           }
           JSON
-          node - <<'JS'
-          const fs = require('fs');
-          const skip = new Set(['.git', '.github', '.gitignore', '.netlify', '.vscode', '_archive',
-            'app-android', 'netlify', 'netlify.toml', 'node_modules']);
-          fs.mkdirSync('app-android/www', { recursive: true });
-          for (const name of fs.readdirSync('.')) {
-            if (skip.has(name) || /\.(md|mp3|mp4)$/i.test(name)) continue;
-            fs.cpSync(name, 'app-android/www/' + name, { recursive: true });
-          }
-          JS
+          # The built app, minus the sounds (they stream from the website)
+          cp -r app/dist app-android/www
+          rm -rf app-android/www/media app-android/www/sw.js
           ls app-android/www
           du -sh app-android/www
 
@@ -115,19 +115,18 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p assets
-          cp ../icon-512-v2.png assets/icon-only.png
+          cp ../app/public/icon-512-v2.png assets/icon-only.png
           npx capacitor-assets generate --android \
             --iconBackgroundColor '#121212' --iconBackgroundColorDark '#121212' \
             --splashBackgroundColor '#121212' --splashBackgroundColorDark '#121212'
 
-      - name: Habit reminder icons, exact alarms and camera
+      - name: Lock notification icon, exact alarms and camera
         run: |
-          # Notification icons drawn in notify-icons/svg, rendered to PNG in notify-icons/android
+          # Icon for Habit Lock's ongoing notification (drawn in notify-icons/svg)
           cp -r ../notify-icons/android/. android/app/src/main/res/
           ls android/app/src/main/res/drawable-nodpi
-          # Reminders every 2 minutes need exact alarms, or Android spaces them out while the
-          # phone sleeps. Granted automatically at install (no pop-up); the only thing the
-          # user is asked is "Allow notifications".
+          # Habit Lock wakes exactly at 4 PM and when a focus session ends. Granted
+          # automatically at install (no pop-up).
           manifest=android/app/src/main/AndroidManifest.xml
           sed -i 's#</manifest>#    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />\n</manifest>#' "$manifest"
           grep -n "EXACT_ALARM" "$manifest"

@@ -1,0 +1,14 @@
+{
+  "name": "Ultradian",
+  "short_name": "Ultradian",
+  "description": "Habits, tasks and deep focus, with an evolving streak and app locking.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f7f9fc",
+  "theme_color": "#ff8c42",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icon-192-v2.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512-v2.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

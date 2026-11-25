@@ -43,8 +43,26 @@ final class HabitLock {
         return cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE);
     }
 
-    /** Locked = switched on, has habits, past the lock time, and today's habits aren't all done. */
+    /** Locked = a focus session is running, or the habit lock applies right now. */
     static boolean isLockActive(Context c) {
+        return focusActive(c) || habitLockActive(c);
+    }
+
+    /** End of the running focus session that locks apps (epoch ms), 0 if none. */
+    static long focusUntil(Context c) {
+        return prefs(c).getLong("focusUntil", 0L);
+    }
+
+    static boolean focusActive(Context c) {
+        return focusUntil(c) > System.currentTimeMillis();
+    }
+
+    static String focusLabel(Context c) {
+        return prefs(c).getString("focusLabel", "");
+    }
+
+    /** Habit lock = switched on, has habits, past the lock time, and today's habits aren't all done. */
+    static boolean habitLockActive(Context c) {
         SharedPreferences p = prefs(c);
         if (!p.getBoolean("enabled", false)) return false;
         if (p.getInt("habitCount", 0) <= 0) return false;
@@ -121,12 +139,16 @@ final class HabitLock {
         int flags = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0);
         PendingIntent pi = PendingIntent.getBroadcast(c, ALARM_REQUEST, i, flags);
         SharedPreferences p = prefs(c);
-        if (!p.getBoolean("enabled", false)) {
+        boolean focus = focusActive(c);
+        if (!p.getBoolean("enabled", false) && !focus) {
             am.cancel(pi);
             return;
         }
         long at;
-        if (isLockActive(c)) {
+        if (focus) {
+            // wake right after the session ends (or in 15 minutes, whichever is first)
+            at = Math.min(focusUntil(c) + 1500L, System.currentTimeMillis() + 15 * 60 * 1000L);
+        } else if (habitLockActive(c)) {
             at = System.currentTimeMillis() + 15 * 60 * 1000L;
         } else {
             Calendar cal = Calendar.getInstance();

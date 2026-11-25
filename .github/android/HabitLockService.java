@@ -26,6 +26,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import java.util.List;
@@ -154,6 +155,8 @@ public class HabitLockService extends Service {
         hideOverlay();
         String name = appName(pkg);
         List<String> pending = HabitLock.pending(this);
+        boolean focus = HabitLock.focusActive(this);
+        int orange = Color.parseColor("#FF8C42");
 
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
@@ -162,11 +165,18 @@ public class HabitLockService extends Service {
         box.setBackgroundColor(Color.parseColor("#F20B0F17"));
         box.setClickable(true); // swallow touches meant for the app underneath
 
-        TextView icon = new TextView(this);
-        icon.setText("🔒");
-        icon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 56);
-        icon.setGravity(Gravity.CENTER);
-        box.addView(icon);
+        // A drawn lock in a round orange badge (no emoji)
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(android.R.drawable.ic_lock_lock);
+        icon.setColorFilter(Color.WHITE);
+        icon.setPadding(dp(18), dp(18), dp(18), dp(18));
+        GradientDrawable badge = new GradientDrawable();
+        badge.setShape(GradientDrawable.OVAL);
+        badge.setColor(orange);
+        icon.setBackground(badge);
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(84), dp(84));
+        iconParams.gravity = Gravity.CENTER_HORIZONTAL;
+        box.addView(icon, iconParams);
 
         TextView title = new TextView(this);
         title.setText(name + " is locked");
@@ -177,11 +187,20 @@ public class HabitLockService extends Service {
         title.setPadding(0, dp(12), 0, dp(8));
         box.addView(title);
 
-        StringBuilder sb = new StringBuilder("Finish today's habits first:\n");
-        int shown = 0;
-        for (String h : pending) {
-            if (shown++ == 5) { sb.append("\n+ ").append(pending.size() - 5).append(" more"); break; }
-            sb.append("\n").append(h);
+        StringBuilder sb = new StringBuilder();
+        if (focus) {
+            long left = Math.max(1, (HabitLock.focusUntil(this) - System.currentTimeMillis() + 59999) / 60000);
+            String label = HabitLock.focusLabel(this);
+            sb.append("You're in a focus session");
+            if (!label.isEmpty()) sb.append(":\n").append(label);
+            sb.append("\n\n").append(left).append(left == 1 ? " minute" : " minutes").append(" to go. You've got this.");
+        } else {
+            sb.append("Finish today's habits first:\n");
+            int shown = 0;
+            for (String h : pending) {
+                if (shown++ == 5) { sb.append("\n+ ").append(pending.size() - 5).append(" more"); break; }
+                sb.append("\n").append(h);
+            }
         }
         TextView body = new TextView(this);
         body.setText(sb.toString());
@@ -193,14 +212,14 @@ public class HabitLockService extends Service {
         box.addView(body);
 
         Button prove = new Button(this);
-        prove.setText("📷  Prove it in Ultradian");
+        prove.setText(focus ? "Back to focus" : "Do it in Ultradian");
         prove.setAllCaps(false);
         prove.setTextColor(Color.WHITE);
         prove.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        GradientDrawable green = new GradientDrawable();
-        green.setColor(Color.parseColor("#10B981"));
-        green.setCornerRadius(dp(16));
-        prove.setBackground(green);
+        GradientDrawable button = new GradientDrawable();
+        button.setColor(orange);
+        button.setCornerRadius(dp(16));
+        prove.setBackground(button);
         prove.setOnClickListener(v -> {
             Intent open = getPackageManager().getLaunchIntentForPackage(getPackageName());
             if (open != null) {
@@ -264,7 +283,10 @@ public class HabitLockService extends Service {
 
     private Notification buildNotification() {
         List<String> pending = HabitLock.pending(this);
-        String text = pending.isEmpty()
+        boolean focus = HabitLock.focusActive(this);
+        String text = focus
+                ? "Focus session: social apps unlock when the timer ends"
+                : pending.isEmpty()
                 ? "Social apps unlock when today's habits are done"
                 : pending.size() + (pending.size() == 1 ? " habit" : " habits") + " left: " + joinShort(pending);
         Intent open = getPackageManager().getLaunchIntentForPackage(getPackageName());
@@ -273,7 +295,7 @@ public class HabitLockService extends Service {
         Notification.Builder b = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 ? new Notification.Builder(this, CHANNEL)
                 : new Notification.Builder(this);
-        b.setContentTitle("🔒 Habit Lock is on")
+        b.setContentTitle(focus ? "Focus mode is on" : "Habit Lock is on")
                 .setContentText(text)
                 .setStyle(new Notification.BigTextStyle().bigText(text + "\nInstagram, YouTube, Facebook, Snapchat and TikTok stay locked until then."))
                 .setOngoing(true)

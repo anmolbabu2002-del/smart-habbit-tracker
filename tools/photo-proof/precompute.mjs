@@ -9,7 +9,7 @@ import { createRequire } from 'node:module';
 
 const repo = process.env.REPO || process.argv[2] || '.';
 if (process.env.MODEL_CACHE) env.cacheDir = process.env.MODEL_CACHE;
-const D = createRequire(import.meta.url)(path.resolve(repo, 'habit-proof-dictionary.js'));
+const D = createRequire(import.meta.url)(path.resolve(repo, 'tools/photo-proof/habit-proof-dictionary.js'));
 const MODEL = 'Xenova/clip-vit-base-patch32';
 const tokenizer = await AutoTokenizer.from_pretrained(MODEL);
 const textModel = await CLIPTextModelWithProjection.from_pretrained(MODEL, { dtype: 'q8' });
@@ -23,5 +23,5 @@ for (const t of texts) {
   prompts[t] = Buffer.from(new Float32Array(v.map(x => x / n)).buffer).toString('base64');
 }
 const out = { model: MODEL, dtype: 'q8', dims: 512, scale: 100, prompts };
-fs.writeFileSync(path.resolve(repo, 'habit-proof-text.json'), JSON.stringify(out));
+fs.writeFileSync(path.resolve(repo, 'app/public/habit-proof-text.json'), JSON.stringify(out));
 console.log(`${texts.length} fingerprints → habit-proof-text.json (${(JSON.stringify(out).length / 1024).toFixed(0)} KB)`);
