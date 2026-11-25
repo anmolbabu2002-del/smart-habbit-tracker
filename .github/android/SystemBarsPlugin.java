@@ -40,6 +40,9 @@ public class SystemBarsPlugin extends Plugin {
             }
 
             WebView webView = getBridge().getWebView();
+            // The phone's font-size setting would scale only the text (not icons or spacing),
+            // overflowing the layout. Keep the app's own sizes, like native apps designed in dp.
+            webView.getSettings().setTextZoom(100);
             ViewCompat.setOnApplyWindowInsetsListener(webView, (view, windowInsets) -> {
                 Insets bars = windowInsets.getInsets(
                     WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()

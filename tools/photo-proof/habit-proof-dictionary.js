@@ -64,8 +64,9 @@
         if (!keepsProof && AVOID.test(text.trim())) return { mode: 'tick', known: true };
         if (photoCat) return { mode: 'photo', category: photoCat.id, show: photoCat.show, timer: !!photoCat.timer, known: true };
         if (NON_VISUAL.some(w => has(text, w))) return { mode: 'tick', known: true };
-        // Unknown names: photo proof, judged against the habit's own words
-        return { mode: 'photo', category: null, show: `a person doing "${String(name).trim()}"`, timer: false, known: false };
+        // Unknown names: a photo can't be judged reliably against vague words ("Build something"),
+        // so they get a normal tick, like everything else a photo can't clearly show
+        return { mode: 'tick', category: null, known: false };
     }
 
     // Everyday scenes and cheats every photo is compared against

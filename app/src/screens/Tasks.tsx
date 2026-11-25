@@ -53,9 +53,9 @@ export function Tasks() {
         <div className="add-row">
           <input className="add-input" placeholder="Add a task…" value={text} maxLength={120} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') submit(); }} />
           <button type="button" className={'btn round ghost due-btn' + (pickDue ? ' on' : '')} aria-label="Due date" onClick={() => { play('tap'); setPickDue(p => !p); }}>
-            <CalendarBlank size={24} weight="bold" />
+            <CalendarBlank size={20} weight="bold" />
           </button>
-          <button type="button" className="btn round" aria-label="Add task" onClick={submit}><Plus size={26} weight="bold" /></button>
+          <button type="button" className="btn round" aria-label="Add task" onClick={submit}><Plus size={22} weight="bold" /></button>
         </div>
         <AnimatePresence initial={false}>
           {(pickDue || text) && (

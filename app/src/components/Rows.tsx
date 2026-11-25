@@ -19,7 +19,7 @@ export function HabitRow({ h, isNew, onOpen, onProve }: { h: Habit; isNew?: bool
   return (
     <motion.div layout className={'card habit' + (done ? ' done' : '')} style={{ ['--hc' as string]: `var(--${h.color})` }}>
       <button type="button" className="habit-main" onClick={() => { play('tap'); onOpen(); }}>
-        <span className="habit-tile" style={{ background: `var(--${h.color}-soft)` }}><HabitIcon icon={h.icon} color={h.color} size={38} /></span>
+        <span className="habit-tile" style={{ background: `var(--${h.color}-soft)` }}><HabitIcon icon={h.icon} color={h.color} size={30} /></span>
         <span className="habit-text">
           <b>{h.name}</b>
           <small>
@@ -34,12 +34,12 @@ export function HabitRow({ h, isNew, onOpen, onProve }: { h: Habit; isNew?: bool
         <motion.button key="done" type="button" className="check-done" aria-label={`Undo ${h.name}`}
           initial={{ scale: 0.3, rotate: -30 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 500, damping: 14 }}
           onClick={() => undoHabit(h.id)}>
-          <Check size={28} weight="bold" />
+          <Check size={22} weight="bold" />
         </motion.button>
       ) : photo ? (
-        <button type="button" className="btn round" aria-label={`Prove ${h.name} with a photo`} onClick={() => { play('tap'); onProve(); }}><Camera size={26} weight="fill" /></button>
+        <button type="button" className="btn round" aria-label={`Prove ${h.name} with a photo`} onClick={() => { play('tap'); onProve(); }}><Camera size={22} weight="fill" /></button>
       ) : (
-        <button type="button" className="btn round ghost" aria-label={`Mark ${h.name} done`} onClick={e => completeHabit(h.id, centerOf(e.currentTarget))}><Check size={26} weight="bold" /></button>
+        <button type="button" className="btn round ghost" aria-label={`Mark ${h.name} done`} onClick={e => completeHabit(h.id, centerOf(e.currentTarget))}><Check size={22} weight="bold" /></button>
       )}
     </motion.div>
   );
@@ -51,7 +51,7 @@ export function TaskRow({ t, onOpen }: { t: Task; onOpen: () => void }) {
     <motion.div layout className={'task' + (t.doneAt ? ' done' : '')} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 40 }}>
       <button type="button" className={'task-check' + (t.doneAt ? ' on' : '')} aria-label={t.doneAt ? `Mark ${t.title} not done` : `Complete ${t.title}`}
         onClick={e => toggleTask(t.id, centerOf(e.currentTarget))}>
-        {t.doneAt && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 600, damping: 15 }}><Check size={18} weight="bold" /></motion.span>}
+        {t.doneAt && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 600, damping: 15 }}><Check size={16} weight="bold" /></motion.span>}
       </button>
       <button type="button" className="task-text" onClick={() => { play('tap'); onOpen(); }}>
         <b>{t.title}</b>

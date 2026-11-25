@@ -14,7 +14,7 @@ export function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) =
     <nav className="tabbar" aria-label="Main">
       {TABS.map(({ id, label, Icon }) => (
         <button key={id} type="button" className={'tab' + (active === id ? ' on' : '')} onClick={() => onChange(id)} aria-current={active === id ? 'page' : undefined}>
-          <span className="tab-icon"><Icon size={28} weight={active === id ? 'fill' : 'bold'} /></span>
+          <span className="tab-icon"><Icon size={24} weight={active === id ? 'fill' : 'bold'} /></span>
           <span className="tab-label">{label}</span>
         </button>
       ))}

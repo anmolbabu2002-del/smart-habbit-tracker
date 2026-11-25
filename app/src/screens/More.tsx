@@ -18,7 +18,7 @@ export function More({ open }: { open: (p: MorePage) => void }) {
       <div className="more-grid">
         {TILES.map(t => (
           <button key={t.id} type="button" className={'card more-tile' + (t.wide ? ' wide' : '')} style={{ ['--tc' as string]: `var(--${t.color}-soft)` }} onClick={() => { play('tap'); open(t.id); }}>
-            <span className="more-ico"><HabitIcon icon={t.icon} color={t.color} size={t.wide ? 60 : 50} /></span>
+            <span className="more-ico"><HabitIcon icon={t.icon} color={t.color} size={t.wide ? 44 : 38} /></span>
             <b>{t.title}</b><small>{t.sub}</small>
           </button>
         ))}
