@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ultradian-v49';
+const CACHE_NAME = 'ultradian-v50';
 
 // ═══ CORE APP SHELL (HTML, CSS, JS) ═══
 const CORE_ASSETS = [
@@ -37,6 +37,12 @@ const FEATURE_ASSETS = [
   './focus-gym.css',
   './habit-reminders.js',
   './habit-reminders.css',
+  './habit-proof-dictionary.js',
+  './habit-proof.js',
+  './habit-proof.css',
+  './habit-proof-text.json',
+  './vendor/transformers.min.js',
+  './vendor/ort-wasm-simd-threaded.jsep.mjs',
   './notify-icons/web/habit_sprout.png',
   './notify-icons/web/habit_hourglass.png',
   './notify-icons/web/habit_flame.png',
@@ -93,11 +99,15 @@ self.addEventListener('install', event => {
 
 // ═══════ ACTIVATE ═══════
 // Clean up ALL old caches and claim clients immediately
+// Caches owned by the photo check (habit-proof.js): the CLIP model and its engine
+const PERMANENT_CACHES = ['transformers-cache', 'photo-proof-engine'];
+
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => {
       return Promise.all(
-        keys.filter(key => key !== CACHE_NAME)
+        // Photo-check AI downloads are permanent: never delete them on an app update
+        keys.filter(key => key !== CACHE_NAME && !PERMANENT_CACHES.includes(key))
           .map(key => caches.delete(key))
       );
     }).then(() => self.clients.claim())
@@ -117,6 +127,12 @@ self.addEventListener('fetch', event => {
         });
       })
     );
+    return;
+  }
+
+  // ── 2a. Photo-check AI (Hugging Face model, AI engine): habit-proof.js stores these itself
+  if (/(^|\.)huggingface\.co$|\.hf\.co$/.test(url.hostname) ||
+      (url.hostname === 'cdn.jsdelivr.net' && url.pathname.includes('/@huggingface/transformers'))) {
     return;
   }
 

@@ -119,7 +119,7 @@ jobs:
             --iconBackgroundColor '#121212' --iconBackgroundColorDark '#121212' \
             --splashBackgroundColor '#121212' --splashBackgroundColorDark '#121212'
 
-      - name: Habit reminder icons and exact alarms
+      - name: Habit reminder icons, exact alarms and camera
         run: |
           # Notification icons drawn in notify-icons/svg, rendered to PNG in notify-icons/android
           cp -r ../notify-icons/android/. android/app/src/main/res/
@@ -130,6 +130,9 @@ jobs:
           manifest=android/app/src/main/AndroidManifest.xml
           sed -i 's#</manifest>#    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />\n</manifest>#' "$manifest"
           grep -n "EXACT_ALARM" "$manifest"
+          # Photo proof for habits uses the app's own camera (Android asks the first time)
+          sed -i 's#</manifest>#    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n</manifest>#' "$manifest"
+          grep -n "CAMERA\|hardware.camera" "$manifest"
 
       - name: Sync web files and plugins
         run: npx cap sync android
