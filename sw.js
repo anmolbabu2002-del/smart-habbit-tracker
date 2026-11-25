@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ultradian-v51';
+const CACHE_NAME = 'ultradian-v52';
 
 // ═══ CORE APP SHELL (HTML, CSS, JS) ═══
 const CORE_ASSETS = [
@@ -35,20 +35,15 @@ const FEATURE_ASSETS = [
   './hero-landscape-3d.js',
   './focus-gym.js',
   './focus-gym.css',
-  './habit-reminders.js',
-  './habit-reminders.css',
   './habit-proof-dictionary.js',
   './habit-proof.js',
   './habit-proof.css',
   './habit-lock.js',
+  './habit-lock.css',
   './habit-proof-text.json',
   './vendor/transformers.min.js',
   './vendor/ort-wasm-simd-threaded.jsep.mjs',
-  './notify-icons/web/habit_sprout.png',
-  './notify-icons/web/habit_hourglass.png',
-  './notify-icons/web/habit_flame.png',
-  './notify-icons/web/habit_alarm.png',
-  './notify-icons/web/badge.png'
+
 ];
 
 // ═══ ICONS & APP IMAGES ═══

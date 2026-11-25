@@ -108,8 +108,7 @@
     // ==================== SETTINGS ====================
     let card = null;
     function buildSettings() {
-        const anchor = document.querySelector('#settings-page .hr-card') ||
-            [...document.querySelectorAll('#settings-page h3')].find(h => /Data Management/i.test(h.textContent));
+        const anchor = [...document.querySelectorAll('#settings-page h3')].find(h => /Data Management/i.test(h.textContent));
         if (!anchor || card) return;
         card = document.createElement('section');
         card.className = 'hl-card';
@@ -118,7 +117,7 @@
             <div class="hl-box">
                 <label class="hl-row">
                     <span><b>Lock social apps until habits are done</b><small>From 4 PM until every habit of the day is done.</small></span>
-                    <span class="hr-switch"><input type="checkbox" id="hl-toggle"><i></i></span>
+                    <span class="hl-switch"><input type="checkbox" id="hl-toggle"><i></i></span>
                 </label>
                 <div class="hl-apps">${APPS.map(a => `<span>${a.icon} ${a.name}</span>`).join('')}</div>
                 <div class="hl-access">
@@ -128,8 +127,7 @@
                 <p class="hl-status" id="hl-status"></p>
                 <p class="hl-note">While apps are locked you can't turn this off, delete, rename or reset habits, or restore a backup. Nothing about your app use is saved or sent.</p>
             </div>`;
-        if (anchor.classList.contains('hr-card')) anchor.after(card);
-        else anchor.parentNode.insertBefore(card, anchor);
+        anchor.parentNode.insertBefore(card, anchor);
         card.querySelector('#hl-toggle').addEventListener('change', (e) => {
             if (!e.target.checked && isLocked()) {
                 e.target.checked = true;
@@ -178,7 +176,20 @@
         }
     }
 
+    // The every-2-minute habit reminders were removed (Habit Lock replaced them). Phones that had
+    // them still have up to ~440 scheduled with Android: cancel them all once, and clear the shade.
+    function clearOldReminders() {
+        if (store.getItem('habitRemindersCleared') === '1') return;
+        const ids = Array.from({ length: 441 }, (_, i) => ({ id: 7099 + i })); // ids 7099–7539
+        const ln = (m, o) => window.ultradianNative('LocalNotifications', m, o);
+        ln('cancel', { notifications: ids })
+            .then(() => ln('removeDeliveredNotifications', { notifications: ids }))
+            .then(() => { store.setItem('habitRemindersCleared', '1'); store.removeItem('habitReminders'); })
+            .catch(() => { /* plugin missing: nothing was ever scheduled */ });
+    }
+
     function init() {
+        clearOldReminders();
         buildSettings();
         sync();
         document.addEventListener('visibilitychange', () => { if (!document.hidden) { sync(); } });

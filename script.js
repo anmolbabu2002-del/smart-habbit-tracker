@@ -509,7 +509,7 @@ function endMeditationSession(completed) {
 }
 
 
-// Reminders: the only phone notifications are habit reminders (habit-reminders.js)
+// No reminder notifications: Habit Lock (habit-lock.js) is the accountability
 
 // --- Personalization ---
 function getUserName() {
@@ -3925,7 +3925,7 @@ function showPomodoroSuccessAnimation() {
 }
 
 // ==================== NOTIFICATIONS ====================
-// In-app message (toast). The app's only phone notifications are habit reminders (habit-reminders.js).
+// In-app message (toast). The app sends no reminder notifications.
 function showNotification(message) {
   // Also show in-app notification
   const notification = document.createElement("div");
@@ -9129,7 +9129,6 @@ let _habitsLoadedFromForage = false;
             appStorage.setItem("userHabits", JSON.stringify(userHabits));
             processHabitsNewDay();
             renderHabits();
-            if (window.HabitReminders) window.HabitReminders.sync();
             if (window.HabitLock) window.HabitLock.sync();
         } else if (userHabits.length > 0 && !_habitsLoadedFromForage) {
             await localforage.setItem("userHabits", userHabits);
@@ -9141,8 +9140,7 @@ let _habitsLoadedFromForage = false;
 
 function saveUserHabits() {
     appStorage.setItem("userHabits", JSON.stringify(userHabits));
-    // Reschedule habit reminders and Habit Lock so they always match what's left today
-    if (window.HabitReminders) window.HabitReminders.sync();
+    // Keep Habit Lock in step with what's left today
     if (window.HabitLock) window.HabitLock.sync();
     if (typeof localforage !== 'undefined') {
         localforage.setItem("userHabits", userHabits).catch(e =>
