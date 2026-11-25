@@ -104,11 +104,12 @@ jobs:
       - name: Create the Android project
         run: npx cap add android
 
-      - name: Add native code (edge-to-edge system bars)
+      - name: Add native code (system bars, Habit Lock)
         run: |
           dest=android/app/src/main/java/com/anmoljha/ultradian
-          cp ../.github/android/MainActivity.java ../.github/android/SystemBarsPlugin.java "$dest/"
+          cp ../.github/android/*.java "$dest/"
           ls "$dest"
+          python3 ../.github/android/build/habit_lock_manifest.py android/app/src/main/AndroidManifest.xml
 
       - name: App icon
         continue-on-error: true
@@ -177,7 +178,9 @@ jobs:
           name: Ultradian-apk
           path: Ultradian.apk
 
+      # Only builds of main reach the Releases page; other branches just compile (and keep the APK as an artifact)
       - name: Publish to Releases
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: android-app
