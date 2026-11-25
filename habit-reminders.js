@@ -204,7 +204,10 @@
                 importance: 4, visibility: 1, vibration: true, lights: true, lightColor: '#10b981'
             }).catch(() => {});
             await native('registerActionTypes', {
-                types: [{ id: 'habit-single', actions: [{ id: 'done', title: '✓ Mark done' }] }]
+                types: [
+                    { id: 'habit-single', actions: [{ id: 'done', title: '✓ Mark done' }] },
+                    { id: 'habit-photo', actions: [{ id: 'prove', title: '📷 Prove it' }] }
+                ]
             }).catch(() => {});
             listenNative('localNotificationActionPerformed', (ev) => handleAction(ev && ev.actionId, ev && ev.notification && ev.notification.extra));
         })();
@@ -253,7 +256,7 @@
                 iconColor: r.slot.color,
                 group: 'habit-reminders',
                 autoCancel: true,
-                actionTypeId: r.single ? 'habit-single' : undefined,
+                actionTypeId: r.single ? (needsPhoto(r.single) ? 'habit-photo' : 'habit-single') : undefined,
                 extra: { kind: 'habit', habit: r.single, date: r.date }
             }))
         });
@@ -286,7 +289,7 @@
             badge: 'notify-icons/web/badge.png',
             tag: 'habit-reminder', renotify: true,
             data: { kind: 'habit', habit: single, date: new Date().toDateString() },
-            actions: single ? [{ action: 'done', title: '✓ Mark done' }] : []
+            actions: single ? [needsPhoto(single) ? { action: 'prove', title: '📷 Prove it' } : { action: 'done', title: '✓ Mark done' }] : []
         };
         try {
             const reg = navigator.serviceWorker ? await navigator.serviceWorker.ready : null;
@@ -306,14 +309,24 @@
         }, 150);
     }
 
+    // Photo-proof habits can't be ticked from a notification — the button opens the camera
+    const needsPhoto = (text) => !!(window.HabitProof && window.HabitProof.needsPhoto({ text }));
+
     function handleAction(actionId, extra) {
         extra = extra || {};
-        if (actionId === 'done' && extra.habit && extra.date === new Date().toDateString()) {
+        if ((actionId === 'done' || actionId === 'prove') && extra.habit && extra.date === new Date().toDateString()) {
             const list = habits();
             const i = list.findIndex(h => String(h.text) === extra.habit);
-            if (i >= 0 && !list[i].completedToday && typeof window.toggleHabit === 'function') {
-                window.toggleHabit(i, true); // shows "🔥 done! Streak: n" and resyncs reminders
-                return;
+            if (i >= 0 && !list[i].completedToday) {
+                if (needsPhoto(extra.habit)) {
+                    openHabits();
+                    setTimeout(() => window.HabitProof.open(i), 400);
+                    return;
+                }
+                if (typeof window.toggleHabit === 'function') {
+                    window.toggleHabit(i, true); // shows "🔥 done! Streak: n" and resyncs reminders
+                    return;
+                }
             }
         }
         openHabits();
@@ -375,7 +388,7 @@
                     inboxList: m.inbox.length > 1 ? m.inbox : undefined,
                     schedule: { at: new Date(Date.now() + 3000).toISOString(), allowWhileIdle: true },
                     channelId: CHANNEL, smallIcon: 'ic_stat_habit', largeIcon: slot.icon, iconColor: slot.color,
-                    actionTypeId: left.length === 1 ? 'habit-single' : undefined,
+                    actionTypeId: left.length === 1 ? (needsPhoto(String(left[0].text)) ? 'habit-photo' : 'habit-single') : undefined,
                     extra: { kind: 'habit', habit: left.length === 1 ? String(left[0].text) : null, date: new Date().toDateString() }
                 }]
             });
