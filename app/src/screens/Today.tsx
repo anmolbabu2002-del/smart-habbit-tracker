@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { Mascot } from '../components/Mascot';
 import { HabitRow, TaskRow } from '../components/Rows';
 import { StreakFlame } from '../components/StreakFlame';
+import { HabitIcon } from '../components/HabitIcon';
 import { HabitEditor } from '../components/HabitEditor';
 import { TaskEditor } from '../components/TaskEditor';
 import { StreakSheet } from '../components/StreakSheet';
@@ -49,14 +50,14 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
           <h1>Hey {s.name || 'there'}!</h1>
         </div>
         <button type="button" className={'streak-pill' + (streak ? '' : ' cold')} onClick={() => { play('tap'); setStreakOpen(true); }} aria-label={`${streak} day streak`}>
-          <StreakFlame stage={stageIndex(streak)} size={34} />
+          <StreakFlame stage={stageIndex(streak)} size={28} />
           <b>{streak}</b>
         </button>
       </header>
 
       <section className={'card hero' + (allDone ? ' won' : '')}>
         <div className="hero-top">
-          <Mascot size={86} mood={allDone ? 'cheer' : afterFour && left ? 'focus' : 'happy'} className="bob" />
+          <Mascot size={58} mood={allDone ? 'cheer' : afterFour && left ? 'focus' : 'happy'} className="bob" />
           <div className="bubble"><b>{title}</b><span>{line}</span></div>
         </div>
         {required.length > 0 && (
@@ -74,7 +75,7 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
       </section>
 
       <h2 className="section-title">Habits
-        <button type="button" className="add-mini" onClick={() => { play('tap'); setEditHabit(null); }} aria-label="Add habit"><Plus size={20} weight="bold" /></button>
+        <button type="button" className="add-mini" onClick={() => { play('tap'); setEditHabit(null); }} aria-label="Add habit"><Plus size={18} weight="bold" /></button>
       </h2>
       {s.habits.length ? (
         <div className="stack">
@@ -95,13 +96,11 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
         <button type="button" className="card empty soft" onClick={() => { play('tap'); setEditTask(null); }}>Nothing due today. Add a task</button>
       )}
 
-      <section className="card focus-cta">
-        <div>
-          <b>Ready for deep work?</b>
-          <span>Pick a task, lock the distractions, go.</span>
-        </div>
-        <button type="button" className="btn big block" onClick={() => { play('tap'); onFocus(); }}>Start focus <ArrowRight size={22} weight="bold" /></button>
-      </section>
+      <button type="button" className="card focus-cta" onClick={() => { play('tap'); onFocus(); }}>
+        <span className="tile"><HabitIcon icon="clock" color="purple" size={30} /></span>
+        <span><b>Start a focus session</b><small>Pick a task, lock the distractions, go.</small></span>
+        <span className="go"><ArrowRight size={20} weight="bold" /></span>
+      </button>
 
       <HabitEditor open={editHabit !== undefined} habit={editHabit} onClose={() => setEditHabit(undefined)} />
       <TaskEditor open={editTask !== undefined} task={editTask} defaultDue={day} onClose={() => setEditTask(undefined)} />

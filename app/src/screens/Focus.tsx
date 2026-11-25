@@ -18,8 +18,8 @@ const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 export function FocusSetup() {
   const s = useApp();
-  const tasks = s.tasks.filter(t => !t.doneAt && ['overdue', 'today', 'anytime'].includes(dueInfo(t.due).group)).slice(0, 4);
-  const habits = s.habits.filter(h => !doneToday(h)).slice(0, 3);
+  const tasks = s.tasks.filter(t => !t.doneAt && ['overdue', 'today', 'anytime'].includes(dueInfo(t.due).group)).slice(0, 3);
+  const habits = s.habits.filter(h => !doneToday(h)).slice(0, 2);
   const picks: Pick[] = useMemo(() => [
     ...tasks.map((t): Pick => ({ key: 't' + t.id, label: t.title, icon: 'checklist', color: 'blue', kind: dueInfo(t.due).label ? `Task · ${dueInfo(t.due).label.toLowerCase()}` : 'Task', ref: { kind: 'task', id: t.id } })),
     ...habits.map((h): Pick => ({ key: 'h' + h.id, label: h.name, icon: h.icon, color: h.color, kind: 'Habit · a full session ticks it off', ref: { kind: 'habit', id: h.id } }))
@@ -50,12 +50,12 @@ export function FocusSetup() {
       <div className="pick-list">
         {picks.map(p => (
           <button key={p.key} type="button" className={'card pick' + (sel === p.key ? ' on' : '')} onClick={() => { play('toggle'); setSel(p.key); }}>
-            <span style={{ background: `var(--${p.color}-soft)` }}><HabitIcon icon={p.icon} color={p.color} size={32} /></span>
+            <span style={{ background: `var(--${p.color}-soft)` }}><HabitIcon icon={p.icon} color={p.color} size={28} /></span>
             <b>{p.label}</b><small>{p.kind}</small>
           </button>
         ))}
         <div className={'card pick other' + (sel === 'other' ? ' on' : '')} onClick={() => { if (sel !== 'other') { play('toggle'); setSel('other'); } }}>
-          <span style={{ background: 'var(--yellow-soft)' }}><HabitIcon icon="bulb" color="yellow" size={32} /></span>
+          <span style={{ background: 'var(--yellow-soft)' }}><HabitIcon icon="bulb" color="yellow" size={28} /></span>
           {sel === 'other'
             ? <input className="pick-input" autoFocus placeholder="What will you work on?" value={other} maxLength={60} onChange={e => setOther(e.target.value)} />
             : <b>Something else…</b>}

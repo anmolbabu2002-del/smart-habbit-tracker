@@ -32,7 +32,7 @@ export function HabitEditor({ open, habit, onClose }: { open: boolean; habit?: H
   return (
     <Sheet open={open} onClose={onClose} title={habit ? 'Edit habit' : 'New habit'}>
       <div className="editor">
-        <div className="editor-preview" style={{ background: `var(--${color}-soft)` }}><HabitIcon icon={icon} color={color} size={64} /></div>
+        <div className="editor-preview" style={{ background: `var(--${color}-soft)` }}><HabitIcon icon={icon} color={color} size={50} /></div>
         <input className="field big" autoFocus={!habit} placeholder="e.g. Read 10 pages" value={name} maxLength={60}
           onChange={e => onName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') save(); }} />
         {photo !== null && (
@@ -54,7 +54,7 @@ export function HabitEditor({ open, habit, onClose }: { open: boolean; habit?: H
           {PICKABLE.map(id => (
             <button key={id} type="button" className={'icon-pick' + (id === icon ? ' on' : '')} aria-label={id}
               onClick={() => { play('toggle'); setIcon(id); setPicked(true); }}>
-              <HabitIcon icon={id} color={color} size={34} />
+              <HabitIcon icon={id} color={color} size={28} />
             </button>
           ))}
         </div>

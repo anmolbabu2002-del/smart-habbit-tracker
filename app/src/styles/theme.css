@@ -31,10 +31,10 @@
   --ink-soft: #7a8294;
   --ink-faint: #aab1c0;
 
-  --radius: 20px;
-  --radius-sm: 14px;
-  --edge: 4px; /* height of the 3D bottom edge */
-  --tabbar-h: 76px;
+  --radius: 18px;
+  --radius-sm: 12px;
+  --edge: 3px; /* height of the 3D bottom edge */
+  --tabbar-h: 62px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --font: 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -59,6 +59,7 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { font-size: 15px; }
 html, body, #root { height: 100%; }
 body {
   margin: 0;
@@ -85,12 +86,12 @@ button { font-family: inherit; }
   align-items: center;
   justify-content: center;
   gap: 10px;
-  min-height: 54px;
-  padding: 0 22px;
-  border-radius: 16px;
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 14px;
   background: var(--c);
   color: #fff;
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 900;
   letter-spacing: 0.005em;
   box-shadow: 0 var(--edge) 0 var(--e), 0 10px 20px -10px var(--e);
@@ -100,12 +101,12 @@ button { font-family: inherit; }
 .btn:active { transform: translateY(var(--edge)); box-shadow: 0 0 0 var(--e), 0 2px 6px -4px var(--e); }
 .btn:disabled { --c: var(--line); --e: var(--line-strong); color: var(--ink-faint); cursor: default; }
 .btn.block { width: 100%; }
-.btn.big { min-height: 62px; font-size: 1.1rem; border-radius: 18px; }
+.btn.big { min-height: 52px; font-size: 1.05rem; border-radius: 16px; }
 .btn.mint { --c: var(--mint); --e: var(--mint-edge); }
 .btn.blue { --c: var(--blue); --e: var(--blue-edge); }
 .btn.purple { --c: var(--purple); --e: var(--purple-edge); }
 .btn.ghost { --c: var(--card); --e: var(--line-strong); color: var(--ink); border: 1.5px solid var(--line); }
-.btn.round { width: 54px; min-height: 54px; padding: 0; border-radius: 50%; }
+.btn.round { width: 46px; min-height: 46px; padding: 0; border-radius: 50%; }
 
 /* ── Card: soft, tinted lift instead of a hard grey edge ── */
 .card {
@@ -122,7 +123,7 @@ button { font-family: inherit; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
+  padding: 7px 13px;
   border-radius: 999px;
   border: 1.5px solid var(--line);
   background: var(--card);
@@ -135,7 +136,7 @@ button { font-family: inherit; }
 .chip.on { background: var(--orange); border-color: var(--orange); color: #fff; box-shadow: 0 6px 14px -8px var(--orange-edge); }
 
 /* ── Progress bar with a glossy highlight ── */
-.progress { height: 18px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.progress { height: 12px; border-radius: 999px; background: var(--line); overflow: hidden; }
 .progress > i {
   display: block; height: 100%; border-radius: inherit;
   background: var(--mint);
@@ -143,13 +144,13 @@ button { font-family: inherit; }
   transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1.2);
 }
 .progress > i::after {
-  content: ''; position: absolute; left: 10px; right: 10px; top: 4px; height: 5px;
+  content: ''; position: absolute; left: 8px; right: 8px; top: 2.5px; height: 3.5px;
   border-radius: 999px; background: rgba(255, 255, 255, 0.45);
 }
 
 .section-title {
-  margin: 26px 4px 12px;
-  font-size: 1.25rem;
+  margin: 20px 2px 8px;
+  font-size: 1.1rem;
   font-weight: 900;
   color: var(--ink);
   display: flex;
