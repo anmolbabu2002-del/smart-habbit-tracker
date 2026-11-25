@@ -1,48 +1,81 @@
-// habit-reminders.js — the app's only notifications: habits you haven't finished yet,
-// between 4 PM and 10 PM.
+// habit-reminders.js — the app's only notifications: habits you haven't finished yet.
 //
-//   4:00 PM  🌱 "3 habits left today"            (sprout icon)
-//   6:30 PM  ⏳ "Next up: 🏃 Run"                  (hourglass)
-//   8:30 PM  🔥 "Keep your 12-day streak alive"    (flame)
-//   9:45 PM  ⏰ "Last call: 2 habits left"         (alarm clock)
+// From 4 PM to 11 PM a reminder arrives every 2 minutes (changeable in Settings) for as long
+// as any habit is still pending, and they stop the moment the last one is done. The wording
+// rotates and gets tougher as the evening goes on, and the icon changes with it:
 //
-// Each one is sent only if habits are still open at that time, names the actual habits,
-// and expands to list them with their streaks. If just one habit is left it gets a
-// "✓ Mark done" button.
+//   4–6 PM   🌱 sprout     "3 habits left today" · "Next up: 🏃 Run"
+//   6–8 PM   ⏳ hourglass  "5 h 30 min left today"
+//   8–10 PM  🔥 flame      "Your 12-day streak dies tonight"
+//   10–11 PM ⏰ alarm      "Last call" · 11 PM "Final reminder tonight"
+//
+// Each one names the actual habits and expands to list them with their streaks; with one
+// habit left it gets a "✓ Mark done" button.
 //
 // Android app: scheduled with the phone's own notification system (Capacitor
-// LocalNotifications), so they arrive with the app closed, the screen off or after a
-// restart. The only permission is "Allow notifications": no exact-alarm access, so Android
-// may deliver a reminder a few minutes late to save battery. They're rebuilt every time a
-// habit changes or the app opens, so they always match what's left; finishing your last
-// habit cancels the rest of today's.
+// LocalNotifications) with exact alarms, so they keep coming every 2 minutes with the app
+// closed or the screen off. The exact-alarm access is granted automatically at install;
+// the only thing you're asked is "Allow notifications". Today and tomorrow are scheduled
+// (Android allows an app 500 alarms) and rebuilt whenever a habit changes or the app opens.
 // Website: browsers can't schedule notifications for a closed page, so there they arrive
-// only while the app is open (in a tab or in the background).
+// only while the app is open.
 
 (function () {
     'use strict';
 
-    const SLOTS = [
-        { n: 1, h: 16, m: 0, icon: 'habit_sprout', color: '#10b981', stage: 'start' },
-        { n: 2, h: 18, m: 30, icon: 'habit_hourglass', color: '#d97706', stage: 'progress' },
-        { n: 3, h: 20, m: 30, icon: 'habit_flame', color: '#ea580c', stage: 'streak' },
-        { n: 4, h: 21, m: 45, icon: 'habit_alarm', color: '#7c3aed', stage: 'last' }
-    ];
-    const DAYS_AHEAD = 7;          // today + the next 6 days, so reminders keep coming even if the app isn't opened
-    const ID_BASE = 7100;          // our notification ids: 7100–7199
+    const WINDOW_START = 16 * 60;            // 4:00 PM, in minutes after midnight
+    const WINDOW_END = 23 * 60;              // 11:00 PM (the last reminder)
+    const EVERY_OPTIONS = [2, 3, 5, 10, 15, 30];
+    const DEFAULT_EVERY = 2;
+    const DAYS_AHEAD = 2;                    // today + tomorrow: ≤ 422 alarms at every 2 min (Android caps apps at 500)
+    const PER_DAY = 220;                     // id space per day (211 reminders at most)
+    const ID_BASE = 7100;                    // our notification ids: 7100–7539
+    const TEST_ID = 7099;
     const CHANNEL = 'habits';
-    const PREF_KEY = 'habitReminders';   // { enabled: bool, asked: bool }
+    const PREF_KEY = 'habitReminders';       // { enabled, asked, every }
     const isNative = !!window.ULTRADIAN_NATIVE;
     const store = window.appStorage || localStorage;
+
+    // The evening in four phases: icon, colour and how hard the wording pushes
+    const PHASES = [
+        { until: 18 * 60, icon: 'habit_sprout', color: '#10b981', kinds: ['next', 'count', 'time'] },
+        { until: 20 * 60, icon: 'habit_hourglass', color: '#d97706', kinds: ['next', 'time', 'count'] },
+        { until: 22 * 60, icon: 'habit_flame', color: '#ea580c', kinds: ['streak', 'next', 'time'] },
+        { until: 24 * 60, icon: 'habit_alarm', color: '#7c3aed', kinds: ['last', 'time', 'next'] }
+    ];
+    const NUDGES = [
+        'Reminders stop the moment you finish.',
+        'Ten focused minutes is enough to start.',
+        'Do the smallest one first.',
+        'Start now — not in {every} minutes.',
+        'Future you is counting on this.',
+        'One habit, right now.',
+        'You said you would. Do it now.',
+        'Close the app after this and go do it.'
+    ];
 
     const native = (method, options) => window.ultradianNative('LocalNotifications', method, options);
 
     // ==================== PREFERENCES ====================
     function prefs() {
-        try { return Object.assign({ enabled: false, asked: false }, JSON.parse(store.getItem(PREF_KEY) || '{}')); }
-        catch (e) { return { enabled: false, asked: false }; }
+        let p;
+        try { p = Object.assign({ enabled: false, asked: false, every: DEFAULT_EVERY }, JSON.parse(store.getItem(PREF_KEY) || '{}')); }
+        catch (e) { p = { enabled: false, asked: false, every: DEFAULT_EVERY }; }
+        if (!EVERY_OPTIONS.includes(Number(p.every))) p.every = DEFAULT_EVERY;
+        p.every = Number(p.every);
+        return p;
     }
     function setPrefs(p) { store.setItem(PREF_KEY, JSON.stringify(Object.assign(prefs(), p))); }
+
+    // Every reminder time in the 4–11 PM window
+    function slots(every) {
+        const out = [];
+        for (let t = WINDOW_START, n = 0; t <= WINDOW_END; t += every, n++) {
+            const phase = PHASES.findIndex(p => t < p.until);
+            out.push({ n, mins: t, h: Math.floor(t / 60), m: t % 60, phase, icon: PHASES[phase].icon, color: PHASES[phase].color });
+        }
+        return out;
+    }
 
     // ==================== HABITS ====================
     function habits() {
@@ -59,8 +92,8 @@
         return h.lastCompletedDate === dayStr(before) ? (h.streak || 0) : 0;
     }
 
-    // What's left on a given day. Today: the real state. Tomorrow and later: every habit
-    // (they reset each day); streaks still count for tomorrow if today's gets done.
+    // What's left on a given day. Today: the real state. Tomorrow: every habit (they reset
+    // each day); streaks still count for tomorrow if today's gets done.
     function openOn(day, offset) {
         const all = habits().filter(h => h && h.text);
         if (offset === 0) {
@@ -74,6 +107,11 @@
     }
 
     // ==================== WHAT EACH REMINDER SAYS ====================
+    function timeLeft(mins) {
+        const left = 24 * 60 - mins, h = Math.floor(left / 60), m = left % 60;
+        return h ? `${h} h${m ? ` ${m} min` : ''}` : `${m} min`;
+    }
+
     function message(slot, info, offset) {
         const { all, left, streakOf } = info;
         const n = left.length, total = all.length, done = total - n;
@@ -81,57 +119,72 @@
         const withStreak = left.map(h => ({ h, s: streakOf(h) })).filter(x => x.s > 0).sort((a, b) => b.s - a.s);
         const list = left.map(label);
         const listShort = list.length <= 3 ? list.join(', ') : `${list.slice(0, 2).join(', ')} and ${list.length - 2} more`;
-        const progress = total ? `${done}/${total} done today` : '';
-        let title, body;
+        const habitsWord = (k) => `${k} ${plural(k, 'habit', 'habits')}`;
 
-        if (slot.stage === 'start') {
-            title = `${n} ${plural(n, 'habit', 'habits')} left today`;
-            body = done === 0
-                ? `${listShort}. Start with the easiest one — momentum does the rest.`
-                : `${listShort}. You've done ${done} of ${total} — keep it rolling.`;
-        } else if (slot.stage === 'progress') {
-            title = `Next up: ${label(first)}`;
-            body = n === 1 ? 'It\'s the only one left today. Ten focused minutes and you\'re done.'
-                : `Then ${n - 1} more: ${list.slice(1, 3).join(', ')}${n > 3 ? '…' : ''}. Evening is the best time to catch up.`;
-        } else if (slot.stage === 'streak' && withStreak.length) {
-            const top = withStreak[0];
-            title = `Keep your ${top.s}-day streak alive 🔥`;
-            body = withStreak.length === 1
-                ? `${label(top.h)} is still open.${n > 1 ? ` Plus ${n - 1} other ${plural(n - 1, 'habit', 'habits')}.` : ''}`
-                : `${withStreak.length} streaks are at risk tonight: ${withStreak.slice(0, 3).map(x => `${label(x.h)} (${x.s})`).join(', ')}.`;
-        } else if (slot.stage === 'streak') {
-            title = `${n} ${plural(n, 'habit', 'habits')} still open`;
-            body = `${listShort}. A couple of hours left in the day — enough for all of them.`;
-        } else {
-            title = `Last call: ${n} ${plural(n, 'habit', 'habits')} left`;
-            body = n === 1 ? `Finish ${label(first)} and close the day with everything done.`
-                : `${listShort}. Even one of them keeps you moving forward.`;
+        let kind = PHASES[slot.phase].kinds[slot.n % PHASES[slot.phase].kinds.length];
+        if (slot.n === 0) kind = 'start';
+        if (slot.mins === WINDOW_END) kind = 'final';
+        if (kind === 'streak' && !withStreak.length) kind = 'count';
+
+        let title, body;
+        switch (kind) {
+            case 'start':
+                title = `${habitsWord(n)} left today`;
+                body = done === 0 ? `${listShort}. Start with the easiest one.` : `${listShort}. You've done ${done} of ${total} — keep going.`;
+                break;
+            case 'next':
+                title = `Next up: ${label(first)}`;
+                body = n === 1 ? 'It\'s the only one left today.' : `Then ${n - 1} more: ${list.slice(1, 3).join(', ')}${n > 3 ? '…' : ''}.`;
+                break;
+            case 'count':
+                title = `Still ${habitsWord(n)} to go`;
+                body = `${listShort}.${total ? ` ${done}/${total} done.` : ''}`;
+                break;
+            case 'time':
+                title = `${timeLeft(slot.mins)} left today`;
+                body = `${listShort} ${plural(n, 'is', 'are')} still pending.`;
+                break;
+            case 'streak': {
+                const top = withStreak[0];
+                title = `Your ${top.s}-day streak dies tonight 🔥`;
+                body = withStreak.length === 1 ? `Unless you do ${label(top.h)}.${n > 1 ? ` Plus ${n - 1} more pending.` : ''}`
+                    : `${withStreak.length} streaks at risk: ${withStreak.slice(0, 3).map(x => `${label(x.h)} (${x.s})`).join(', ')}.`;
+                break;
+            }
+            case 'last':
+                title = `Last call: ${habitsWord(n)} left`;
+                body = n === 1 ? `Finish ${label(first)} and close the day with everything done.` : `${listShort}. Even one of them keeps you moving.`;
+                break;
+            default: // final, 11 PM
+                title = 'Final reminder tonight';
+                body = n === 1 ? `Do ${label(first)} now — this is the last nudge.` : `${listShort}. Finish what you can before midnight.`;
         }
+        if (kind !== 'final') body += ' ' + NUDGES[slot.n % NUDGES.length].replace('{every}', prefs().every);
 
         const inbox = left.slice(0, 6).map(h => { const s = streakOf(h); return `${label(h)}${s ? `  ·  🔥 ${s}` : ''}`; });
         if (left.length > 6) inbox.push(`+ ${left.length - 6} more`);
-        return { title, body, inbox, summary: offset === 0 ? progress : `${total} ${plural(total, 'habit', 'habits')} today` };
+        const summary = offset === 0 ? `${done}/${total} done · reminder ${slot.n + 1}` : `${habitsWord(total)} today · reminder ${slot.n + 1}`;
+        return { title, body, inbox, summary };
     }
 
     function slotTime(day, slot) {
         const t = new Date(day); t.setHours(slot.h, slot.m, 0, 0); return t;
     }
 
-    // Every reminder that should exist right now, from today 4 PM to 6 days ahead
+    // Every reminder that should exist right now: the rest of today's, then tomorrow's
     function plan(now) {
         now = now || new Date();
-        const out = [];
+        const every = prefs().every, daySlots = slots(every), out = [];
         for (let offset = 0; offset < DAYS_AHEAD; offset++) {
             const day = new Date(now); day.setDate(day.getDate() + offset); day.setHours(12, 0, 0, 0);
             const info = openOn(day, offset);
             if (!info.left.length) continue;
-            for (const slot of SLOTS) {
+            for (const slot of daySlots) {
                 const at = slotTime(day, slot);
                 if (at <= now) continue;
-                const msg = message(slot, info, offset);
                 out.push({
-                    id: ID_BASE + offset * 10 + slot.n,
-                    at, slot, ...msg,
+                    id: ID_BASE + offset * PER_DAY + slot.n,
+                    at, slot, ...message(slot, info, offset),
                     single: offset === 0 && info.left.length === 1 ? String(info.left[0].text) : null,
                     date: dayStr(day)
                 });
@@ -147,7 +200,7 @@
         nativeReady = (async () => {
             await native('createChannel', {
                 id: CHANNEL, name: 'Habit reminders',
-                description: 'Between 4 and 10 PM, only when habits are left',
+                description: 'Every few minutes from 4 to 11 PM while habits are pending',
                 importance: 4, visibility: 1, vibration: true, lights: true, lightColor: '#10b981'
             }).catch(() => {});
             await native('registerActionTypes', {
@@ -175,18 +228,14 @@
         } catch (e) { return 'unavailable'; }
     }
 
-    const ourIds = () => Array.from({ length: DAYS_AHEAD * 10 }, (_, i) => ({ id: ID_BASE + i }));
+    const idList = (from, count) => Array.from({ length: count }, (_, i) => ({ id: from + i }));
 
     async function nativeSync() {
         await nativeSetup();
-        await native('cancel', { notifications: ourIds() }).catch(() => {});
-        const p = prefs();
-        const todayLeft = openOn(new Date(), 0).left.length;
-        // Everything done today: clear today's reminders from the notification shade too
-        if (!p.enabled || todayLeft === 0) {
-            await native('removeDeliveredNotifications', { notifications: ourIds().slice(0, 10) }).catch(() => {});
-        }
-        if (!p.enabled) return 0;
+        await native('cancel', { notifications: idList(ID_BASE, DAYS_AHEAD * PER_DAY) }).catch(() => {});
+        // Opening the app clears the pile of reminders already in the notification shade
+        await native('removeDeliveredNotifications', { notifications: idList(ID_BASE, PER_DAY) }).catch(() => {});
+        if (!prefs().enabled) return 0;
         const list = plan();
         if (!list.length) return 0;
         await native('schedule', {
@@ -219,11 +268,8 @@
         webTimers = [];
         if (!prefs().enabled || !('Notification' in window) || Notification.permission !== 'granted') return 0;
         const now = new Date();
-        const today = SLOTS.map(s => ({ s, at: slotTime(now, s) })).filter(x => x.at > now);
-        today.forEach(({ s, at }) => {
-            webTimers.push(setTimeout(() => webShow(s), at - now));
-        });
-        // Tomorrow, the timers are set again when the app is opened or at midnight
+        const today = slots(prefs().every).map(s => ({ s, at: slotTime(now, s) })).filter(x => x.at > now);
+        today.forEach(({ s, at }) => webTimers.push(setTimeout(() => webShow(s), at - now)));
         const midnight = new Date(now); midnight.setHours(24, 0, 5, 0);
         webTimers.push(setTimeout(webSync, midnight - now));
         return today.length;
@@ -299,7 +345,7 @@
         setPrefs({ enabled: permission === 'granted', asked: true });
         sync();
         if (typeof window.showNotification === 'function') {
-            window.showNotification(permission === 'granted' ? '🔔 Habit reminders on — 4 PM to 10 PM, only when habits are left.'
+            window.showNotification(permission === 'granted' ? `🔔 Habit reminders on — every ${prefs().every} min from 4 to 11 PM while habits are pending.`
                 : permission === 'denied' ? '🔕 Notifications are blocked. Allow them for Ultradian in your phone settings.'
                 : 'Notifications aren\'t available here.');
         }
@@ -311,12 +357,13 @@
     function testMessage() {
         const info = openOn(new Date(), 0);
         if (!info.left.length) return { title: 'Habit reminders work 🎉', body: 'All your habits are done — you\'d only hear from us if some were left.', inbox: [], summary: '' };
-        const m = message(SLOTS[2], info, 0);
+        const flame = slots(prefs().every).find(s => s.phase === 2);
+        const m = message(flame, info, 0);
         return { ...m, title: m.title + ' (test)' };
     }
 
     async function sendTest() {
-        const slot = SLOTS[2];
+        const slot = slots(prefs().every).find(s => s.phase === 2);
         if (isNative) {
             await nativeSetup();
             if (await nativePermission(true) !== 'granted') return enable();
@@ -324,7 +371,7 @@
             const left = openOn(new Date(), 0).left;
             await native('schedule', {
                 notifications: [{
-                    id: ID_BASE + 99, title: m.title, body: m.body, largeBody: m.body, summaryText: m.summary,
+                    id: TEST_ID, title: m.title, body: m.body, largeBody: m.body, summaryText: m.summary,
                     inboxList: m.inbox.length > 1 ? m.inbox : undefined,
                     schedule: { at: new Date(Date.now() + 3000).toISOString(), allowWhileIdle: true },
                     channelId: CHANNEL, smallIcon: 'ic_stat_habit', largeIcon: slot.icon, iconColor: slot.color,
@@ -347,11 +394,11 @@
         flame: '<svg viewBox="0 0 256 256" aria-hidden="true"><circle cx="128" cy="128" r="128" fill="#f97316"/><path d="M128 208c-38 0-62-26-62-60 0-30 20-48 34-66 4 18 12 28 22 32-4-30 10-58 34-74-2 30 10 46 24 64 12 14 10 26 10 44 0 34-24 60-62 60z" fill="#fff"/><path d="M128 198c-18 0-30-12-30-30 0-16 12-26 20-36 2 10 8 16 14 18-2-16 6-30 18-38 0 16 6 24 12 32 6 8 6 14 6 24 0 18-14 30-40 30z" fill="#fed7aa"/></svg>',
         alarm: '<svg viewBox="0 0 256 256" aria-hidden="true"><circle cx="128" cy="128" r="128" fill="#8b5cf6"/><circle cx="128" cy="138" r="62" fill="none" stroke="#fff" stroke-width="14"/><path d="M128 104v36l24 16" fill="none" stroke="#fff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 82l26-24M194 82l-26-24" stroke="#fff" stroke-width="14" stroke-linecap="round"/></svg>'
     };
-    const SLOT_INFO = [
-        ['sprout', '4:00 PM', 'What\'s left today'],
-        ['hourglass', '6:30 PM', 'Your next habit'],
-        ['flame', '8:30 PM', 'Streaks at risk'],
-        ['alarm', '9:45 PM', 'Last call']
+    const PHASE_INFO = [
+        ['sprout', '4–6 PM', 'What\'s left, next up'],
+        ['hourglass', '6–8 PM', 'Time left today'],
+        ['flame', '8–10 PM', 'Streaks at risk'],
+        ['alarm', '10–11 PM', 'Last calls']
     ];
 
     let card = null;
@@ -364,15 +411,19 @@
             <h3>🔔 Habit reminders</h3>
             <div class="hr-box">
                 <label class="hr-row">
-                    <span><b>Remind me about unfinished habits</b><small>Only between 4 PM and 10 PM, and only when habits are left.</small></span>
+                    <span><b>Remind me about unfinished habits</b><small>4 PM to 11 PM, only while habits are pending. They stop the moment you finish.</small></span>
                     <span class="hr-switch"><input type="checkbox" id="hr-toggle"><i></i></span>
                 </label>
-                <ul class="hr-times">${SLOT_INFO.map(([icon, time, what]) => `<li>${ICON_SVG[icon]}<b>${time}</b><span>${what}</span></li>`).join('')}</ul>
+                <label class="hr-every">Remind me every
+                    <select id="hr-every">${EVERY_OPTIONS.map(m => `<option value="${m}">${m} minutes</option>`).join('')}</select>
+                </label>
+                <ul class="hr-times">${PHASE_INFO.map(([icon, time, what]) => `<li>${ICON_SVG[icon]}<b>${time}</b><span>${what}</span></li>`).join('')}</ul>
                 <p class="hr-status" id="hr-status"></p>
                 <button type="button" class="hr-test" id="hr-test">Send a test reminder</button>
             </div>`;
         heading.parentNode.insertBefore(card, heading);
         card.querySelector('#hr-toggle').addEventListener('change', (e) => { if (e.target.checked) enable(); else disable(); });
+        card.querySelector('#hr-every').addEventListener('change', (e) => { setPrefs({ every: Number(e.target.value) }); sync(); });
         card.querySelector('#hr-test').addEventListener('click', sendTest);
         renderSettings();
     }
@@ -381,22 +432,25 @@
         if (!card) return;
         const p = prefs();
         card.querySelector('#hr-toggle').checked = p.enabled;
+        card.querySelector('#hr-every').value = String(p.every);
         card.classList.toggle('off', !p.enabled);
         const status = card.querySelector('#hr-status');
         let perm = 'unavailable';
         if (isNative) perm = await nativePermission(false);
         else if ('Notification' in window) perm = Notification.permission === 'default' ? 'prompt' : Notification.permission;
         const left = openOn(new Date(), 0).left.length;
-        const next = p.enabled ? plan()[0] : null;
+        const upcoming = p.enabled ? plan() : [];
+        const next = upcoming[0];
+        const tonight = upcoming.filter(r => r.date === dayStr(new Date())).length;
         status.textContent = perm === 'denied' ? '🔕 Notifications are blocked for this app — allow them in your phone\'s settings.'
             : !p.enabled ? 'Off.'
             : !habits().length ? 'Add a habit and reminders will start.'
-            : next ? `Next: ${next.at.toLocaleDateString([], { weekday: 'short' })} ${next.at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} — ${left ? `${left} ${plural(left, 'habit', 'habits')} left today` : 'all done today ✓'}.`
+            : next ? `Next: ${next.at.toLocaleDateString([], { weekday: 'short' })} ${next.at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}, then every ${p.every} min until 11 PM — ${left ? `${left} ${plural(left, 'habit', 'habits')} pending${tonight ? `, up to ${tonight} more tonight` : ''}` : 'all done today ✓'}.`
             : 'All done for today ✓';
         if (!isNative && p.enabled) status.textContent += ' On the website, reminders arrive only while the app is open — install the Android app to get them with it closed.';
     }
 
-    // First time someone with habits opens the app: offer reminders once, gently
+    // First time someone with habits opens the app: offer reminders once
     function maybeOffer() {
         const p = prefs();
         if (p.asked || p.enabled || !habits().length) return;
@@ -406,7 +460,7 @@
         el.innerHTML = `<div class="hr-offer-card" role="dialog" aria-label="Habit reminders">
                 ${ICON_SVG.flame}
                 <b>Never miss a habit</b>
-                <p>Get a reminder between 4 and 10 PM — only on days when habits are still left.</p>
+                <p>From 4 to 11 PM you'll get a reminder every ${p.every} minutes while any habit is pending. They stop the moment you finish.</p>
                 <div><button type="button" data-a="no">Not now</button><button type="button" data-a="yes" class="hr-yes">Turn on</button></div>
             </div>`;
         document.body.appendChild(el);

@@ -31,3 +31,6 @@
 .hr-offer-card .hr-yes { background: #10b981; border-color: #10b981; color: #fff; }
 @keyframes hr-fade { from { opacity: 0; } }
 @keyframes hr-up { from { transform: translateY(30px); opacity: 0; } }
+.hr-every { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; font-size: 0.9rem; font-weight: 600; color: var(--text-main); }
+.hr-every select { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-main); font: inherit; font-weight: 700; }
+.hr-card.off .hr-every { opacity: 0.45; }

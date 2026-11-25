@@ -119,12 +119,17 @@ jobs:
             --iconBackgroundColor '#121212' --iconBackgroundColorDark '#121212' \
             --splashBackgroundColor '#121212' --splashBackgroundColorDark '#121212'
 
-      - name: Habit reminder icons
+      - name: Habit reminder icons and exact alarms
         run: |
-          # Notification icons drawn in notify-icons/svg, rendered to PNG in notify-icons/android.
-          # Reminders need only the "Allow notifications" permission (no exact-alarm access).
+          # Notification icons drawn in notify-icons/svg, rendered to PNG in notify-icons/android
           cp -r ../notify-icons/android/. android/app/src/main/res/
           ls android/app/src/main/res/drawable-nodpi
+          # Reminders every 2 minutes need exact alarms, or Android spaces them out while the
+          # phone sleeps. Granted automatically at install (no pop-up); the only thing the
+          # user is asked is "Allow notifications".
+          manifest=android/app/src/main/AndroidManifest.xml
+          sed -i 's#</manifest>#    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />\n</manifest>#' "$manifest"
+          grep -n "EXACT_ALARM" "$manifest"
 
       - name: Sync web files and plugins
         run: npx cap sync android
