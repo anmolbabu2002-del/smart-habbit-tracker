@@ -1,0 +1,159 @@
+/* Ultradian design system — vibrant, cartoonish, high energy.
+   Your orange leads; bright accents for states; chunky "3D" edges on everything you can tap. */
+
+:root {
+  /* brand */
+  --orange: #ff8c42;
+  --orange-edge: #e26b1f;
+  --orange-soft: #fff0e5;
+  /* accents */
+  --mint: #12c79b;      /* done / success — our own, not Duolingo's lime */
+  --mint-edge: #0c9e7a;
+  --mint-soft: #dcf8ef;
+  --blue: #1cb0f6;
+  --blue-edge: #1899d6;
+  --blue-soft: #ddf4ff;
+  --purple: #a560e8;
+  --purple-edge: #8547c6;
+  --purple-soft: #f3e8ff;
+  --yellow: #ffc800;
+  --yellow-edge: #e0a800;
+  --yellow-soft: #fff6cc;
+  --red: #ff4b4b;
+  --red-edge: #d93a3a;
+  --red-soft: #ffe1e1;
+  /* surfaces + text */
+  --bg: #f7f9fc;
+  --card: #ffffff;
+  --line: #e5e8ef;
+  --line-strong: #d4d9e3;
+  --ink: #2f3542;
+  --ink-soft: #7a8294;
+  --ink-faint: #aab1c0;
+
+  --radius: 20px;
+  --radius-sm: 14px;
+  --edge: 4px; /* height of the 3D bottom edge */
+  --tabbar-h: 76px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --font: 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --orange-soft: #3a2616;
+  --mint-soft: #123a30;
+  --blue-soft: #10314a;
+  --purple-soft: #2e1e45;
+  --yellow-soft: #3a3110;
+  --red-soft: #3d1a1a;
+  --bg: #131820;
+  --card: #1c2330;
+  --line: #2c3546;
+  --line-strong: #37425a;
+  --ink: #eef1f7;
+  --ink-soft: #9aa3b5;
+  --ink-faint: #5d6780;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-weight: 700;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+input, textarea { user-select: text; -webkit-user-select: text; font-family: inherit; }
+button { font-family: inherit; }
+
+/* ── Chunky 3D button ── */
+.btn {
+  --c: var(--orange);
+  --e: var(--orange-edge);
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 54px;
+  padding: 0 22px;
+  border-radius: 16px;
+  background: var(--c);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 var(--edge) 0 var(--e);
+  transform: translateY(0);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s;
+}
+.btn:active { transform: translateY(var(--edge)); box-shadow: 0 0 0 var(--e); }
+.btn:disabled { --c: var(--line); --e: var(--line-strong); color: var(--ink-faint); cursor: default; }
+.btn.block { width: 100%; }
+.btn.big { min-height: 62px; font-size: 1.1rem; border-radius: 18px; }
+.btn.mint { --c: var(--mint); --e: var(--mint-edge); }
+.btn.blue { --c: var(--blue); --e: var(--blue-edge); }
+.btn.purple { --c: var(--purple); --e: var(--purple-edge); }
+.btn.ghost { --c: var(--card); --e: var(--line-strong); color: var(--ink); border: 2px solid var(--line-strong); }
+.btn.ghost:active { box-shadow: 0 0 0 var(--line-strong); }
+.btn.round { width: 54px; min-height: 54px; padding: 0; border-radius: 50%; }
+
+/* ── Card: white with a chunky bottom edge ── */
+.card {
+  background: var(--card);
+  border: 2px solid var(--line);
+  border-bottom-width: var(--edge);
+  border-radius: var(--radius);
+}
+
+/* ── Chip ── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 2px solid var(--line);
+  border-bottom-width: 3px;
+  background: var(--card);
+  color: var(--ink-soft);
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.chip.on { background: var(--orange-soft); border-color: var(--orange); color: var(--orange-edge); }
+
+/* ── Progress bar with a glossy highlight ── */
+.progress { height: 18px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.progress > i {
+  display: block; height: 100%; border-radius: inherit;
+  background: var(--mint);
+  position: relative;
+  transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1.2);
+}
+.progress > i::after {
+  content: ''; position: absolute; left: 10px; right: 10px; top: 4px; height: 5px;
+  border-radius: 999px; background: rgba(255, 255, 255, 0.45);
+}
+
+.section-title {
+  margin: 26px 4px 12px;
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.section-title small { font-size: 0.9rem; font-weight: 800; color: var(--ink-faint); }
