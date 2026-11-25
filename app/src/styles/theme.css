@@ -90,32 +90,32 @@ button { font-family: inherit; }
   border-radius: 16px;
   background: var(--c);
   color: #fff;
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 900;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  box-shadow: 0 var(--edge) 0 var(--e);
+  letter-spacing: 0.005em;
+  box-shadow: 0 var(--edge) 0 var(--e), 0 10px 20px -10px var(--e);
   transform: translateY(0);
   transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s;
 }
-.btn:active { transform: translateY(var(--edge)); box-shadow: 0 0 0 var(--e); }
+.btn:active { transform: translateY(var(--edge)); box-shadow: 0 0 0 var(--e), 0 2px 6px -4px var(--e); }
 .btn:disabled { --c: var(--line); --e: var(--line-strong); color: var(--ink-faint); cursor: default; }
 .btn.block { width: 100%; }
 .btn.big { min-height: 62px; font-size: 1.1rem; border-radius: 18px; }
 .btn.mint { --c: var(--mint); --e: var(--mint-edge); }
 .btn.blue { --c: var(--blue); --e: var(--blue-edge); }
 .btn.purple { --c: var(--purple); --e: var(--purple-edge); }
-.btn.ghost { --c: var(--card); --e: var(--line-strong); color: var(--ink); border: 2px solid var(--line-strong); }
-.btn.ghost:active { box-shadow: 0 0 0 var(--line-strong); }
+.btn.ghost { --c: var(--card); --e: var(--line-strong); color: var(--ink); border: 1.5px solid var(--line); }
 .btn.round { width: 54px; min-height: 54px; padding: 0; border-radius: 50%; }
 
-/* ── Card: white with a chunky bottom edge ── */
+/* ── Card: soft, tinted lift instead of a hard grey edge ── */
 .card {
+  --tint: 47, 53, 66;
   background: var(--card);
-  border: 2px solid var(--line);
-  border-bottom-width: var(--edge);
+  border: 1.5px solid var(--line);
   border-radius: var(--radius);
+  box-shadow: 0 1px 0 rgba(var(--tint), 0.04), 0 8px 22px -12px rgba(var(--tint), 0.28);
 }
+:root[data-theme='dark'] .card { --tint: 0, 0, 0; box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.7); }
 
 /* ── Chip ── */
 .chip {
@@ -124,15 +124,15 @@ button { font-family: inherit; }
   gap: 6px;
   padding: 8px 14px;
   border-radius: 999px;
-  border: 2px solid var(--line);
-  border-bottom-width: 3px;
+  border: 1.5px solid var(--line);
   background: var(--card);
   color: var(--ink-soft);
+  box-shadow: 0 4px 12px -8px rgba(47, 53, 66, 0.3);
   font-weight: 800;
   font-size: 0.9rem;
   cursor: pointer;
 }
-.chip.on { background: var(--orange-soft); border-color: var(--orange); color: var(--orange-edge); }
+.chip.on { background: var(--orange); border-color: var(--orange); color: #fff; box-shadow: 0 6px 14px -8px var(--orange-edge); }
 
 /* ── Progress bar with a glossy highlight ── */
 .progress { height: 18px; border-radius: 999px; background: var(--line); overflow: hidden; }

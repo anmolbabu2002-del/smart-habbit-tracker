@@ -8,7 +8,7 @@
 }
 .stack { display: grid; gap: 12px; }
 h1 { margin: 2px 0 0; font-size: 2rem; font-weight: 900; letter-spacing: -0.01em; }
-.eyebrow { color: var(--ink-faint); font-weight: 800; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.eyebrow { color: var(--ink-faint); font-weight: 800; font-size: 0.92rem; }
 .sub { margin: 6px 0 0; color: var(--ink-soft); font-size: 1rem; }
 
 /* ── Tab bar ── */
@@ -16,20 +16,21 @@ h1 { margin: 2px 0 0; font-size: 2rem; font-weight: 900; letter-spacing: -0.01em
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
   display: grid; grid-template-columns: repeat(4, 1fr);
   padding: 8px 10px calc(8px + var(--safe-bottom));
-  background: var(--card);
-  border-top: 2px solid var(--line);
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--line);
 }
 .tab {
   appearance: none; border: 0; background: none; cursor: pointer;
   display: flex; flex-direction: column; align-items: center; gap: 3px;
-  color: var(--ink-faint); font-weight: 900; font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-faint); font-weight: 800; font-size: 0.78rem;
 }
 .tab-icon {
-  display: grid; place-items: center; width: 56px; height: 40px; border-radius: 14px;
-  border: 2px solid transparent; transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  display: grid; place-items: center; width: 62px; height: 34px; border-radius: 999px;
+  transition: background 0.2s, color 0.2s, transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1.4);
 }
-.tab.on { color: var(--orange-edge); }
-.tab.on .tab-icon { background: var(--orange-soft); border-color: var(--orange); color: var(--orange); transform: translateY(-1px); }
+.tab.on { color: var(--orange-edge); font-weight: 900; }
+.tab.on .tab-icon { background: var(--orange-soft); color: var(--orange); transform: scale(1.04); }
 .tab:active .tab-icon { transform: scale(0.92); }
 
 /* ── Today ── */
@@ -39,10 +40,9 @@ h1 { margin: 2px 0 0; font-size: 2rem; font-weight: 900; letter-spacing: -0.01em
 .streak-pill { flex-shrink: 0; }
 .streak-pill {
   display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 14px;
-  background: var(--purple-soft); color: var(--purple); font-weight: 900; border: 2px solid var(--purple);
-  border-bottom-width: 4px; white-space: nowrap;
+  background: var(--purple-soft); color: var(--purple); font-weight: 900; white-space: nowrap;
 }
-.streak-pill small { font-size: 0.72rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.8; }
+.streak-pill small { font-size: 0.8rem; font-weight: 800; opacity: 0.8; }
 .hero { padding: 16px 16px 14px; position: relative; overflow: hidden; }
 .hero::before {
   content: ''; position: absolute; right: -40px; top: -40px; width: 160px; height: 160px; border-radius: 50%;
@@ -51,11 +51,11 @@ h1 { margin: 2px 0 0; font-size: 2rem; font-weight: 900; letter-spacing: -0.01em
 .hero-top { display: flex; align-items: center; gap: 12px; position: relative; }
 .bubble {
   position: relative; flex: 1; padding: 12px 14px; border-radius: 16px;
-  background: var(--bg); border: 2px solid var(--line);
+  background: var(--bg); border: 1.5px solid var(--line);
 }
 .bubble::before {
   content: ''; position: absolute; left: -9px; top: 50%; margin-top: -8px; width: 14px; height: 14px;
-  background: var(--bg); border-left: 2px solid var(--line); border-bottom: 2px solid var(--line); transform: rotate(45deg);
+  background: var(--bg); border-left: 1.5px solid var(--line); border-bottom: 1.5px solid var(--line); transform: rotate(45deg);
 }
 .bubble b { display: block; font-size: 1.15rem; font-weight: 900; }
 .bubble span { color: var(--ink-soft); font-size: 0.92rem; }
@@ -72,7 +72,7 @@ h1 { margin: 2px 0 0; font-size: 2rem; font-weight: 900; letter-spacing: -0.01em
 .habit-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .habit-text b { font-size: 1.08rem; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .habit-text small { color: var(--ink-soft); font-size: 0.85rem; font-weight: 700; }
-.habit.done { background: var(--mint-soft); border-color: var(--mint); }
+.habit.done { --tint: 12, 158, 122; background: var(--mint-soft); border-color: color-mix(in srgb, var(--mint) 55%, transparent); }
 .habit.done .habit-text small { color: var(--mint-edge); font-weight: 800; }
 .check-done {
   width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0;
@@ -82,10 +82,10 @@ h1 { margin: 2px 0 0; font-size: 2rem; font-weight: 900; letter-spacing: -0.01em
 
 .list { padding: 4px 0; }
 .task { display: flex; align-items: center; gap: 14px; padding: 12px 14px; }
-.task + .task { border-top: 2px solid var(--line); }
+.task + .task { border-top: 1.5px solid var(--line); }
 .task-check {
   width: 30px; height: 30px; border-radius: 10px; flex-shrink: 0; cursor: pointer; display: grid; place-items: center;
-  background: var(--card); border: 2.5px solid var(--line-strong); border-bottom-width: 4px; color: #fff; padding: 0;
+  background: var(--card); border: 2.5px solid var(--line-strong); color: #fff; padding: 0; transition: transform 0.12s;
 }
 .task-check.on { background: var(--mint); border-color: var(--mint-edge); }
 .task-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -108,7 +108,8 @@ h1 { margin: 2px 0 0; font-size: 2rem; font-weight: 900; letter-spacing: -0.01em
 .add-row { display: flex; gap: 10px; align-items: center; }
 .add-input {
   flex: 1; min-height: 54px; padding: 0 16px; border-radius: 16px; font-size: 1.02rem; font-weight: 700; color: var(--ink);
-  background: var(--card); border: 2px solid var(--line); border-bottom-width: 4px; outline: none;
+  background: var(--card); border: 1.5px solid var(--line); outline: none;
+  box-shadow: 0 8px 22px -14px rgba(47, 53, 66, 0.3);
 }
 .add-input:focus { border-color: var(--blue); }
 .add-input::placeholder { color: var(--ink-faint); }
@@ -122,13 +123,13 @@ h1 { margin: 2px 0 0; font-size: 2rem; font-weight: 900; letter-spacing: -0.01em
 .pick span { grid-row: span 2; font-size: 1.6rem; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 14px; background: var(--bg); }
 .pick b { font-size: 1.02rem; font-weight: 900; }
 .pick small { color: var(--ink-soft); font-weight: 700; }
-.pick.on { border-color: var(--orange); background: var(--orange-soft); }
+.pick.on { --tint: 226, 107, 31; border-color: var(--orange); background: var(--orange-soft); }
 .durations { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .dur { appearance: none; cursor: pointer; padding: 14px 6px 12px; display: flex; flex-direction: column; align-items: center; color: var(--ink); }
 .dur b { font-size: 2rem; font-weight: 900; line-height: 1; }
 .dur small { color: var(--ink-soft); font-weight: 800; }
-.dur em { margin-top: 6px; font-style: normal; font-size: 0.78rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-faint); }
-.dur.on { border-color: var(--orange); background: var(--orange-soft); }
+.dur em { margin-top: 6px; font-style: normal; font-size: 0.85rem; font-weight: 900; color: var(--ink-faint); }
+.dur.on { --tint: 226, 107, 31; border-color: var(--orange); background: var(--orange-soft); }
 .dur.on b, .dur.on em { color: var(--orange-edge); }
 .lock-row { margin-top: 16px; display: flex; align-items: center; gap: 12px; padding: 14px; }
 .lock-row > span:nth-child(2) { flex: 1; display: flex; flex-direction: column; }
@@ -144,8 +145,8 @@ h1 { margin: 2px 0 0; font-size: 2rem; font-weight: 900; letter-spacing: -0.01em
 .week-head span { color: var(--purple); font-weight: 900; }
 .bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; height: 110px; margin-top: 14px; }
 .bar { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; }
-.bar i { width: 100%; border-radius: 10px; background: var(--purple-soft); border-bottom: 4px solid var(--purple); }
-.bar.today i { background: var(--purple); border-bottom-color: var(--purple-edge); }
+.bar i { width: 100%; border-radius: 10px; background: var(--purple-soft); }
+.bar.today i { background: linear-gradient(180deg, #c48cf5, var(--purple)); box-shadow: 0 6px 14px -6px var(--purple-edge); }
 .bar small { color: var(--ink-faint); font-weight: 900; font-size: 0.78rem; }
 .start { margin-top: 20px; }
 
