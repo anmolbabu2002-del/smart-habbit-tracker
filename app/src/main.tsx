@@ -11,6 +11,7 @@ import { migrateFromV1 } from './lib/migrate';
 import { clearOldReminders, syncLock } from './lib/lock';
 import { backgroundDownload } from './lib/proof';
 import { afterHabitsChanged } from './lib/actions';
+import { dailyBackup } from './lib/backup';
 
 async function boot() {
   await restoreIfWiped(['ultradian.v2', 'journalEntries']);
@@ -20,6 +21,7 @@ async function boot() {
   afterHabitsChanged();
   syncLock();
   clearOldReminders();
+  setTimeout(dailyBackup, 8000);
   const idle = (window as unknown as { requestIdleCallback?: (f: () => void) => void }).requestIdleCallback || ((f: () => void) => setTimeout(f, 4000));
   idle(() => backgroundDownload(getState().habits.map(h => h.name)));
 }

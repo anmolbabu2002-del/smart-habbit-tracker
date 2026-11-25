@@ -52,3 +52,6 @@ function notify(type: 'SUCCESS' | 'WARNING' | 'ERROR') {
   if (isNative) native('Haptics', 'notification', { type }).catch(() => {});
   else navigator.vibrate?.(type === 'SUCCESS' ? [12, 60, 24] : [30, 40, 30]);
 }
+
+/** Big media files (meditation sounds) stream from the website instead of bloating the app */
+export const media = (file: string) => (isNative ? `${REMOTE}/media/${file}` : `media/${file}`);

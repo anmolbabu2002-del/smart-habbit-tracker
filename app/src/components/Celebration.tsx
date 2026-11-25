@@ -165,7 +165,7 @@ function Feat({ p }: { p: Extract<Party, { kind: 'feat' }> }) {
   }, []);
   return (
     <div className="party-body">
-      <motion.p className="evolve-kicker" {...rise(0)}>Milestone unlocked</motion.p>
+      <motion.p className="evolve-kicker" {...rise(0)}>{p.kicker || 'Milestone unlocked'}</motion.p>
       <motion.div className="medal" initial={{ scale: 0, rotate: -40 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 13, delay: 0.15 }}>
         <span className="medal-ribbon" />
         <span className="medal-disc"><HabitIcon icon={p.icon} color="orange" size={70} /></span>

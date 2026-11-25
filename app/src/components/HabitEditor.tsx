@@ -7,7 +7,7 @@ import { needsPhoto } from '../lib/proof';
 import { play } from '../lib/sound';
 import { COLORS, type Color, type Habit } from '../lib/types';
 
-const PICKABLE = ICON_IDS.filter(i => i !== 'flag');
+const PICKABLE = ICON_IDS.filter(i => !['flag', 'chat', 'gear'].includes(i));
 
 export function HabitEditor({ open, habit, onClose }: { open: boolean; habit?: Habit | null; onClose: () => void }) {
   const [name, setName] = useState('');

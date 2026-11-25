@@ -48,8 +48,12 @@ export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().to
 let dbp: Promise<IDBDatabase> | null = null;
 function db() {
   if (!dbp) dbp = new Promise((resolve, reject) => {
-    const req = indexedDB.open('ultradian-v2', 1);
-    req.onupgradeneeded = () => req.result.createObjectStore('kv');
+    const req = indexedDB.open('ultradian-v2', 2);
+    req.onupgradeneeded = () => {
+      const names = req.result.objectStoreNames;
+      if (!names.contains('kv')) req.result.createObjectStore('kv');
+      if (!names.contains('blobs')) req.result.createObjectStore('blobs'); // book files, chats
+    };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
@@ -101,4 +105,42 @@ export function makeSlice<T>(key: string, initial: T) {
     reload() { try { const r = localStorage.getItem(key); value = r ? JSON.parse(r) as T : initial; } catch { value = initial; } ls.forEach(f => f()); },
     use(): T { return useSyncExternalStore((f) => { ls.add(f); return () => ls.delete(f); }, () => value); }
   };
+}
+
+/** Binary or structured values (book files, chat history) in the new app's IndexedDB */
+export async function blobGet<T = unknown>(key: string): Promise<T | null> {
+  try {
+    const d = await db();
+    return await new Promise(resolve => {
+      const req = d.transaction('blobs').objectStore('blobs').get(key);
+      req.onsuccess = () => resolve((req.result ?? null) as T | null);
+      req.onerror = () => resolve(null);
+    });
+  } catch { return null; }
+}
+export async function blobSet(key: string, value: unknown) {
+  const d = await db();
+  await new Promise<void>((resolve, reject) => {
+    const tx = d.transaction('blobs', 'readwrite');
+    if (value === null) tx.objectStore('blobs').delete(key); else tx.objectStore('blobs').put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/** Read a value the old app saved with localforage (IndexedDB "UltradianApp" / "appData") */
+export async function legacyGet<T = unknown>(key: string): Promise<T | null> {
+  try {
+    const d = await new Promise<IDBDatabase>((resolve, reject) => {
+      const req = indexedDB.open('UltradianApp');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    if (!d.objectStoreNames.contains('appData')) { d.close(); return null; }
+    return await new Promise(resolve => {
+      const req = d.transaction('appData').objectStore('appData').get(key);
+      req.onsuccess = () => { resolve((req.result ?? null) as T | null); d.close(); };
+      req.onerror = () => { resolve(null); d.close(); };
+    });
+  } catch { return null; }
 }

@@ -286,6 +286,23 @@ const ICONS: Record<string, (p: Pal) => JSX.Element> = {
     <path d="M7 19.5 L15 27.3 L12.5 40 L24 33.7 L35.5 40 L33 27.3 L41 19.5 L31 28 L33 36 L24 30.5 L15 36 L17 28Z" fill={e} opacity=".4" />
     {glint(19, 18)}
   </>,
+  chat: ({ c, e }) => <>
+    <path d="M8 9 H34 C37.3 9 40 11.7 40 15 V28 C40 31.3 37.3 34 34 34 H20 L12 41 V34 H8 C4.7 34 3 31.3 3 28 V15 C3 11.7 4.7 9 8 9Z" fill={c} />
+    <path d="M3 26 V28 C3 31.3 4.7 34 8 34 H12 V41 L20 34 H34 C37.3 34 40 31.3 40 28 V26 C40 29 37 31 34 31 H8 C5 31 3 29 3 26Z" fill={e} opacity=".45" />
+    <circle cx="13" cy="21.5" r="2.8" fill={W} /><circle cx="21.5" cy="21.5" r="2.8" fill={W} /><circle cx="30" cy="21.5" r="2.8" fill={W} />
+    {twinkle(41, 9, 5.5, GOLD)}
+  </>,
+  gear: ({ c, e }) => <>
+    <g transform="translate(24 25)">
+      {Array.from({ length: 8 }, (_, i) => <rect key={i} x="-4.5" y="-20" width="9" height="10" rx="2.5" fill={e} transform={`rotate(${i * 45})`} />)}
+    </g>
+    <g transform="translate(24 23.5)">
+      {Array.from({ length: 8 }, (_, i) => <rect key={i} x="-4.5" y="-20" width="9" height="10" rx="2.5" fill={c} transform={`rotate(${i * 45})`} />)}
+      <circle r="14" fill={c} />
+      <circle r="6" fill={W} />
+    </g>
+    {glint(16, 15)}
+  </>,
   flag: ({ c, e }) => <>
     <path d="M11 6 V43" stroke={K} strokeWidth="3.6" strokeLinecap="round" />
     <path d="M12 8 C20 4 26 12 40 8 V26 C26 30 20 22 12 26Z" fill={c} />
