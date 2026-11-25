@@ -46,7 +46,6 @@ export function App() {
   const go = (t: Tab) => { if (t !== tab) { play('tap'); setTab(t); window.scrollTo({ top: 0 }); } };
 
   if (q.get('screen') === 'icons') return <IconGallery />;
-  if (q.get('screen') === 'run') return <FocusRun />;
 
   return (
     <div className="app">
@@ -54,11 +53,13 @@ export function App() {
         <motion.div key={tab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.16 }}>
           {tab === 'today' && <Today onProve={setProving} onFocus={() => go('focus')} />}
           {tab === 'tasks' && <Tasks />}
-          {(tab === 'focus' || tab === 'more') && <FocusSetup />}
+          {tab === 'focus' && <FocusSetup />}
+          {tab === 'more' && <FocusSetup />}
         </motion.div>
       </AnimatePresence>
       <TabBar active={tab} onChange={go} />
       <AnimatePresence>{proving && <ProofCamera key={proving.id} habit={proving} onClose={() => setProving(null)} />}</AnimatePresence>
+      <AnimatePresence>{s.focus.active && <FocusRun key="run" a={s.focus.active} />}</AnimatePresence>
       <Toasts />
       <CelebrationHost />
       <FxLayer />

@@ -6,6 +6,7 @@ import { play } from '../lib/sound';
 import { haptic } from '../lib/native';
 import { STAGES, stageIndex, lastWeek, nextStage } from '../lib/streak';
 import { getState } from '../lib/store';
+import { toggleTask } from '../lib/actions';
 import { fmtMinutes } from '../lib/dates';
 import { StreakFlame } from './StreakFlame';
 import { HabitIcon } from './HabitIcon';
@@ -146,7 +147,11 @@ function FocusDone({ p }: { p: Extract<Party, { kind: 'focus' }> }) {
       <motion.p className="party-sub" {...rise(0.25)}>{p.label}</motion.p>
       <motion.div className="party-count" {...rise(0.35)}><b>+{n}</b><span>min deep work</span></motion.div>
       <motion.div className="party-badge" {...rise(0.6)}>{fmtMinutes(p.weekMinutes)} this week</motion.div>
-      <motion.button type="button" className="btn big block white" {...rise(0.8)} onClick={() => { play('tap'); nextParty(); }}>Continue</motion.button>
+      {p.taskId ? <>
+        <motion.p className="party-sub" {...rise(0.75)}>Did you finish the task?</motion.p>
+        <motion.button type="button" className="btn big block white" {...rise(0.8)} onClick={() => { nextParty(); toggleTask(p.taskId!, { x: innerWidth / 2, y: innerHeight / 2 }); }}>Yes, it’s done!</motion.button>
+        <motion.button type="button" className="btn block ghost-white" {...rise(0.9)} onClick={() => { play('tap'); nextParty(); }}>Not yet</motion.button>
+      </> : <motion.button type="button" className="btn big block white" {...rise(0.8)} onClick={() => { play('tap'); nextParty(); }}>Continue</motion.button>}
     </div>
   );
 }

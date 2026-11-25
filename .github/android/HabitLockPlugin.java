@@ -69,6 +69,9 @@ public class HabitLockPlugin extends Plugin {
         e.putString("pending", pending.toString());
         e.putString("allHabits", all.toString());
         e.putString("blocked", blocked.toString());
+        // focus sessions with "Lock social apps" on: locked until this time (epoch ms)
+        e.putLong("focusUntil", call.getData().optLong("focusUntil", 0L));
+        e.putString("focusLabel", call.getString("focusLabel", ""));
         e.apply();
         HabitLock.refresh(getContext());
         JSObject r = new JSObject();

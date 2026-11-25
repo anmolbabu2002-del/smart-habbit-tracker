@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react';
 
 export type Party =
   | { kind: 'allDone'; streak: number; prev: number; best: boolean; evolvedTo?: number }
-  | { kind: 'focus'; minutes: number; label: string; icon: string; weekMinutes: number; finished: boolean }
+  | { kind: 'focus'; minutes: number; label: string; icon: string; weekMinutes: number; finished: boolean; taskId?: string }
   | { kind: 'feat'; icon: string; title: string; text: string }
   | { kind: 'evolve'; from: number; to: number };
 

@@ -35,8 +35,10 @@ export function habitLocked(s: State = getState()) {
 /** The end of a focus session that locks apps (epoch ms), or 0 */
 export function focusLockUntil(s: State = getState()) {
   const a = s.focus.active;
-  if (!a || !a.lock || a.pausedAt) return 0;
-  return a.start + a.pausedMs + a.planned * 60000;
+  if (!a || !a.lock) return 0;
+  const end = a.start + a.pausedMs + a.planned * 60000;
+  // Pausing doesn't unlock apps: keep pushing the end back while paused (re-sent every 30 s)
+  return a.pausedAt ? end + (Date.now() - a.pausedAt) + 15 * 60000 : end;
 }
 
 let timer = 0;
