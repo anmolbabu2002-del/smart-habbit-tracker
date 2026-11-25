@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ultradian-v50';
+const CACHE_NAME = 'ultradian-v51';
 
 // ═══ CORE APP SHELL (HTML, CSS, JS) ═══
 const CORE_ASSETS = [
@@ -40,6 +40,7 @@ const FEATURE_ASSETS = [
   './habit-proof-dictionary.js',
   './habit-proof.js',
   './habit-proof.css',
+  './habit-lock.js',
   './habit-proof-text.json',
   './vendor/transformers.min.js',
   './vendor/ort-wasm-simd-threaded.jsep.mjs',

@@ -9130,6 +9130,7 @@ let _habitsLoadedFromForage = false;
             processHabitsNewDay();
             renderHabits();
             if (window.HabitReminders) window.HabitReminders.sync();
+            if (window.HabitLock) window.HabitLock.sync();
         } else if (userHabits.length > 0 && !_habitsLoadedFromForage) {
             await localforage.setItem("userHabits", userHabits);
         }
@@ -9140,8 +9141,9 @@ let _habitsLoadedFromForage = false;
 
 function saveUserHabits() {
     appStorage.setItem("userHabits", JSON.stringify(userHabits));
-    // Reschedule habit reminders so they always match what's left today
+    // Reschedule habit reminders and Habit Lock so they always match what's left today
     if (window.HabitReminders) window.HabitReminders.sync();
+    if (window.HabitLock) window.HabitLock.sync();
     if (typeof localforage !== 'undefined') {
         localforage.setItem("userHabits", userHabits).catch(e =>
             console.warn("[Habits] localForage save failed", e)
