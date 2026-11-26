@@ -60,7 +60,7 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
 
       {s.habits.length > 0 && <section className={'card hero' + (allDone ? ' won' : '')}>
         <div className="hero-top">
-          <Mascot size={58} mood={allDone ? 'cheer' : afterFour && left ? 'focus' : 'happy'} className="bob" />
+          <Mascot size={58} mood={allDone ? 'cheer' : afterFour && left ? 'focus' : 'happy'} />
           <div className="bubble"><b>{title}</b><span>{line}</span></div>
         </div>
         {required.length > 0 && (
