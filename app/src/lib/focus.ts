@@ -45,6 +45,8 @@ export function weekMinutes(s: State = getState()) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(mon, i));
   return days.map(d => ({ day: d, minutes: s.focus.sessions.filter(x => x.day === d).reduce((n, x) => n + x.minutes, 0) }));
 }
+/** Sessions given up this week (Monday to today) */
+export const weekGiveUps = (s: State = getState()) => (s.focus.giveUps || []).filter(g => g.day >= weekOf()).length;
 export const totalMinutes = (s: State = getState()) => s.focus.sessions.reduce((n, x) => n + x.minutes, 0);
 
 export function endFocus(finished: boolean) {
@@ -58,7 +60,12 @@ export function endFocus(finished: boolean) {
     if (d.focus.sessions.length > 3000) d.focus.sessions = d.focus.sessions.slice(-3000);
   });
   syncLock();
-  if (minutes < 1) { play('pop'); return; }
+  // Giving up is counted, and you see it
+  if (!finished) {
+    update(d => { d.focus.giveUps = [...(d.focus.giveUps || []), { day: today(), minutes }].slice(-500); });
+    party({ kind: 'gaveup', minutes, planned: a.planned, week: weekGiveUps() });
+    return;
+  }
 
   const week = weekMinutes().reduce((n, x) => n + x.minutes, 0);
   // A full session on a habit: tick-habits are ticked off; photo habits still need their photo

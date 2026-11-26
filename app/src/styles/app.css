@@ -778,3 +778,6 @@ button.voice-row > span, .voice-pick > span { flex: 1; display: grid; }
 .reflect { position: absolute; bottom: 0; height: 25%; width: 46px; right: calc(10% + 37px); z-index: 1; pointer-events: none; filter: blur(7px);
   background: repeating-linear-gradient(180deg, rgba(255, 246, 216, 0.55) 0 3px, rgba(255, 246, 216, 0.12) 3px 9px); -webkit-mask: linear-gradient(180deg, #000, transparent); mask: linear-gradient(180deg, #000, transparent); animation: shimmer 5s ease-in-out infinite; }
 .reflect.dawn { right: auto; left: 50%; margin-left: -45px; width: 90px; background: repeating-linear-gradient(180deg, rgba(255, 200, 140, 0.6) 0 3px, rgba(255, 200, 140, 0.15) 3px 9px); }
+.party-gaveup { background: radial-gradient(120% 70% at 50% 25%, #8d95a8 0%, #5d6578 55%, #3d4354 100%); }
+.party-gaveup::before { display: none; }
+.giveups { margin: 6px 0 0; color: var(--red-edge); font-weight: 800; font-size: 0.82rem; }

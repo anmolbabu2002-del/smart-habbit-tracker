@@ -23,6 +23,7 @@ export function CelebrationHost() {
           {p.kind === 'focus' && <FocusDone p={p} />}
           {p.kind === 'feat' && <Feat p={p} />}
           {p.kind === 'evolve' && <Evolve from={p.from} to={p.to} onDone={nextParty} />}
+          {p.kind === 'gaveup' && <GaveUp p={p} />}
         </motion.div>
       )}
     </AnimatePresence>
@@ -156,6 +157,21 @@ function FocusDone({ p }: { p: Extract<Party, { kind: 'focus' }> }) {
         <motion.button type="button" className="btn big block white" {...rise(0.8)} onClick={() => { nextParty(); toggleTask(p.taskId!, { x: innerWidth / 2, y: innerHeight / 2 }); }}>Yes, it’s done!</motion.button>
         <motion.button type="button" className="btn block ghost-white" {...rise(0.9)} onClick={() => { play('tap'); nextParty(); }}>Not yet</motion.button>
       </> : <motion.button type="button" className="btn big block white" {...rise(0.8)} onClick={() => { play('tap'); nextParty(); }}>Continue</motion.button>}
+    </div>
+  );
+}
+
+function GaveUp({ p }: { p: Extract<Party, { kind: 'gaveup' }> }) {
+  useEffect(() => { play('error'); haptic.warning(); }, []);
+  const nth = (n: number) => n + (['th', 'st', 'nd', 'rd'][(n % 100 - 20) % 10] || ['th', 'st', 'nd', 'rd'][n % 100] || 'th');
+  return (
+    <div className="party-body">
+      <motion.div {...rise(0)}><Mascot size={84} mood="sleepy" /></motion.div>
+      <motion.h1 {...rise(0.1)}>You gave up</motion.h1>
+      <motion.p className="party-sub" {...rise(0.2)}>After {fmtMinutes(p.minutes)} of {p.planned} minutes.</motion.p>
+      <motion.div className="party-count" {...rise(0.3)}><b>{p.week}</b><span>{p.week === 1 ? 'give-up' : 'give-ups'} this week</span></motion.div>
+      <motion.p className="party-sub" {...rise(0.4)}>{p.week === 1 ? 'Everyone slips once. Next session, go the distance.' : `That’s your ${nth(p.week)} this week. Your future self is watching.`}</motion.p>
+      <motion.button type="button" className="btn big block white" {...rise(0.5)} onClick={() => { play('tap'); nextParty(); }}>I’ll do better</motion.button>
     </div>
   );
 }
