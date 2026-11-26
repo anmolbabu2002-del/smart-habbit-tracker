@@ -81,6 +81,45 @@ public class HabitLockPlugin extends Plugin {
         call.resolve(r);
     }
 
+    /** Screen time of the given apps: today, and the 7 days before (see UsageReport). */
+    @PluginMethod
+    public void usage(PluginCall call) {
+        Context c = getContext();
+        if (!HabitLock.hasUsageAccess(c)) {
+            JSObject r = new JSObject();
+            r.put("access", false);
+            call.resolve(r);
+            return;
+        }
+        JSArray arr = call.getArray("pkgs", new JSArray());
+        java.util.List<String> pkgs = new java.util.ArrayList<>();
+        for (int i = 0; i < arr.length(); i++) {
+            try { pkgs.add(arr.getString(i)); } catch (Exception ignored) { /* skip */ }
+        }
+        new Thread(() -> {
+            try {
+                java.util.Map<String, UsageReport.App> data = UsageReport.read(c, pkgs);
+                JSObject apps = new JSObject();
+                for (java.util.Map.Entry<String, UsageReport.App> en : data.entrySet()) {
+                    UsageReport.App a = en.getValue();
+                    JSObject o = new JSObject();
+                    o.put("today", a.today);
+                    JSArray full = new JSArray(), same = new JSArray();
+                    for (int i = 0; i < UsageReport.PAST; i++) { full.put(a.full[i]); same.put(a.same[i]); }
+                    o.put("full", full);
+                    o.put("same", same);
+                    apps.put(en.getKey(), o);
+                }
+                JSObject r = new JSObject();
+                r.put("access", true);
+                r.put("apps", apps);
+                call.resolve(r);
+            } catch (Exception ex) {
+                call.reject("Couldn't read screen time");
+            }
+        }).start();
+    }
+
     @PluginMethod
     public void openUsageAccessSettings(PluginCall call) {
         Context c = getContext();

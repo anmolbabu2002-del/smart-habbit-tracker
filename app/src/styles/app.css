@@ -963,3 +963,35 @@ button.voice-row > span, .voice-pick > span { flex: 1; display: grid; }
 .why-big { display: block; quotes: '“' '”'; font-style: italic; font-weight: 900; line-height: 1.35; }
 .why-big.on-dark { margin-bottom: 8px; font-size: 1.05rem; color: #fff; }
 .why-big.in-card { width: 100%; margin: 2px 0 6px; padding: 10px 14px; border-radius: 14px; background: var(--orange-soft); color: var(--ink); font-size: 0.98rem; }
+
+/* ── Noto's bubble (tappable when there's screen time to show) ── */
+button.bubble { appearance: none; font: inherit; color: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button.bubble:active { transform: scale(0.985); }
+
+/* ── Screen time sheet ── */
+.us { display: grid; gap: 14px; }
+.us-hero { display: grid; gap: 2px; }
+.us-hero b { font-size: 2rem; font-weight: 900; line-height: 1.1; color: var(--ink); }
+.us-hero span { color: var(--ink-soft); font-weight: 700; }
+.us-hero small { margin-top: 4px; font-weight: 800; font-size: 0.88rem; }
+.us-hero small.up { color: var(--red-edge); }
+.us-hero small.down { color: var(--mint-edge); }
+.us-apps { display: grid; gap: 12px; }
+.us-app { display: grid; grid-template-columns: 84px 1fr auto; grid-template-rows: auto auto; align-items: center; column-gap: 10px; row-gap: 2px; }
+.us-name { font-weight: 800; color: var(--ink); }
+.us-bar { height: 10px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.us-bar i { display: block; height: 100%; border-radius: 99px; background: var(--orange); }
+.us-val { font-weight: 900; color: var(--ink); font-variant-numeric: tabular-nums; min-width: 58px; text-align: right; }
+.us-y { grid-column: 2 / 4; color: var(--ink-faint); font-weight: 700; font-size: 0.78rem; }
+.us-app.none .us-name, .us-app.none .us-val { color: var(--ink-faint); }
+.us-week { display: grid; gap: 8px; }
+.us-readout { font-weight: 700; color: var(--ink-soft); font-size: 0.9rem; }
+.us-readout b { color: var(--ink); font-weight: 900; }
+.us-cols { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; height: 128px; }
+.us-col { appearance: none; border: 0; background: none; padding: 0 4px; display: grid; grid-template-rows: 1fr auto; gap: 6px; cursor: pointer; font: inherit; -webkit-tap-highlight-color: transparent; }
+.us-track { position: relative; display: block; border-bottom: 1px solid var(--line-strong); }
+.us-track i { position: absolute; left: 18%; right: 18%; bottom: 0; border-radius: 4px 4px 0 0; background: var(--orange); opacity: 0.45; transition: opacity 0.15s; }
+.us-col.today .us-track i, .us-col.on .us-track i { opacity: 1; }
+.us-col small { font-size: 0.72rem; font-weight: 800; color: var(--ink-faint); text-align: center; }
+.us-col.on small { color: var(--ink); }
+.us-note { margin: 0; color: var(--ink-soft); font-weight: 700; font-size: 0.9rem; }
