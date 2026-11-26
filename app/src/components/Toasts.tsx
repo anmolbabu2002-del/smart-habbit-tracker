@@ -1,6 +1,6 @@
 import { LockSimple, CheckCircle, Info } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useToasts } from '../lib/celebrate';
+import { useToasts, dismissToast } from '../lib/celebrate';
 
 export function Toasts() {
   const list = useToasts();
@@ -13,6 +13,7 @@ export function Toasts() {
             transition={{ type: 'spring', stiffness: 400, damping: 28 }}>
             {t.tone === 'lock' ? <LockSimple size={20} weight="fill" /> : t.tone === 'good' ? <CheckCircle size={20} weight="fill" /> : <Info size={20} weight="fill" />}
             <span>{t.text}</span>
+            {t.action && <button type="button" className="toast-action" onClick={() => { t.action!.run(); dismissToast(t.id); }}>{t.action.label}</button>}
           </motion.div>
         ))}
       </AnimatePresence>

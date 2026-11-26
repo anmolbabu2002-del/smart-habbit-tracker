@@ -6,7 +6,7 @@ import '@fontsource/nunito/900.css';
 import './styles/theme.css';
 import './styles/app.css';
 import { App } from './App';
-import { restoreIfWiped, getState } from './lib/store';
+import { restoreIfWiped, getState, update } from './lib/store';
 import { migrateFromV1 } from './lib/migrate';
 import { clearOldReminders, syncLock } from './lib/lock';
 import { backgroundDownload } from './lib/proof';
@@ -27,6 +27,8 @@ async function boot() {
   serviceWorker();
   await restoreIfWiped(['ultradian.v2', 'journalEntries']);
   migrateFromV1();
+  // Habit Lock is on by default (switched on once for people who had it off)
+  if (!getState().lockDefaulted) update(d => { d.lock.enabled = true; d.lockDefaulted = true; });
   document.documentElement.dataset.theme = getState().theme;
   createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
   afterHabitsChanged();

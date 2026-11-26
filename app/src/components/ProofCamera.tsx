@@ -11,6 +11,8 @@ import { HabitIcon } from './HabitIcon';
 import type { Habit } from '../lib/types';
 
 type Phase = 'camera' | 'checking' | 'pass' | 'fail' | 'error';
+// A transparent poster: without one, Android shows a big "play" image until the camera starts
+const BLANK = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
 export function ProofCamera({ habit, onClose }: { habit: Habit; onClose: () => void }) {
   const video = useRef<HTMLVideoElement>(null);
@@ -18,6 +20,9 @@ export function ProofCamera({ habit, onClose }: { habit: Habit; onClose: () => v
   const stream = useRef<MediaStream | null>(null);
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
   const [phase, setPhase] = useState<Phase>('camera');
+  const phaseRef = useRef<Phase>('camera');
+  phaseRef.current = phase;
+  const [passOpen, setPassOpen] = useState(false);
   const [result, setResult] = useState<CheckResult | null>(null);
   const [count, setCount] = useState(0);
   const [camError, setCamError] = useState('');
@@ -37,15 +42,19 @@ export function ProofCamera({ habit, onClose }: { habit: Habit; onClose: () => v
     }
   }, [facing]);
 
-  useEffect(() => { if (phase === 'camera') start(); }, [start, phase]);
+  useEffect(() => { if (phase === 'camera') start(); return () => stop(); }, [start, phase]);
+  // Once, when the camera opens (not on every re-render: that used to unload the photo check
+  // and leave the shutter disabled until the camera was switched)
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
     loadVision();
     if (!proof.known && proof.show) textFingerprint('a photo of ' + proof.show).catch(() => {});
-    const off = onBack(() => { onClose(); return true; });
-    const vis = () => { if (document.hidden) stop(); };
+    const off = onBack(() => { closeRef.current(); return true; });
+    const vis = () => { if (document.hidden) stop(); else if (phaseRef.current === 'camera') start(); };
     document.addEventListener('visibilitychange', vis);
     return () => { off(); stop(); document.removeEventListener('visibilitychange', vis); setTimeout(unload, 300); };
-  }, [onClose, proof.known, proof.show]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 10-second self-timer for workouts: prop the phone up and get into position
   useEffect(() => {
@@ -58,26 +67,36 @@ export function ProofCamera({ habit, onClose }: { habit: Habit; onClose: () => v
     return () => clearTimeout(t);
   }); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Three frames about half a second apart: a single blurry or awkward frame no longer fails you
   async function snap() {
     const v = video.current, c = canvas.current;
     if (!v || !c || !stream.current) return;
     play('shutter');
     haptic.medium();
     const w = v.videoWidth || 640, h = v.videoHeight || 480, k = Math.min(1, 640 / Math.max(w, h));
-    c.width = Math.round(w * k); c.height = Math.round(h * k);
-    c.getContext('2d')!.drawImage(v, 0, 0, c.width, c.height);
+    const grab = () => { const f = document.createElement('canvas'); f.width = Math.round(w * k); f.height = Math.round(h * k); f.getContext('2d')!.drawImage(v, 0, 0, f.width, f.height); return f; };
+    const frames = [grab()];
+    for (let i = 0; i < 2; i++) { await new Promise(r => setTimeout(r, 450)); frames.push(grab()); }
+    c.width = frames[1].width; c.height = frames[1].height;
+    c.getContext('2d')!.drawImage(frames[1], 0, 0);
     stop();
     setPhase('checking');
     try {
-      const r = await check(c, habit.name);
-      setResult(r);
-      if (r.pass) {
+      let best: CheckResult | null = null;
+      for (const f of frames) {
+        const r = await check(f, habit.name);
+        if (!best || r.confidence > best.confidence) best = r;
+        if (r.pass) break;
+      }
+      setResult(best);
+      if (best?.pass) {
         setPhase('pass');
+        play('habit');
         setTimeout(() => { onClose(); completeHabit(habit.id, { x: innerWidth / 2, y: innerHeight / 2 }); }, 1100);
       } else { setPhase('fail'); play('error'); haptic.error(); }
     } catch { setPhase('error'); play('error'); }
-    // the photo only lived in this canvas: wipe it
-    c.getContext('2d')!.clearRect(0, 0, c.width, c.height);
+    // the photos only lived in these canvases: wipe them
+    [c, ...frames].forEach(f => f.getContext('2d')!.clearRect(0, 0, f.width, f.height));
   }
 
   const usePass = () => { onClose(); completeHabit(habit.id, { x: innerWidth / 2, y: innerHeight / 2 }, true); };
@@ -95,7 +114,7 @@ export function ProofCamera({ habit, onClose }: { habit: Habit; onClose: () => v
       </header>
 
       <div className="cam-stage">
-        <video ref={video} playsInline muted autoPlay hidden={phase !== 'camera'} style={{ transform: facing === 'user' ? 'scaleX(-1)' : undefined }} />
+        <video ref={video} playsInline muted autoPlay poster={BLANK} hidden={phase !== 'camera'} style={{ transform: facing === 'user' ? 'scaleX(-1)' : undefined }} />
         <canvas ref={canvas} hidden={phase === 'camera'} />
         <AnimatePresence>
           {count > 0 && <motion.span key={count} className="cam-count" initial={{ scale: 1.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }}>{count}</motion.span>}
@@ -122,10 +141,17 @@ export function ProofCamera({ habit, onClose }: { habit: Habit; onClose: () => v
       )}
 
       {phase !== 'pass' && phase !== 'checking' && (
-        <button type="button" className="cam-pass" disabled={!passLeft()} onClick={usePass}>
-          <Ticket size={20} weight="fill" />
-          {passLeft() ? 'Forgot the photo? Use this week’s free pass' : 'Free pass already used this week'}
-        </button>
+        <div className="cam-pass-wrap">
+          <button type="button" className={'cam-pass-ico' + (passOpen ? ' on' : '')} onClick={() => { play('tap'); setPassOpen(o => !o); }} aria-label="Free pass"><Ticket size={20} weight="fill" /></button>
+          <AnimatePresence>
+            {passOpen && (
+              <motion.div className="cam-pass-pop" initial={{ opacity: 0, y: 8, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8 }}>
+                <span>{passLeft() ? 'Forgot to take the photo? You get one free pass a week.' : 'You’ve used this week’s free pass. A new one comes on Monday.'}</span>
+                {passLeft() && <button type="button" className="btn block" onClick={usePass}>Use free pass</button>}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       )}
     </motion.div>
   );

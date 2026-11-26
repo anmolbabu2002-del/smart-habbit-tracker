@@ -2,6 +2,7 @@
 // streak and Habit Lock always stay in step.
 import { getState, update, uid } from './store';
 import { today, weekOf, dueInfo, addDays } from './dates';
+import { nextDue } from './parseTask';
 import { play } from './sound';
 import { haptic } from './native';
 import { burst, party, praise, randomPraise, toast } from './celebrate';
@@ -57,11 +58,13 @@ export function undoHabit(id: string) {
   });
   play('pop');
   haptic.tap();
-  afterHabitsChanged();
+  afterHabitsChanged(true);
 }
 
-/** Recompute today's "all done" state and throw the party once a day */
-export function afterHabitsChanged() {
+/** Recompute today's "all done" state and throw the party once a day.
+ *  undo: a habit was un-ticked, so an earned day can be lost. Otherwise (e.g. a habit was
+ *  added after everything was done) an earned day stays earned. */
+export function afterHabitsChanged(undo = false) {
   const s = getState(), day = today();
   const perfect = s.habits.length > 0 && requiredHabits(s, day).every(h => doneToday(h, day));
   const had = s.perfectDays.includes(day);
@@ -74,10 +77,13 @@ export function afterHabitsChanged() {
     update(d => { d.bestStreak = Math.max(d.bestStreak, streak); d.celebratedDay = day; });
     if (first) {
       const evolvedTo = stageIndex(streak) > stageIndex(prev) ? stageIndex(streak) : undefined;
-      setTimeout(() => party({ kind: 'allDone', streak, prev, best: best && streak > 1, evolvedTo }), 650);
-      if (new Date().getHours() < 12) feat('early-bird', 'sun', 'Early bird', 'Every habit done before noon.');
+      setTimeout(() => {
+        party({ kind: 'allDone', streak, prev, best: best && streak > 1, evolvedTo });
+        const h = new Date().getHours();
+        if (h >= 4 && h < 12) feat('early-bird', 'sun', 'Early bird', 'Every habit done before noon.'); // queued after the party
+      }, 650);
     }
-  } else if (!perfect && had) {
+  } else if (!perfect && had && undo) {
     update(d => { d.perfectDays = d.perfectDays.filter(x => x !== day); });
   }
   syncLock();
@@ -114,21 +120,22 @@ export function lockedToast(what: string) {
 }
 
 // ── Tasks ──
-export function addTask(t: { title: string; note?: string; due?: string }) {
+export function addTask(t: { title: string; note?: string; due?: string; repeat?: Task['repeat'] }) {
   const title = t.title.trim();
   if (!title) return;
-  update(s => { s.tasks.unshift({ id: uid(), title, note: t.note?.trim() || undefined, due: t.due || undefined, createdAt: Date.now() }); });
+  update(s => { s.tasks.unshift({ id: uid(), title, note: t.note?.trim() || undefined, due: t.due || (t.repeat ? today() : undefined), repeat: t.repeat, createdAt: Date.now() }); });
   play('add');
   haptic.tap();
 }
 
-export function editTask(id: string, patch: Partial<Pick<Task, 'title' | 'note' | 'due'>>) {
+export function editTask(id: string, patch: Partial<Pick<Task, 'title' | 'note' | 'due' | 'repeat'>>) {
   update(s => {
     const t = s.tasks.find(x => x.id === id);
     if (!t) return;
     if (patch.title !== undefined) t.title = patch.title.trim() || t.title;
     if ('note' in patch) t.note = patch.note?.trim() || undefined;
     if ('due' in patch) t.due = patch.due || undefined;
+    if ('repeat' in patch) { t.repeat = patch.repeat || undefined; if (t.repeat && !t.due) t.due = today(); }
   });
 }
 
@@ -140,7 +147,17 @@ export function toggleTask(id: string, at?: At) {
     play('pop');
     return;
   }
-  update(s => { const x = s.tasks.find(y => y.id === id)!; x.doneAt = today(); s.tasksDone += 1; });
+  update(s => {
+    const x = s.tasks.find(y => y.id === id)!;
+    x.doneAt = today();
+    s.tasksDone += 1;
+    // A repeating task comes back on its next date
+    if (x.repeat && x.due) {
+      const nextDate = nextDue(x.due, x.repeat);
+      s.tasks.unshift({ id: uid(), title: x.title, note: x.note, due: nextDate, repeat: x.repeat, createdAt: Date.now() });
+      delete x.repeat;
+    }
+  });
   play('check');
   haptic.tap();
   if (at) burst({ ...at, count: 16, power: 0.7, colors: ['#12c79b', '#ffc800', '#1cb0f6'] });
@@ -157,6 +174,15 @@ export function toggleTask(id: string, at?: At) {
 export function deleteTask(id: string) {
   update(s => { s.tasks = s.tasks.filter(t => t.id !== id); });
   play('whoosh');
+}
+
+/** Overdue tasks: move them all to today in one tap */
+export function moveOverdueToToday() {
+  const t0 = today();
+  const n = getState().tasks.filter(t => !t.doneAt && t.due && t.due < t0).length;
+  update(s => { s.tasks.forEach(t => { if (!t.doneAt && t.due && t.due < t0) t.due = t0; }); });
+  play('whoosh');
+  toast(`Moved ${n} ${n === 1 ? 'task' : 'tasks'} to today`, 'good');
 }
 
 export function clearDone() {

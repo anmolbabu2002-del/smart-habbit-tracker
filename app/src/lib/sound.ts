@@ -3,7 +3,7 @@
 
 export type Sfx =
   | 'tap' | 'toggle' | 'add' | 'pop' | 'check' | 'habit' | 'combo' | 'allDone' | 'streak' | 'evolve'
-  | 'focusStart' | 'focusEnd' | 'feat' | 'locked' | 'error' | 'shutter' | 'whoosh' | 'pass' | 'tick';
+  | 'focusStart' | 'focusEnd' | 'feat' | 'locked' | 'error' | 'shutter' | 'whoosh' | 'pass' | 'tick' | 'bowl' | 'breath';
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
@@ -195,6 +195,18 @@ export function play(name: Sfx) {
     case 'locked':
       tone(c, 220, t, 0.12, { type: 'square', vol: 0.09 });
       tone(c, 165, t + 0.14, 0.2, { type: 'square', vol: 0.09 });
+      break;
+    case 'bowl': { // singing bowl: a low tone with slow-beating partials and a long fade
+      const f = 196;
+      [[1, 0.32, 6], [2.76, 0.12, 4.5], [5.4, 0.06, 3], [8.9, 0.025, 2]].forEach(([k, v, d]) => {
+        tone(c, f * k, t, d, { vol: v, attack: 0.02 });
+        tone(c, f * k * 1.004, t, d, { vol: v * 0.6, attack: 0.02 }); // gentle beating
+      });
+      noise(c, t, 0.08, { vol: 0.05, from: 2500, q: 2 });
+      break;
+    }
+    case 'breath': // a soft airy swell for phase changes
+      noise(c, t, 0.9, { vol: 0.025, from: 400, to: 900, q: 0.5, type: 'lowpass' });
       break;
     case 'error':
       tone(c, 300, t, 0.25, { type: 'triangle', vol: 0.2, glideTo: 150 });

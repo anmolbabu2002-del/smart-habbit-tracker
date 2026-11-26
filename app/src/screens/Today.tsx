@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { LockSimple, LockSimpleOpen, Plus, ArrowRight } from '@phosphor-icons/react';
 import { motion } from 'motion/react';
 import { Mascot } from '../components/Mascot';
@@ -10,7 +10,8 @@ import { TaskEditor } from '../components/TaskEditor';
 import { StreakSheet } from '../components/StreakSheet';
 import { useApp } from '../lib/store';
 import { doneToday } from '../lib/actions';
-import { requiredHabits, LOCK_FROM } from '../lib/lock';
+import { requiredHabits, LOCK_FROM, lockStatus, openUsageAccess, openOverlay, type LockStatus } from '../lib/lock';
+import { isNative } from '../lib/native';
 import { stageIndex, streakOf } from '../lib/streak';
 import { dueInfo, longDay, today } from '../lib/dates';
 import { play } from '../lib/sound';
@@ -26,9 +27,8 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
   const required = requiredHabits(s);
   const done = required.filter(h => doneToday(h)).length;
   const left = required.length - done;
-  const allDone = required.length > 0 && left === 0;
+  const allDone = required.length > 0 && (left === 0 || s.perfectDays.includes(day));
   const streak = streakOf(s);
-  const hasOld = s.habits.some(h => h.createdAt < day);
   const afterFour = new Date().getHours() * 60 + new Date().getMinutes() >= LOCK_FROM;
   const lockOn = s.lock.enabled;
 
@@ -55,6 +55,8 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
         </button>
       </header>
 
+      {s.lock.enabled && <PermCard />}
+
       <section className={'card hero' + (allDone ? ' won' : '')}>
         <div className="hero-top">
           <Mascot size={58} mood={allDone ? 'cheer' : afterFour && left ? 'focus' : 'happy'} className="bob" />
@@ -79,7 +81,7 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
       </h2>
       {s.habits.length ? (
         <div className="stack">
-          {s.habits.map(h => <HabitRow key={h.id} h={h} isNew={hasOld && h.createdAt === day && !doneToday(h)} onOpen={() => setEditHabit(h)} onProve={() => onProve(h)} />)}
+          {s.habits.map(h => <HabitRow key={h.id} h={h} onOpen={() => setEditHabit(h)} onProve={() => onProve(h)} />)}
         </div>
       ) : (
         <button type="button" className="card empty" onClick={() => { play('tap'); setEditHabit(null); }}>
@@ -87,14 +89,10 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
         </button>
       )}
 
-      <h2 className="section-title">Due today
-        {dueLeft > 0 ? <small>{dueLeft} left</small> : <button type="button" className="add-mini" onClick={() => { play('tap'); setEditTask(null); }} aria-label="Add task"><Plus size={20} weight="bold" /></button>}
-      </h2>
-      {due.length ? (
+      {due.length > 0 && <>
+        <h2 className="section-title">Due today {dueLeft > 0 && <small>{dueLeft} left</small>}</h2>
         <motion.div layout className="card list">{due.map(t => <TaskRow key={t.id} t={t} onOpen={() => setEditTask(t)} />)}</motion.div>
-      ) : (
-        <button type="button" className="card empty soft" onClick={() => { play('tap'); setEditTask(null); }}>Nothing due today. Add a task</button>
-      )}
+      </>}
 
       <button type="button" className="card focus-cta" onClick={() => { play('tap'); onFocus(); }}>
         <span className="tile"><HabitIcon icon="clock" color="purple" size={30} /></span>
@@ -106,5 +104,27 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
       <TaskEditor open={editTask !== undefined} task={editTask} defaultDue={day} onClose={() => setEditTask(undefined)} />
       <StreakSheet open={streakOpen} onClose={() => setStreakOpen(false)} />
     </main>
+  );
+}
+
+/** Habit Lock (and Focus) need two Android permissions; nag gently until both are allowed */
+function PermCard() {
+  const [st, setSt] = useState<LockStatus | null>(null);
+  useEffect(() => {
+    if (!isNative) return;
+    const check = () => lockStatus().then(setSt);
+    check();
+    const v = () => { if (!document.hidden) check(); };
+    document.addEventListener('visibilitychange', v);
+    return () => document.removeEventListener('visibilitychange', v);
+  }, []);
+  if (!st || (st.usageAccess && st.overlay)) return null;
+  const missing = !st.usageAccess ? 'Usage access' : 'Display over other apps';
+  return (
+    <button type="button" className="card perm-card" onClick={() => { play('tap'); (!st.usageAccess ? openUsageAccess() : openOverlay()).catch(() => {}); }}>
+      <span className="set-ico orange"><LockSimple size={20} weight="fill" /></span>
+      <span><b>Habit Lock can’t lock apps yet</b><small>Tap to allow “{missing}” for Ultradian</small></span>
+      <ArrowRight size={18} weight="bold" />
+    </button>
   );
 }

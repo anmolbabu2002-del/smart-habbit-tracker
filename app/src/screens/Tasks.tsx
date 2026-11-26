@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Plus, CalendarBlank } from '@phosphor-icons/react';
+import { Plus, CalendarBlank, Sparkle, X, ArrowsClockwise } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'motion/react';
 import { TaskRow } from '../components/Rows';
 import { TaskEditor, DuePicker } from '../components/TaskEditor';
 import { Mascot } from '../components/Mascot';
 import { useApp } from '../lib/store';
-import { addTask, clearDone } from '../lib/actions';
+import { addTask, clearDone, moveOverdueToToday } from '../lib/actions';
+import { parseTask, REPEAT_LABEL } from '../lib/parseTask';
 import { addDays, dueInfo, prettyDay, today, type DueGroup } from '../lib/dates';
 import { play } from '../lib/sound';
 import type { Task } from '../lib/types';
@@ -19,6 +20,8 @@ export function Tasks() {
   const [text, setText] = useState('');
   const [due, setDue] = useState<string | undefined>(today());
   const [pickDue, setPickDue] = useState(false);
+  const [ignoreParse, setIgnoreParse] = useState(false);
+  const parsed = ignoreParse ? { title: text } as ReturnType<typeof parseTask> : parseTask(text);
   const [edit, setEdit] = useState<Task | null | undefined>(undefined);
 
   const open = s.tasks.filter(t => !t.doneAt);
@@ -28,7 +31,11 @@ export function Tasks() {
   const done = s.tasks.filter(t => t.doneAt).sort((a, b) => (b.doneAt || '').localeCompare(a.doneAt || ''));
 
   const switchView = (v: View) => { play('toggle'); setView(v); setDue(v === 'upcoming' ? addDays(today(), 1) : today()); };
-  const submit = () => { if (!text.trim()) return; addTask({ title: text, due }); setText(''); };
+  const submit = () => {
+    if (!text.trim()) return;
+    addTask({ title: parsed.title, due: parsed.due || due, repeat: parsed.repeat });
+    setText(''); setIgnoreParse(false);
+  };
 
   const groups: [string, Task[]][] = [];
   const list = view === 'today' ? todayList : view === 'upcoming' ? upcoming : done;
@@ -51,7 +58,7 @@ export function Tasks() {
 
       {view !== 'done' && <>
         <div className="add-row">
-          <input className="add-input" placeholder="Add a task…" value={text} maxLength={120} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') submit(); }} />
+          <input className="add-input" placeholder="Try “Call mom friday”" value={text} maxLength={120} onChange={e => { setText(e.target.value); if (!e.target.value) setIgnoreParse(false); }} onKeyDown={e => { if (e.key === 'Enter') submit(); }} />
           <button type="button" className={'btn round ghost due-btn' + (pickDue ? ' on' : '')} aria-label="Due date" onClick={() => { play('tap'); setPickDue(p => !p); }}>
             <CalendarBlank size={20} weight="bold" />
           </button>
@@ -60,8 +67,14 @@ export function Tasks() {
         <AnimatePresence initial={false}>
           {(pickDue || text) && (
             <motion.div className="quick-due" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
-              {pickDue ? <DuePicker value={due} onChange={v => { setDue(v); setPickDue(false); }} />
-                : <span className="due-hint" onClick={() => setPickDue(true)}>Due: <b>{due ? (dueInfo(due).label === 'Today' ? 'Today' : prettyDay(due)) : 'Anytime'}</b> · change</span>}
+              {pickDue ? <DuePicker value={due} onChange={v => { setDue(v); setIgnoreParse(true); setPickDue(false); }} />
+                : parsed.matched ? (
+                  <span className="parsed-chip"><Sparkle size={14} weight="fill" />
+                    {parsed.due && <b>{dueInfo(parsed.due).label === 'Today' ? 'Today' : prettyDay(parsed.due)}</b>}
+                    {parsed.repeat && <><ArrowsClockwise size={13} weight="bold" /> {REPEAT_LABEL[parsed.repeat]}</>}
+                    <button type="button" onClick={() => setIgnoreParse(true)} aria-label="Ignore the date"><X size={12} weight="bold" /></button>
+                  </span>
+                ) : <span className="due-hint" onClick={() => setPickDue(true)}>Due: <b>{due ? (dueInfo(due).label === 'Today' ? 'Today' : prettyDay(due)) : 'Anytime'}</b> · change</span>}
             </motion.div>
           )}
         </AnimatePresence>
@@ -70,7 +83,9 @@ export function Tasks() {
       {groups.length ? groups.map(([title, ts]) => (
         <section key={title}>
           <h2 className="section-title">{title}
-            {view === 'done' ? <button type="button" className="link" onClick={clearDone}>Clear</button> : <small>{ts.length}</small>}
+            {view === 'done' ? <button type="button" className="link" onClick={clearDone}>Clear</button>
+              : title === 'Overdue' ? <button type="button" className="link" onClick={moveOverdueToToday}>Move all to today</button>
+              : <small>{ts.length}</small>}
           </h2>
           <motion.div layout className="card list">
             <AnimatePresence initial={false}>{ts.map(t => <TaskRow key={t.id} t={t} onOpen={() => setEdit(t)} />)}</AnimatePresence>

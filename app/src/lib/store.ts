@@ -10,7 +10,7 @@ export const fresh = (): State => ({
   v: 2, name: '', theme: 'light', sound: true,
   habits: [], tasks: [], perfectDays: [], bestStreak: 0, celebratedDay: '', passes: {},
   focus: { sessions: [], lastPlanned: 50, lockApps: true },
-  lock: { enabled: false }, feats: [], tasksDone: 0, migrated: false
+  lock: { enabled: true }, feats: [], tasksDone: 0, migrated: false, lockDefaulted: true
 });
 
 function read(): State | null {

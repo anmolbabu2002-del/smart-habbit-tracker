@@ -14,7 +14,7 @@ const Journal = lazy(() => import('./screens/more/Journal').then(m => ({ default
 const Chat = lazy(() => import('./screens/more/Chat').then(m => ({ default: m.Chat })));
 const Meditate = lazy(() => import('./screens/more/Meditate').then(m => ({ default: m.Meditate })));
 const Settings = lazy(() => import('./screens/more/Settings').then(m => ({ default: m.Settings })));
-import { useApp } from './lib/store';
+import { useApp, getState } from './lib/store';
 import { setSoundEnabled, play } from './lib/sound';
 import { onBack } from './lib/back';
 import { onOpenHabits, syncLock } from './lib/lock';
@@ -41,13 +41,16 @@ export function App() {
     const off = onBack(() => { if (tabRef.current !== 'today') { setTab('today'); return true; } return false; });
     // The lock screen's "Do it now" opens Today
     onOpenHabits(() => setTab('today'));
+    // Something asked for a habit's photo proof (e.g. after a focus session)
+    const prove = (e: Event) => { const h = getState().habits.find(x => x.id === (e as CustomEvent).detail); if (h) setProving(h); };
+    window.addEventListener('ultradian:prove', prove);
     // A new day: refresh everything and tell Habit Lock
     let last = today();
     const tick = () => { const d = today(); if (d !== last) { last = d; setDay(d); afterHabitsChanged(); } else syncLock(); };
     const iv = setInterval(tick, 30000);
     const vis = () => { if (!document.hidden) tick(); };
     document.addEventListener('visibilitychange', vis);
-    return () => { off(); clearInterval(iv); document.removeEventListener('visibilitychange', vis); };
+    return () => { off(); clearInterval(iv); document.removeEventListener('visibilitychange', vis); window.removeEventListener('ultradian:prove', prove); };
   }, []);
 
   const go = (t: Tab) => { if (t !== tab) { play('tap'); setTab(t); window.scrollTo({ top: 0 }); } };
