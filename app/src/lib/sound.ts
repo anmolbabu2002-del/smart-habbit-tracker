@@ -3,7 +3,7 @@
 
 export type Sfx =
   | 'tap' | 'toggle' | 'add' | 'pop' | 'check' | 'habit' | 'combo' | 'allDone' | 'streak' | 'evolve'
-  | 'focusStart' | 'focusEnd' | 'feat' | 'locked' | 'error' | 'shutter' | 'whoosh' | 'pass' | 'tick' | 'bowl' | 'breath';
+  | 'focusStart' | 'focusEnd' | 'feat' | 'locked' | 'error' | 'shutter' | 'whoosh' | 'pass' | 'tick' | 'bowl' | 'breath' | 'chimeIn' | 'chimeOut' | 'chimeHold';
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
@@ -207,6 +207,15 @@ export function play(name: Sfx) {
     }
     case 'breath': // a soft airy swell for phase changes
       noise(c, t, 0.9, { vol: 0.025, from: 400, to: 900, q: 0.5, type: 'lowpass' });
+      break;
+    case 'chimeIn': // soft rising pair for "breathe in"
+      bell(c, NOTE(76), t, 1.4, 0.07); bell(c, NOTE(81), t + 0.35, 1.6, 0.07);
+      break;
+    case 'chimeHold':
+      bell(c, NOTE(81), t, 1.2, 0.05);
+      break;
+    case 'chimeOut': // soft falling pair for "breathe out"
+      bell(c, NOTE(81), t, 1.4, 0.07); bell(c, NOTE(74), t + 0.4, 1.8, 0.07);
       break;
     case 'error':
       tone(c, 300, t, 0.25, { type: 'triangle', vol: 0.2, glideTo: 150 });

@@ -1,71 +1,68 @@
-// A calm space: night sky with drifting aurora, twinkling stars and fireflies over a still
-// lake. A glowing orb breathes with you; a singing bowl opens and closes the session.
+// Meditation: a living space with a bloom of light that breathes with you. The screen is the
+// point; the controls stay out of the way (Begin, and one line that opens three choices).
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Play } from '@phosphor-icons/react';
+import { ArrowLeft, X } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'motion/react';
-import { media, haptic } from '../../lib/native';
+import { media, haptic, isNative, native } from '../../lib/native';
 import { play } from '../../lib/sound';
+import { getState } from '../../lib/store';
 import { onBack as onBackKey } from '../../lib/back';
 
-type Phase = { name: string; s: number; scale: number };
-type Sky = { top: string; mid: string; low: string; far: string; near: string; trees: string; water: string; dawn?: boolean };
-const SKIES: Record<string, Sky> = {
-  calm: { top: '#04121f', mid: '#0d3346', low: '#1f5a63', far: '#163c4d', near: '#0d2a37', trees: '#071a23', water: '#0b2633' },
-  relax: { top: '#070818', mid: '#1d1a4a', low: '#3a2c6e', far: '#241f55', near: '#171540', trees: '#0c0b26', water: '#120f33' },
-  focus: { top: '#24304f', mid: '#a0607a', low: '#f4a868', far: '#6b4a6e', near: '#45334f', trees: '#2a2035', water: '#3b2f4a', dawn: true },
-  sleep: { top: '#02040c', mid: '#0b1636', low: '#1b2c5c', far: '#121f45', near: '#0b1633', trees: '#050b1e', water: '#08122a' }
-};
-const MODES: Record<string, { label: string; sub: string; hue: [string, string, string]; phases: Phase[] }> = {
-  calm: { label: 'Calm', sub: '4 in · 2 hold · 6 out', hue: ['#b6f5ea', '#4fd6c3', '#2a8f9e'], phases: [{ name: 'Breathe in', s: 4, scale: 1 }, { name: 'Hold', s: 2, scale: 1 }, { name: 'Breathe out', s: 6, scale: 0.62 }] },
-  relax: { label: 'Relax', sub: '4 in · 7 hold · 8 out', hue: ['#d9ccff', '#9b87f5', '#5b47c4'], phases: [{ name: 'Breathe in', s: 4, scale: 1 }, { name: 'Hold', s: 7, scale: 1 }, { name: 'Breathe out', s: 8, scale: 0.62 }] },
-  focus: { label: 'Focus', sub: 'Box · 4 · 4 · 4 · 4', hue: ['#ffe6b0', '#ffb85c', '#e07b39'], phases: [{ name: 'Breathe in', s: 4, scale: 1 }, { name: 'Hold', s: 4, scale: 1 }, { name: 'Breathe out', s: 4, scale: 0.62 }, { name: 'Hold', s: 4, scale: 0.62 }] },
-  sleep: { label: 'Sleep', sub: '4 in · 8 slow out', hue: ['#c4dcff', '#6f9bff', '#3a55b8'], phases: [{ name: 'Breathe in', s: 4, scale: 1 }, { name: 'Breathe out', s: 8, scale: 0.6 }] }
+type Phase = { name: string; s: number; open: number };
+type Style = { label: string; bg: [string, string, string]; petal: [string, string]; speck: string; phases?: Phase[] };
+const STYLES: Record<string, Style> = {
+  sit: { label: 'Just sit', bg: ['#0b0f2b', '#1b1446', '#0b2a3a'], petal: ['#d9d2ff', '#8f7cf0'], speck: '220,215,255' },
+  calm: { label: 'Calm', bg: ['#04161f', '#0c3a44', '#0a2233'], petal: ['#c9fff2', '#3fd1b6'], speck: '190,255,235', phases: [{ name: 'Breathe in', s: 4, open: 1 }, { name: 'Hold', s: 2, open: 1 }, { name: 'Breathe out', s: 6, open: 0.15 }] },
+  relax: { label: 'Relax', bg: ['#0a0820', '#2a1b52', '#16113a'], petal: ['#f0dcff', '#a36ff0'], speck: '230,210,255', phases: [{ name: 'Breathe in', s: 4, open: 1 }, { name: 'Hold', s: 7, open: 1 }, { name: 'Breathe out', s: 8, open: 0.15 }] },
+  focus: { label: 'Focus', bg: ['#1a0f14', '#4a2230', '#2a1622'], petal: ['#ffe7c4', '#ff9f6b'], speck: '255,225,190', phases: [{ name: 'Breathe in', s: 4, open: 1 }, { name: 'Hold', s: 4, open: 1 }, { name: 'Breathe out', s: 4, open: 0.15 }, { name: 'Hold', s: 4, open: 0.15 }] },
+  sleep: { label: 'Sleep', bg: ['#02040e', '#0c1a3c', '#060c22'], petal: ['#d4e4ff', '#5f8cff'], speck: '200,220,255', phases: [{ name: 'Breathe in', s: 4, open: 1 }, { name: 'Breathe out', s: 8, open: 0.15 }] }
 };
 const SOUNDS = [{ id: 'none', label: 'Silence' }, { id: 'nature.mp3', label: 'Nature' }, { id: 'deepfocus.mp3', label: 'Deep focus' }, { id: 'peaceful.mp4', label: 'Peaceful' }, { id: 'spiritual.mp4', label: 'Spiritual' }];
 const LENGTHS = [3, 5, 10, 15, 20];
-const GUIDE = ['Let your shoulders drop.', 'Notice the air: cool in, warm out.', 'If your mind wanders, gently come back.', 'Soften your jaw and your forehead.', 'Nothing to fix. Just breathe.', 'Feel your feet, heavy and grounded.', 'Each breath a little slower.', 'You are here. That is enough.'];
+type Prefs = { mins: number; style: string; sound: string; bloom: boolean; vibrate: boolean };
+const loadPrefs = (): Prefs => { try { return { mins: 10, style: 'sit', sound: 'none', bloom: true, vibrate: true, ...JSON.parse(localStorage.getItem('medPrefs') || '{}') }; } catch { return { mins: 10, style: 'sit', sound: 'none', bloom: true, vibrate: true }; } };
 type Stats = { sessions: number; minutes: number };
 const getStats = (): Stats => { try { return { sessions: 0, minutes: 0, ...JSON.parse(localStorage.getItem('medStats') || '{}') }; } catch { return { sessions: 0, minutes: 0 }; } };
+const layersFor = (sessions: number) => Math.min(5, 1 + Math.floor(sessions / 3)); // the bloom grows a layer every 3 sessions
+const greeting = () => { const h = new Date().getHours(); return h < 5 ? 'Still awake' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; };
 
 export function Meditate({ onBack }: { onBack: () => void }) {
-  const [mode, setMode] = useState(localStorage.getItem('medMode') || 'calm');
-  const [mins, setMins] = useState(Number(localStorage.getItem('medMins')) || 5);
-  const [sound, setSound] = useState(localStorage.getItem('medSound') || 'none');
-  const [state, setState] = useState<'setup' | 'running' | 'done'>('setup');
+  const [prefs, setPrefs] = useState<Prefs>(loadPrefs);
+  const [state, setState] = useState<'idle' | 'running' | 'done'>('idle');
+  const [sheet, setSheet] = useState(false);
   const [phase, setPhase] = useState(0);
-  const [count, setCount] = useState(0);
-  const [left, setLeft] = useState(mins * 60);
-  const [guide, setGuide] = useState(0);
-  const [chrome, setChrome] = useState(false);
+  const [left, setLeft] = useState(prefs.mins * 60);
+  const [dim, setDim] = useState(false);
   const [stats, setStats] = useState(getStats);
-  const [arrived, setArrived] = useState(false);
-  useEffect(() => { play('breath'); const t = setTimeout(() => setArrived(true), 1800); return () => clearTimeout(t); }, []);
+  const [grew, setGrew] = useState(false);
   const audio = useRef<HTMLAudioElement | null>(null);
   const endAt = useRef(0);
-  const m = MODES[mode] || MODES.calm;
-  const ph = m.phases[phase % m.phases.length];
+  const dimTimer = useRef(0);
+  const st = STYLES[prefs.style] || STYLES.sit;
+  const ph = st.phases?.[phase % st.phases.length];
 
-  useEffect(() => { localStorage.setItem('medMode', mode); localStorage.setItem('medMins', String(mins)); localStorage.setItem('medSound', sound); if (state === 'setup') setLeft(mins * 60); }, [mode, mins, sound, state]);
+  useEffect(() => { localStorage.setItem('medPrefs', JSON.stringify(prefs)); if (state === 'idle') setLeft(prefs.mins * 60); }, [prefs, state]);
+  useEffect(() => { play('breath'); }, []);
+  useEffect(() => onBackKey(() => { if (sheet) { setSheet(false); return true; } if (state === 'running') { stop(); return true; } onBack(); return true; }), [state, sheet]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => { audio.current?.pause(); clearTimeout(dimTimer.current); }, []);
 
-  // breathing: one tick a second through each phase
+  // clock
   useEffect(() => {
     if (state !== 'running') return;
-    const t = setTimeout(() => {
-      if (count + 1 >= ph.s) { setPhase(p => (p + 1) % m.phases.length); setCount(0); haptic.tap(); play('breath'); }
-      else setCount(c => c + 1);
+    const iv = setInterval(() => {
       const l = Math.max(0, Math.round((endAt.current - Date.now()) / 1000));
       setLeft(l);
       if (l <= 0) finish();
-    }, 1000);
-    return () => clearTimeout(t);
-  }); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (state !== 'running') return;
-    const iv = setInterval(() => setGuide(g => g + 1), 22000);
+    }, 500);
     return () => clearInterval(iv);
-  }, [state]);
-  useEffect(() => onBackKey(() => { if (state === 'running') { stop(); return true; } onBack(); return true; }), [state]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => () => { audio.current?.pause(); }, []);
+  }); // eslint-disable-line react-hooks/exhaustive-deps
+  // guided breathing: cues you can feel and hear with your eyes closed
+  useEffect(() => {
+    if (state !== 'running' || !ph) return;
+    cue(ph);
+    const t = setTimeout(() => setPhase(p => p + 1), ph.s * 1000);
+    return () => clearTimeout(t);
+  }, [state, phase]); // eslint-disable-line react-hooks/exhaustive-deps
   // keep the screen on while meditating
   useEffect(() => {
     if (state !== 'running') return;
@@ -74,174 +71,184 @@ export function Meditate({ onBack }: { onBack: () => void }) {
     return () => { l?.release().catch(() => {}); };
   }, [state]);
 
+  function cue(p: Phase) {
+    const kind = p.name === 'Breathe in' ? 'in' : p.name === 'Breathe out' ? 'out' : 'hold';
+    play(kind === 'in' ? 'chimeIn' : kind === 'out' ? 'chimeOut' : 'chimeHold');
+    if (!prefs.vibrate) return;
+    if (kind === 'in') { haptic.tap(); setTimeout(() => haptic.tap(), 160); }
+    else if (kind === 'hold') haptic.tap();
+    else if (isNative) native('Haptics', 'vibrate', { duration: 420 }).catch(() => {});
+    else navigator.vibrate?.(420);
+  }
+  function scheduleDim() { clearTimeout(dimTimer.current); setDim(false); dimTimer.current = window.setTimeout(() => setDim(true), 20000); }
+
   function begin() {
     play('bowl');
-    endAt.current = Date.now() + mins * 60000 + 1000;
-    setPhase(0); setCount(0); setGuide(0); setLeft(mins * 60); setChrome(false);
+    endAt.current = Date.now() + prefs.mins * 60000 + 800;
+    setPhase(0); setLeft(prefs.mins * 60); setGrew(false); setSheet(false);
     setState('running');
-    if (sound !== 'none') {
-      audio.current = new Audio(media(sound));
-      audio.current.loop = true;
-      audio.current.volume = 0;
-      audio.current.play().then(() => { let v = 0; const iv = setInterval(() => { v = Math.min(0.55, v + 0.05); if (audio.current) audio.current.volume = v; if (v >= 0.55) clearInterval(iv); }, 200); }).catch(() => {});
+    scheduleDim();
+    if (prefs.sound !== 'none') {
+      audio.current = new Audio(media(prefs.sound));
+      audio.current.loop = true; audio.current.volume = 0;
+      audio.current.play().then(() => { let v = 0; const iv = setInterval(() => { v = Math.min(0.5, v + 0.04); if (audio.current) audio.current.volume = v; if (v >= 0.5) clearInterval(iv); }, 220); }).catch(() => {});
     }
   }
   function fadeOut() {
     const a = audio.current; audio.current = null;
     if (!a) return;
-    const iv = setInterval(() => { a.volume = Math.max(0, a.volume - 0.05); if (a.volume <= 0) { a.pause(); clearInterval(iv); } }, 120);
+    const iv = setInterval(() => { a.volume = Math.max(0, a.volume - 0.04); if (a.volume <= 0) { a.pause(); clearInterval(iv); } }, 120);
   }
   function finish() {
-    fadeOut();
-    play('bowl');
-    haptic.success();
-    const next = { sessions: stats.sessions + 1, minutes: stats.minutes + mins };
+    fadeOut(); play('bowl'); if (prefs.vibrate) haptic.success();
+    clearTimeout(dimTimer.current); setDim(false);
+    const next = { sessions: stats.sessions + 1, minutes: stats.minutes + prefs.mins };
+    setGrew(layersFor(next.sessions) > layersFor(stats.sessions));
     localStorage.setItem('medStats', JSON.stringify(next));
     setStats(next);
     setState('done');
   }
-  function stop() { fadeOut(); play('pop'); setState('setup'); }
+  function stop() { fadeOut(); clearTimeout(dimTimer.current); setDim(false); play('pop'); setState('idle'); }
 
-  const sky = SKIES[mode] || SKIES.calm;
-  const style = { ['--h1' as string]: m.hue[0], ['--h2' as string]: m.hue[1], ['--h3' as string]: m.hue[2], background: `linear-gradient(180deg, ${sky.top} 0%, ${sky.mid} 48%, ${sky.low} 70%, ${sky.water} 100%)` };
+  // how open the bloom is
+  const open = state === 'done' ? 1 : state === 'running' ? (ph ? ph.open : 0.8) : 0.5;
+  const dur = state === 'running' && ph ? ph.s : 2.5;
+  const name = getState().name;
+  const bg = { ['--b1' as string]: st.bg[0], ['--b2' as string]: st.bg[1], ['--b3' as string]: st.bg[2] };
+
   return (
-    <motion.div className={'zen zen-' + state} style={style} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      onClick={() => { if (state === 'running') setChrome(c => !c); }}>
-      <Sky />
-      {!sky.dawn && <div className="aurora"><i /><i /><i /></div>}
-      {[0, 1, 2].map(i => <i key={i} className={'shoot s' + i} />)}
-      <Landscape sky={sky} />
+    <motion.div className={'medi medi-' + state} style={bg} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.8 }}
+      onClick={() => { if (state === 'running') scheduleDim(); }}>
+      <div className="medi-bg" />
+      <Specks rgb={st.speck} rising={state === 'running' && ph?.name === 'Breathe in'} />
+
+      <header className={'medi-top' + (state === 'running' ? ' quiet' : '')}>
+        <button type="button" className="medi-ic" onClick={e => { e.stopPropagation(); play('tap'); if (state === 'running') stop(); else onBack(); }} aria-label={state === 'running' ? 'End session' : 'Back'}>
+          {state === 'running' ? <X size={20} weight="bold" /> : <ArrowLeft size={20} weight="bold" />}
+        </button>
+      </header>
+
       <AnimatePresence>
-        {!arrived && (
-          <motion.div className="zen-arrive" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.4 }}>
-            <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 1 }}>Welcome. Let the day go.</motion.p>
+        {state === 'idle' && (
+          <motion.div className="medi-greet" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ delay: 0.5, duration: 1.2 }}>
+            <b>{greeting()}{name ? `, ${name}` : ''}</b>
+            {stats.minutes > 0 && <span>{stats.minutes} mindful minutes so far</span>}
           </motion.div>
         )}
       </AnimatePresence>
 
-      <header className={'zen-top' + (state === 'running' && !chrome ? ' hide' : '')}>
-        <button type="button" className="zen-ic" onClick={e => { e.stopPropagation(); play('tap'); if (state === 'running') stop(); else onBack(); }} aria-label="Back"><ArrowLeft size={22} weight="bold" /></button>
-        <span className="zen-stats">{stats.minutes} mindful min · {stats.sessions} sessions</span>
-      </header>
-
-      <div className="orb-wrap">
-        <motion.div className="orb-ring r3" animate={{ scale: state === 'running' ? ph.scale * 1.18 : 0.9, opacity: state === 'running' ? 0.35 : 0.2 }} transition={{ duration: state === 'running' ? ph.s : 1.2, ease: 'easeInOut' }} />
-        <motion.div className="orb-ring r2" animate={{ scale: state === 'running' ? ph.scale * 1.08 : 0.85 }} transition={{ duration: state === 'running' ? ph.s : 1.2, ease: 'easeInOut' }} />
-        <motion.div className="orb" animate={{ scale: state === 'running' ? ph.scale : state === 'done' ? 1 : 0.78 }} transition={{ duration: state === 'running' ? ph.s : 1.2, ease: 'easeInOut' }}>
-          <AnimatePresence mode="wait">
-            <motion.div key={state === 'running' ? ph.name + phase : state} className="orb-text" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.5 }}>
-              {state === 'running' ? <><b>{ph.name}</b><span>{ph.s - count}</span></> : state === 'done' ? <><b>Well done</b><span>{mins} min</span></> : <><b>{m.label}</b><span>{m.sub}</span></>}
-            </motion.div>
-          </AnimatePresence>
-        </motion.div>
+      <div className="medi-center">
+        {prefs.bloom
+          ? <Bloom layers={layersFor(stats.sessions + (state === 'done' && grew ? 0 : 0))} open={open} dur={dur} petal={st.petal} idle={state === 'idle'} still={state === 'running' && !ph} />
+          : <div className={'medi-glow' + (state === 'idle' ? ' idle' : '')} style={{ transform: `scale(${0.7 + open * 0.45})`, transitionDuration: `${dur}s`, background: `radial-gradient(circle, ${st.petal[0]} 0%, ${st.petal[1]}55 45%, transparent 70%)` }} />}
+        <AnimatePresence mode="wait">
+          {state === 'running' && ph && <motion.span key={phase} className="medi-word" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.9 }}>{ph.name}</motion.span>}
+        </AnimatePresence>
       </div>
 
-      <AnimatePresence mode="wait">
-        {state === 'running' && (
-          <motion.p key={guide} className="zen-guide" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.6 }}>
-            {GUIDE[guide % GUIDE.length]}
-          </motion.p>
-        )}
-      </AnimatePresence>
-      {state === 'running' && <span className={'zen-time' + (chrome ? '' : ' dim')}>{String(Math.floor(left / 60)).padStart(2, '0')}:{String(left % 60).padStart(2, '0')}{chrome && ' · tap ← to end'}</span>}
+      {state === 'running' && <span className="medi-time">{String(Math.floor(left / 60)).padStart(2, '0')}:{String(left % 60).padStart(2, '0')}</span>}
 
       <AnimatePresence>
-        {state === 'setup' && arrived && (
-          <motion.div className="glass" initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 28 }} onClick={e => e.stopPropagation()}>
-            <div className="glass-row modes">
-              {Object.entries(MODES).map(([id, x]) => (
-                <button key={id} type="button" className={'zen-mode' + (mode === id ? ' on' : '')} style={{ ['--mc' as string]: x.hue[1] }} onClick={() => { play('toggle'); setMode(id); }}>
-                  <i /><b>{x.label}</b>
-                </button>
-              ))}
-            </div>
-            <div className="glass-row lengths">{LENGTHS.map(l => <button key={l} type="button" className={'zen-chip' + (mins === l ? ' on' : '')} onClick={() => { play('toggle'); setMins(l); }}>{l} min</button>)}</div>
-            <div className="glass-row scroll">{SOUNDS.map(x => <button key={x.id} type="button" className={'zen-chip' + (sound === x.id ? ' on' : '')} onClick={() => { play('toggle'); setSound(x.id); }}>{x.label}</button>)}</div>
-            <button type="button" className="zen-begin" onClick={begin}><Play size={20} weight="fill" /> Begin</button>
+        {state === 'idle' && (
+          <motion.div className="medi-actions" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} transition={{ delay: 0.9, duration: 0.9 }}>
+            <button type="button" className="medi-begin" onClick={begin}>Begin</button>
+            <button type="button" className="medi-line" onClick={() => { play('tap'); setSheet(true); }}>
+              {prefs.mins} min · {st.label} · {SOUNDS.find(x => x.id === prefs.sound)?.label}
+            </button>
           </motion.div>
         )}
         {state === 'done' && (
-          <motion.div className="glass done" initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }} onClick={e => e.stopPropagation()}>
-            <b>{mins} calm minutes</b>
-            <span>{stats.minutes} mindful minutes in total. Carry this calm into your next task.</span>
-            <button type="button" className="zen-begin" onClick={() => { play('tap'); setState('setup'); }}>Done</button>
+          <motion.div className="medi-actions done" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ delay: 0.6, duration: 1 }}>
+            <b>Well done</b>
+            <span>{prefs.mins} calm minutes{grew ? ' · your bloom grew a new layer' : ''}</span>
+            <button type="button" className="medi-begin" onClick={() => { play('tap'); setState('idle'); }}>Done</button>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className={'medi-dim' + (dim ? ' on' : '')} />
+
+      <AnimatePresence>
+        {sheet && (
+          <>
+            <motion.div className="medi-scrim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSheet(false)} />
+            <motion.div className="medi-sheet" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 300, damping: 34 }}>
+              <span className="sheet-handle" />
+              <Row label="Length">{LENGTHS.map(l => <Chip key={l} on={prefs.mins === l} onClick={() => setPrefs({ ...prefs, mins: l })}>{l}</Chip>)}</Row>
+              <Row label="Style">{Object.entries(STYLES).map(([id, x]) => <Chip key={id} on={prefs.style === id} onClick={() => setPrefs({ ...prefs, style: id })}>{x.label}</Chip>)}</Row>
+              <Row label="Sound">{SOUNDS.map(x => <Chip key={x.id} on={prefs.sound === x.id} onClick={() => setPrefs({ ...prefs, sound: x.id })}>{x.label}</Chip>)}</Row>
+              <div className="medi-switches">
+                <button type="button" onClick={() => { play('toggle'); setPrefs({ ...prefs, bloom: !prefs.bloom }); }}>Bloom<span className={'switch' + (prefs.bloom ? ' on' : '')}><i /></span></button>
+                <button type="button" onClick={() => { play('toggle'); setPrefs({ ...prefs, vibrate: !prefs.vibrate }); }}>Vibration<span className={'switch' + (prefs.vibrate ? ' on' : '')}><i /></span></button>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </motion.div>
   );
 }
 
-/** Twinkling stars and slowly rising fireflies on one canvas */
-function Sky() {
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div className="medi-row"><small>{label}</small><div>{children}</div></div>;
+}
+function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+  return <button type="button" className={'medi-chip' + (on ? ' on' : '')} onClick={() => { play('toggle'); onClick(); }}>{children}</button>;
+}
+
+/** A flower of light: layers of translucent petals that open as you breathe in */
+function Bloom({ layers, open, dur, petal, idle, still }: { layers: number; open: number; dur: number; petal: [string, string]; idle: boolean; still: boolean }) {
+  const rings = Array.from({ length: layers }, (_, k) => layers - 1 - k); // outer layers drawn first
+  return (
+    <svg className={'bloom' + (idle ? ' idle' : '') + (still ? ' still' : '')} viewBox="0 0 300 300" aria-hidden="true">
+      <defs>
+        <radialGradient id="bl-p" cx="50%" cy="100%" r="100%"><stop offset="0" stopColor={petal[0]} stopOpacity=".95" /><stop offset=".55" stopColor={petal[1]} stopOpacity=".7" /><stop offset="1" stopColor={petal[1]} stopOpacity=".05" /></radialGradient>
+        <radialGradient id="bl-core"><stop offset="0" stopColor="#fff" /><stop offset=".4" stopColor={petal[0]} /><stop offset="1" stopColor={petal[1]} stopOpacity="0" /></radialGradient>
+        <radialGradient id="bl-halo"><stop offset="0" stopColor={petal[1]} stopOpacity=".45" /><stop offset="1" stopColor={petal[1]} stopOpacity="0" /></radialGradient>
+      </defs>
+      <circle cx="150" cy="150" r="148" fill="url(#bl-halo)" className="bl-halo" style={{ opacity: 0.35 + open * 0.65, transition: `opacity ${dur}s ease-in-out` }} />
+      {rings.map(k => {
+        const n = 6 + 2 * k, L = 64 + k * 17, W = L * 0.44;
+        const d = `M0 0 C ${W} ${-L * 0.35} ${W * 0.8} ${-L * 0.85} 0 ${-L} C ${-W * 0.8} ${-L * 0.85} ${-W} ${-L * 0.35} 0 0 Z`;
+        const sc = 0.32 + 0.68 * open, rot = (1 - open) * (k % 2 ? -24 : 24);
+        return (
+          <g key={k} className="bl-layer" style={{ transform: `rotate(${rot}deg) scale(${sc})`, transition: `transform ${dur}s cubic-bezier(.45,0,.25,1), opacity ${dur}s`, opacity: 0.6 + 0.4 * open - k * 0.05, animationDelay: `${k * 0.4}s` }}>
+            {Array.from({ length: n }, (_, i) => <path key={i} d={d} fill="url(#bl-p)" transform={`translate(150 150) rotate(${(i * 360) / n + (k % 2 ? 180 / n : 0)})`} />)}
+          </g>
+        );
+      })}
+      <circle cx="150" cy="150" r={14 + open * 8} fill="url(#bl-core)" style={{ transition: `r ${dur}s ease-in-out` }} />
+    </svg>
+  );
+}
+
+/** Soft specks of light drifting upward, a little faster as you breathe in */
+function Specks({ rgb, rising }: { rgb: string; rising: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const speed = useRef(1);
+  speed.current = rising ? 2.2 : 1;
   useEffect(() => {
     const cv = ref.current!, ctx = cv.getContext('2d')!;
     const dpr = Math.min(2, devicePixelRatio || 1);
-    let w = 0, h = 0, raf = 0;
+    let w = 0, h = 0, raf = 0, sp = 1;
     const size = () => { w = cv.clientWidth; h = cv.clientHeight; cv.width = w * dpr; cv.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
     size();
-    const stars = Array.from({ length: 130 }, () => ({ x: Math.random(), y: Math.random() * 0.62, r: Math.random() * 1.3 + 0.2, p: Math.random() * 6, s: 0.4 + Math.random() * 1.2 }));
-    const flies = Array.from({ length: 22 }, () => ({ x: Math.random(), y: 0.55 + Math.random() * 0.45, vx: (Math.random() - 0.5) * 0.0003, vy: -0.0002 - Math.random() * 0.0004, p: Math.random() * 6 }));
+    const dots = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random(), r: 0.6 + Math.random() * 1.8, v: 0.00008 + Math.random() * 0.00025, p: Math.random() * 6 }));
     const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const draw = (tm: number) => {
+    const draw = (t: number) => {
+      sp += (speed.current - sp) * 0.02;
       ctx.clearRect(0, 0, w, h);
-      const t = tm / 1000;
-      for (const s of stars) {
-        const a = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * s.s + s.p));
-        ctx.globalAlpha = a; ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(s.x * w, s.y * h, s.r, 0, Math.PI * 2); ctx.fill();
+      for (const d of dots) {
+        if (!still) { d.y -= d.v * sp * 16; d.x += Math.sin(t / 3000 + d.p) * 0.00015; if (d.y < -0.02) { d.y = 1.02; d.x = Math.random(); } }
+        const a = 0.15 + 0.45 * (0.5 + 0.5 * Math.sin(t / 900 + d.p));
+        ctx.fillStyle = `rgba(${rgb},${a})`;
+        ctx.beginPath(); ctx.arc(d.x * w, d.y * h, d.r, 0, Math.PI * 2); ctx.fill();
       }
-      for (const f of flies) {
-        if (!still) { f.x += f.vx + Math.sin(t + f.p) * 0.0002; f.y += f.vy; if (f.y < 0.35) { f.y = 1.02; f.x = Math.random(); } }
-        const a = 0.25 + 0.55 * (0.5 + 0.5 * Math.sin(t * 1.7 + f.p));
-        const g = ctx.createRadialGradient(f.x * w, f.y * h, 0, f.x * w, f.y * h, 7);
-        g.addColorStop(0, `rgba(255,240,180,${a})`); g.addColorStop(1, 'rgba(255,240,180,0)');
-        ctx.globalAlpha = 1; ctx.fillStyle = g;
-        ctx.beginPath(); ctx.arc(f.x * w, f.y * h, 7, 0, Math.PI * 2); ctx.fill();
-      }
-      ctx.globalAlpha = 1;
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
     addEventListener('resize', size);
     return () => { cancelAnimationFrame(raf); removeEventListener('resize', size); };
-  }, []);
-  return <canvas ref={ref} className="zen-sky" aria-hidden="true" />;
-}
-
-/** A row of pine trees along a ridge */
-function pines(y: number, count: number, h: number, seed: number) {
-  let out = '';
-  for (let i = 0; i < count; i++) {
-    const x = (i / count) * 420 - 10 + ((seed * (i + 3)) % 9);
-    const hh = h * (0.7 + (((seed + i) * 37) % 30) / 100);
-    out += `M${x} ${y} L${x + hh * 0.22} ${y - hh * 0.45} L${x + hh * 0.12} ${y - hh * 0.45} L${x + hh * 0.3} ${y - hh * 0.75} L${x + hh * 0.2} ${y - hh * 0.75} L${x + hh * 0.35} ${y - hh} L${x + hh * 0.5} ${y - hh * 0.75} L${x + hh * 0.4} ${y - hh * 0.75} L${x + hh * 0.58} ${y - hh * 0.45} L${x + hh * 0.48} ${y - hh * 0.45} L${x + hh * 0.7} ${y}Z `;
-  }
-  return out;
-}
-
-/** Three mountain ranges with drifting mist, pine forests and a lake reflecting the sky */
-function Landscape({ sky }: { sky: Sky }) {
-  const far = 'M0 112 L35 86 L70 100 L112 62 L160 96 L205 72 L250 98 L300 66 L348 94 L400 78 L400 150 L0 150Z';
-  const mid = 'M0 126 L48 104 L92 118 L146 94 L196 116 L238 102 L290 120 L338 100 L400 116 L400 150 L0 150Z';
-  const near = 'M0 140 C60 128 110 136 170 132 C230 128 290 138 400 130 L400 152 L0 152Z';
-  return (
-    <svg className="zen-land" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-      <defs>
-        <linearGradient id="zl-w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={sky.water} /><stop offset="1" stopColor="#02040a" /></linearGradient>
-        <linearGradient id="zl-moon" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={sky.dawn ? '#ffc890' : '#fff6d8'} stopOpacity=".55" /><stop offset="1" stopColor={sky.dawn ? '#ffc890' : '#fff6d8'} stopOpacity="0" /></linearGradient>
-        <filter id="zl-blur"><feGaussianBlur stdDeviation="6" /></filter>
-      </defs>
-      <path d={far} fill={sky.far} />
-      <ellipse className="mist m1" cx="200" cy="104" rx="240" ry="10" fill="#fff" opacity=".08" filter="url(#zl-blur)" />
-      <path d={mid} fill={sky.near} />
-      <ellipse className="mist m2" cx="160" cy="124" rx="200" ry="8" fill="#fff" opacity=".07" filter="url(#zl-blur)" />
-      <path d={pines(136, 26, 26, 7)} fill={sky.trees} />
-      <path d={near} fill={sky.trees} />
-      <rect x="0" y="150" width="400" height="150" fill="url(#zl-w)" />
-      <g transform="translate(0 300) scale(1 -1)" opacity=".22"><path d={pines(150, 26, 26, 7)} fill={sky.near} /></g>
-      {[175, 205, 240].map((y, i) => <rect key={'w' + y} className="ripple" x={40 + i * 60} y={y} width={70} height="1" rx=".5" fill="#fff" opacity=".06" style={{ animationDelay: `${i * 1.3}s` }} />)}
-    </svg>
-  );
+  }, [rgb]);
+  return <canvas ref={ref} className="medi-specks" aria-hidden="true" />;
 }
