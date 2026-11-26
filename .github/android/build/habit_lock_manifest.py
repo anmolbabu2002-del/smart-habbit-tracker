@@ -1,4 +1,4 @@
-"""Adds what Habit Lock needs to the generated AndroidManifest.xml (run by the Android workflow).
+"""Adds what Habit Lock and background read-aloud need to the generated AndroidManifest.xml (run by the Android workflow).
 
 - PACKAGE_USAGE_STATS: "Usage access" (which app is in front, checked only while the lock is on)
 - SYSTEM_ALERT_WINDOW: "Display over other apps" (the lock screen over a blocked app)
@@ -20,6 +20,9 @@ permissions = '''
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <queries>
         <package android:name="com.instagram.android" />
         <package android:name="com.instagram.lite" />
@@ -30,6 +33,9 @@ permissions = '''
         <package android:name="com.zhiliaoapp.musically" />
         <package android:name="com.ss.android.ugc.trill" />
         <package android:name="com.zhiliaoapp.musically.go" />
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
     </queries>
 '''
 components = '''
@@ -41,6 +47,10 @@ components = '''
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Blocks the user's chosen social media apps until their daily habits are done" />
         </service>
+        <service
+            android:name="com.anmoljha.ultradian.ReadAloudService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
         <receiver
             android:name="com.anmoljha.ultradian.HabitLockReceiver"
             android:exported="false">

@@ -6,7 +6,8 @@ import { classify, SCENES, type Proof } from './proofDictionary';
 
 const MODEL = 'Xenova/clip-vit-base-patch32';
 const LIB_VERSION = '3.8.1';
-const THRESHOLD = 0.5;
+// Measured on real photos (Stanford 40 actions): 90% of genuine photos pass, 2.6% of cheats
+const THRESHOLD = 0.45;
 const MODEL_URL = (f: string) => `https://huggingface.co/${MODEL}/resolve/main/${f}`;
 const VISION_FILES = ['config.json', 'preprocessor_config.json', 'onnx/vision_model_quantized.onnx'];
 const TEXT_FILES = ['tokenizer.json', 'tokenizer_config.json', 'onnx/text_model_quantized.onnx'];
@@ -146,18 +147,21 @@ export async function check(canvas: HTMLCanvasElement, habitName: string): Promi
   const image = await st.lib.RawImage.fromCanvas(canvas);
   const { image_embeds } = await st.vision(await st.processor(image));
   const img = normalize(image_embeds.data);
-  const prompts = ['a photo of ' + proof.show, ...SCENES.map(s => 'a photo of ' + s)];
-  const logits: number[] = [];
-  for (const p of prompts) logits.push(100 * dot(img, await textFingerprint(p)));
+  // The habit scores its best of several descriptions; everyday scenes and cheats compete with it
+  const own: number[] = [];
+  for (const p of proof.prompts || [proof.show!]) own.push(100 * dot(img, await textFingerprint('a photo of ' + p)));
+  const scenes = SCENES.filter(s => !(proof.exclude || []).includes(s));
+  const logits: number[] = [Math.max(...own)];
+  for (const s of scenes) logits.push(100 * dot(img, await textFingerprint('a photo of ' + s)));
   const max = Math.max(...logits), ex = logits.map(l => Math.exp(l - max)), sum = ex.reduce((a, b) => a + b, 0);
   const probs = ex.map(x => x / sum);
   const best = probs.indexOf(Math.max(...probs));
-  return { pass: probs[0] >= THRESHOLD, confidence: probs[0], looksLike: best === 0 ? null : SCENES[best - 1] };
+  return { pass: probs[0] >= THRESHOLD, confidence: probs[0], looksLike: best === 0 ? null : scenes[best - 1] };
 }
 
 /** Soon after launch: download the photo check in the background if any habit needs it */
 export function backgroundDownload(names: string[]) {
-  const photo = names.filter(needsPhoto);
+  const photo = names.filter(needsPhoto); // only photo habits need the AI
   if (!photo.length || !('caches' in window)) return;
   const withText = photo.some(n => !proofOf(n).known);
   prefetch(withText).then(() => localStorage.setItem('photoProofDownloaded', '1')).catch(e => console.warn('Photo check download paused', e));

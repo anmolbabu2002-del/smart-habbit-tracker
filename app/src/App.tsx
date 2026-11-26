@@ -5,6 +5,8 @@ import { FxLayer } from './components/FxLayer';
 import { CelebrationHost } from './components/Celebration';
 import { Toasts } from './components/Toasts';
 import { ProofCamera } from './components/ProofCamera';
+import { VoiceProof } from './components/VoiceProof';
+import { proofOf } from './lib/proof';
 import { Today } from './screens/Today';
 import { Tasks } from './screens/Tasks';
 import { FocusSetup, FocusRun } from './screens/Focus';
@@ -74,7 +76,9 @@ export function App() {
         {page === 'meditate' && <Meditate key="meditate" onBack={closePage} />}
         {page === 'settings' && <Settings key="settings" onBack={closePage} />}
       </AnimatePresence></Suspense>
-      <AnimatePresence>{proving && <ProofCamera key={proving.id} habit={proving} onClose={() => setProving(null)} />}</AnimatePresence>
+      <AnimatePresence>{proving && (proofOf(proving.name).mode === 'voice'
+        ? <VoiceProof key={'v' + proving.id} habit={proving} onClose={() => setProving(null)} />
+        : <ProofCamera key={proving.id} habit={proving} onClose={() => setProving(null)} />)}</AnimatePresence>
       <AnimatePresence>{s.focus.active && <FocusRun key="run" a={s.focus.active} />}</AnimatePresence>
       <Toasts />
       <CelebrationHost />

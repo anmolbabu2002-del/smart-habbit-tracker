@@ -120,7 +120,7 @@ jobs:
             --iconBackgroundColor '#121212' --iconBackgroundColorDark '#121212' \
             --splashBackgroundColor '#121212' --splashBackgroundColorDark '#121212'
 
-      - name: Lock notification icon, exact alarms and camera
+      - name: Lock notification icon, exact alarms, camera and microphone
         run: |
           # Icon for Habit Lock's ongoing notification (drawn in notify-icons/svg)
           cp -r ../notify-icons/android/. android/app/src/main/res/
@@ -133,6 +133,9 @@ jobs:
           # Photo proof for habits uses the app's own camera (Android asks the first time)
           sed -i 's#</manifest>#    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n</manifest>#' "$manifest"
           grep -n "CAMERA\|hardware.camera" "$manifest"
+          # Voice proof for speaking habits listens through the microphone (nothing is recorded)
+          sed -i 's#</manifest>#    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n</manifest>#' "$manifest"
+          grep -n "RECORD_AUDIO" "$manifest"
 
       - name: Sync web files and plugins
         run: npx cap sync android

@@ -67,26 +67,36 @@ export function ProofCamera({ habit, onClose }: { habit: Habit; onClose: () => v
     return () => clearTimeout(t);
   }); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Three frames about half a second apart: a single blurry or awkward frame no longer fails you
   async function snap() {
     const v = video.current, c = canvas.current;
     if (!v || !c || !stream.current) return;
     play('shutter');
     haptic.medium();
     const w = v.videoWidth || 640, h = v.videoHeight || 480, k = Math.min(1, 640 / Math.max(w, h));
-    c.width = Math.round(w * k); c.height = Math.round(h * k);
-    c.getContext('2d')!.drawImage(v, 0, 0, c.width, c.height);
+    const grab = () => { const f = document.createElement('canvas'); f.width = Math.round(w * k); f.height = Math.round(h * k); f.getContext('2d')!.drawImage(v, 0, 0, f.width, f.height); return f; };
+    const frames = [grab()];
+    for (let i = 0; i < 2; i++) { await new Promise(r => setTimeout(r, 450)); frames.push(grab()); }
+    c.width = frames[1].width; c.height = frames[1].height;
+    c.getContext('2d')!.drawImage(frames[1], 0, 0);
     stop();
     setPhase('checking');
     try {
-      const r = await check(c, habit.name);
-      setResult(r);
-      if (r.pass) {
+      let best: CheckResult | null = null;
+      for (const f of frames) {
+        const r = await check(f, habit.name);
+        if (!best || r.confidence > best.confidence) best = r;
+        if (r.pass) break;
+      }
+      setResult(best);
+      if (best?.pass) {
         setPhase('pass');
+        play('habit');
         setTimeout(() => { onClose(); completeHabit(habit.id, { x: innerWidth / 2, y: innerHeight / 2 }); }, 1100);
       } else { setPhase('fail'); play('error'); haptic.error(); }
     } catch { setPhase('error'); play('error'); }
-    // the photo only lived in this canvas: wipe it
-    c.getContext('2d')!.clearRect(0, 0, c.width, c.height);
+    // the photos only lived in these canvases: wipe them
+    [c, ...frames].forEach(f => f.getContext('2d')!.clearRect(0, 0, f.width, f.height));
   }
 
   const usePass = () => { onClose(); completeHabit(habit.id, { x: innerWidth / 2, y: innerHeight / 2 }, true); };
