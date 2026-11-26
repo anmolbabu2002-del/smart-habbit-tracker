@@ -31,6 +31,7 @@ export function completeHabit(id: string, at?: At, viaPass = false) {
   update(s => {
     const x = s.habits.find(y => y.id === id)!;
     x.history.push(day);
+    x.doneAt = Date.now();
     if (viaPass) {
       x.passDays = [...(x.passDays || []), day];
       s.passes[weekOf()] = { habitId: id, day };
@@ -45,8 +46,17 @@ export function completeHabit(id: string, at?: At, viaPass = false) {
   afterHabitsChanged();
 }
 
+/** A tick can be undone only right after it (a mistaken tap), never later in the day */
+export const UNDO_MS = 15000;
 export function undoHabit(id: string) {
   const day = today();
+  const h0 = getState().habits.find(h => h.id === id);
+  if (!h0?.doneAt || Date.now() - h0.doneAt > UNDO_MS) {
+    play('locked');
+    haptic.warning();
+    toast('Done is done. Habits can only be undone right after ticking them.', 'lock');
+    return;
+  }
   update(s => {
     const x = s.habits.find(y => y.id === id);
     if (!x) return;
