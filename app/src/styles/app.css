@@ -34,7 +34,7 @@ h1 { margin: 2px 0 0; font-size: 1.75rem; font-weight: 900; letter-spacing: -0.0
 .tab:active .tab-icon { transform: scale(0.92); }
 
 /* ── Today ── */
-.today-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.today-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .today-head > div { min-width: 0; }
 .today-head > div { min-width: 0; }
 .today-head h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: clamp(1.35rem, 6.2vw, 1.7rem); }
@@ -941,21 +941,23 @@ button.voice-row > span, .voice-pick > span { flex: 1; display: grid; }
 .eh-btn:active { animation: none; }
 @media (prefers-reduced-motion: reduce) { .eh-ring, .eh-sprout, .eh-dot, .eh-btn { animation: none; } }
 
-/* ── Your why ── */
+/* ── Your why: the headline on Today ── */
 .why {
-  position: relative; display: grid; justify-items: start; gap: 5px; width: 100%;
-  margin: -2px 0 14px; padding: 3px 26px 3px 14px; border: 0; background: none;
+  position: relative; display: grid; justify-items: start; gap: 6px; width: 100%;
+  margin: 4px 0 0; padding: 2px 4px 2px 14px; border: 0; background: none;
   font: inherit; color: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 .why::before {
-  content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 4px; border-radius: 99px;
+  content: ''; position: absolute; left: 0; top: 5px; bottom: 5px; width: 4px; border-radius: 99px;
   background: linear-gradient(180deg, var(--orange), var(--yellow));
 }
-.why q { quotes: '“' '”'; font-size: 1.02rem; font-weight: 800; font-style: italic; line-height: 1.35; color: var(--ink); opacity: 0.72; }
-.why.own q { opacity: 1; }
+.why h1 { margin: 0; font-size: clamp(1.2rem, 5.4vw, 1.45rem); font-weight: 900; line-height: 1.25; letter-spacing: -0.01em; color: var(--ink); opacity: 0.72; }
+.today-head .why h1 { white-space: normal; overflow: visible; text-overflow: clip; }
+.why q { quotes: '“' '”'; }
+.why.own h1 { opacity: 1; }
 .why-cta { display: inline-flex; align-items: center; gap: 5px; font-size: 0.8rem; font-weight: 900; color: var(--orange-edge); }
-.why-pen { position: absolute; right: 4px; top: 6px; color: var(--ink-faint); }
-.why:active q { opacity: 0.55; }
+.why-pen { display: inline-block; margin-left: 6px; vertical-align: 0.05em; color: var(--ink-faint); }
+.why:active h1 { opacity: 0.55; }
 .why-help { margin: 0; color: var(--ink-soft); font-weight: 700; font-size: 0.92rem; line-height: 1.4; }
 .why-field { font-style: italic; }
 .why-big { display: block; quotes: '“' '”'; font-style: italic; font-weight: 900; line-height: 1.35; }

@@ -51,15 +51,13 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
       <header className="today-head">
         <div>
           <small className="eyebrow">{longDay()}</small>
-          <h1>Hey {s.name || 'there'}!</h1>
+          <WhyLine />
         </div>
         <button type="button" className={'streak-pill' + (streak ? '' : ' cold')} onClick={() => { play('tap'); setStreakOpen(true); }} aria-label={`${streak} day streak`}>
           <StreakFlame stage={stageIndex(streak)} size={28} />
           <b>{streak}</b>
         </button>
       </header>
-
-      {!allDone && <WhyLine />}
 
       {s.lock.enabled && <PermCard />}
 

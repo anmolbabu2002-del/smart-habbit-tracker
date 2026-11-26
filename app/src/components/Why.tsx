@@ -17,10 +17,8 @@ export function WhyLine() {
     <>
       <button type="button" className={'why' + (own ? ' own' : '')} onClick={() => { play('tap'); setOpen(true); }}
         aria-label={own ? 'Edit your why' : 'Write your why'}>
-        <q>{own ? s.why : WHY_DEFAULT}</q>
-        {own
-          ? <PencilSimple className="why-pen" size={14} weight="bold" />
-          : <span className="why-cta"><PencilSimple size={13} weight="bold" /> Write your why</span>}
+        <h1><q>{own ? s.why : WHY_DEFAULT}</q>{own && <PencilSimple className="why-pen" size={15} weight="bold" />}</h1>
+        {!own && <span className="why-cta"><PencilSimple size={13} weight="bold" /> Write your why</span>}
       </button>
       <WhyEditor open={open} onClose={() => setOpen(false)} />
     </>
