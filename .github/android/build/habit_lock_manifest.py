@@ -60,6 +60,29 @@ components = '''
             </intent-filter>
         </receiver>
 '''
+# Noto's moods on the home screen (AppIcon.java): the launcher entry moves from MainActivity
+# to three aliases of it, one enabled at a time.
+aliases = ''.join(f'''
+        <activity-alias
+            android:name="com.anmoljha.ultradian.{name}"
+            android:targetActivity=".MainActivity"
+            android:enabled="{'true' if name == 'IconNormal' else 'false'}"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:icon="@mipmap/{icon}"
+            android:roundIcon="@mipmap/{icon}_round">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>''' for name, icon in [('IconNormal', 'ic_launcher'), ('IconDone', 'ic_launcher_done'), ('IconRisk', 'ic_launcher_risk')])
+if 'IconNormal' not in xml:
+    launcher = re.compile(r'\s*<intent-filter>\s*<action android:name="android.intent.action.MAIN"\s*/>\s*<category android:name="android.intent.category.LAUNCHER"\s*/>\s*</intent-filter>')
+    xml, n = launcher.subn('', xml, count=1)
+    if n != 1:
+        sys.exit('MainActivity launcher intent-filter not found')
+    xml = re.sub(r'(</activity>)', r'\1' + aliases.replace('\\', '\\\\'), xml, count=1)
+
 if 'HabitLockService' not in xml:
     xml = re.sub(r'(\s*)</application>', components + r'\1</application>', xml, count=1)
     xml = re.sub(r'(\s*)</manifest>', permissions + r'\1</manifest>', xml, count=1)

@@ -144,12 +144,14 @@ final class HabitLock {
         } else if (!active) {
             c.stopService(new Intent(c, HabitLockService.class));
         }
+        AppIcon.sync(c);
         scheduleNext(c);
     }
 
     /**
-     * Wake up at the next moment that matters: the lock time today or tomorrow, or every
-     * 15 minutes while the lock is on (restarts the service if the phone killed it).
+     * Wake up at the next moment that matters: the lock time, just after midnight (Noto's icon
+     * mood changes at both), or every 15 minutes while the lock is on (restarts the service if
+     * the phone killed it).
      */
     static void scheduleNext(Context c) {
         AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
@@ -159,25 +161,34 @@ final class HabitLock {
         PendingIntent pi = PendingIntent.getBroadcast(c, ALARM_REQUEST, i, flags);
         SharedPreferences p = prefs(c);
         boolean focus = focusActive(c);
-        if (!p.getBoolean("enabled", false) && !focus) {
+        boolean hasHabits = p.getInt("habitCount", 0) > 0;
+        if (!p.getBoolean("enabled", false) && !focus && !hasHabits) {
             am.cancel(pi);
             return;
         }
-        long at;
+        long now = System.currentTimeMillis();
+        // the lock time (today or tomorrow): the lock starts and Noto starts crying
+        Calendar cal = Calendar.getInstance();
+        int lockFrom = p.getInt("lockFrom", 16 * 60);
+        cal.set(Calendar.HOUR_OF_DAY, lockFrom / 60);
+        cal.set(Calendar.MINUTE, lockFrom % 60);
+        cal.set(Calendar.SECOND, 5);
+        cal.set(Calendar.MILLISECOND, 0);
+        if (cal.getTimeInMillis() <= now) cal.add(Calendar.DAY_OF_YEAR, 1);
+        long at = cal.getTimeInMillis();
+        // just after midnight: a new day, Noto goes back to normal
+        Calendar midnight = Calendar.getInstance();
+        midnight.add(Calendar.DAY_OF_YEAR, 1);
+        midnight.set(Calendar.HOUR_OF_DAY, 0);
+        midnight.set(Calendar.MINUTE, 0);
+        midnight.set(Calendar.SECOND, 30);
+        midnight.set(Calendar.MILLISECOND, 0);
+        at = Math.min(at, midnight.getTimeInMillis());
         if (focus) {
             // wake right after the session ends (or in 15 minutes, whichever is first)
-            at = Math.min(focusUntil(c) + 1500L, System.currentTimeMillis() + 15 * 60 * 1000L);
+            at = Math.min(at, Math.min(focusUntil(c) + 1500L, now + 15 * 60 * 1000L));
         } else if (habitLockActive(c)) {
-            at = System.currentTimeMillis() + 15 * 60 * 1000L;
-        } else {
-            Calendar cal = Calendar.getInstance();
-            int lockFrom = p.getInt("lockFrom", 16 * 60);
-            cal.set(Calendar.HOUR_OF_DAY, lockFrom / 60);
-            cal.set(Calendar.MINUTE, lockFrom % 60);
-            cal.set(Calendar.SECOND, 5);
-            cal.set(Calendar.MILLISECOND, 0);
-            if (cal.getTimeInMillis() <= System.currentTimeMillis()) cal.add(Calendar.DAY_OF_YEAR, 1);
-            at = cal.getTimeInMillis();
+            at = Math.min(at, now + 15 * 60 * 1000L);
         }
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !am.canScheduleExactAlarms()) {
