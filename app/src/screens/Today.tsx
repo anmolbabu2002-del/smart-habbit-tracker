@@ -5,6 +5,7 @@ import { Mascot } from '../components/Mascot';
 import { HabitRow, TaskRow } from '../components/Rows';
 import { StreakFlame } from '../components/StreakFlame';
 import { HabitIcon } from '../components/HabitIcon';
+import { EmptyHabits } from '../components/EmptyHabits';
 import { HabitEditor } from '../components/HabitEditor';
 import { TaskEditor } from '../components/TaskEditor';
 import { StreakSheet } from '../components/StreakSheet';
@@ -57,7 +58,7 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
 
       {s.lock.enabled && <PermCard />}
 
-      <section className={'card hero' + (allDone ? ' won' : '')}>
+      {s.habits.length > 0 && <section className={'card hero' + (allDone ? ' won' : '')}>
         <div className="hero-top">
           <Mascot size={58} mood={allDone ? 'cheer' : afterFour && left ? 'focus' : 'happy'} className="bob" />
           <div className="bubble"><b>{title}</b><span>{line}</span></div>
@@ -74,7 +75,7 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
             {allDone ? 'Apps unlocked for today' : afterFour ? '5 apps locked until habits are done' : '5 apps lock at 4 PM'}
           </div>
         )}
-      </section>
+      </section>}
 
       <h2 className="section-title">Habits
         <button type="button" className="add-mini" onClick={() => { play('tap'); setEditHabit(null); }} aria-label="Add habit"><Plus size={18} weight="bold" /></button>
@@ -84,9 +85,7 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
           {s.habits.map(h => <HabitRow key={h.id} h={h} onOpen={() => setEditHabit(h)} onProve={() => onProve(h)} />)}
         </div>
       ) : (
-        <button type="button" className="card empty" onClick={() => { play('tap'); setEditHabit(null); }}>
-          <Plus size={22} weight="bold" /> Add your first habit
-        </button>
+        <EmptyHabits onCustom={() => setEditHabit(null)} />
       )}
 
       {due.length > 0 && <>
@@ -94,11 +93,11 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
         <motion.div layout className="card list">{due.map(t => <TaskRow key={t.id} t={t} onOpen={() => setEditTask(t)} />)}</motion.div>
       </>}
 
-      <button type="button" className="card focus-cta" onClick={() => { play('tap'); onFocus(); }}>
+      {dueLeft > 0 && <button type="button" className="card focus-cta" onClick={() => { play('tap'); onFocus(); }}>
         <span className="tile"><HabitIcon icon="clock" color="purple" size={30} /></span>
-        <span><b>Start a focus session</b><small>Pick a task, lock the distractions, go.</small></span>
+        <span><b>Focus on today’s tasks</b><small>{dueLeft} left. Lock the distractions and go.</small></span>
         <span className="go"><ArrowRight size={20} weight="bold" /></span>
-      </button>
+      </button>}
 
       <HabitEditor open={editHabit !== undefined} habit={editHabit} onClose={() => setEditHabit(undefined)} />
       <TaskEditor open={editTask !== undefined} task={editTask} defaultDue={day} onClose={() => setEditTask(undefined)} />

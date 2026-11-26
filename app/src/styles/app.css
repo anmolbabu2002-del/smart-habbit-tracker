@@ -735,3 +735,22 @@ button.voice-row > span, .voice-pick > span { flex: 1; display: grid; }
 .src-chips .chip { flex-shrink: 0; }
 .topic-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 8px; }
 .topic { appearance: none; flex-shrink: 0; cursor: pointer; font: inherit; font-weight: 900; color: var(--ink); padding: 12px 16px; border-radius: 16px; }
+
+/* ── No habits yet ── */
+.empty-hero { position: relative; overflow: hidden; padding: 0 0 14px; display: grid; }
+.eh-scene { width: 100%; height: 170px; display: block; }
+.eh-glow { animation: glow 4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.eh-star { animation: twinkle 3s ease-in-out infinite; }
+@keyframes twinkle { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+.eh-ember { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); }
+.eh-mascot { position: absolute; left: 22px; top: 104px; }
+.eh-text { display: grid; gap: 4px; text-align: center; padding: 12px 18px 0; }
+.eh-text b { font-size: 1.2rem; font-weight: 900; }
+.eh-text span { color: var(--ink-soft); font-weight: 700; font-size: 0.9rem; }
+.eh-mystery { display: flex; justify-content: center; gap: 10px; margin: 12px 0 4px; }
+.eh-mystery span { display: grid; justify-items: center; }
+.eh-mystery small { font-weight: 900; color: var(--ink-faint); font-size: 0.75rem; }
+.eh-ideas { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 10px 14px; }
+.eh-idea { appearance: none; display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px 7px 8px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-weight: 800; font-size: 0.85rem; cursor: pointer; }
+.eh-idea:active { transform: scale(0.95); }
+.empty-hero > .btn { margin: 0 14px; width: auto; }
