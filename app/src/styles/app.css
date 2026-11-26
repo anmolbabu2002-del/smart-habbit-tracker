@@ -730,3 +730,4 @@ button.voice-row > span, .voice-pick > span { flex: 1; display: grid; }
 .voice-pick { appearance: none; border: 0; background: none; flex: 1; display: flex; align-items: center; gap: 10px; text-align: left; font: inherit; color: var(--ink); cursor: pointer; padding: 0; }
 .rd-player { gap: 8px; }
 
+.habit-main { user-select: none; -webkit-touch-callout: none; }

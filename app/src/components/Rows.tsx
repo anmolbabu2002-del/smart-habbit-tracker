@@ -19,12 +19,12 @@ export function HabitRow({ h, onOpen, onProve }: { h: Habit; onOpen: () => void;
   const sub = done ? (viaPass ? 'Free pass used' : 'Done today') : photo ? 'Prove it with a photo' : 'Tap when done';
 
   return (
-    <Swipe actions={[
+    <Swipe holdOnly actions={[
       { label: 'Edit', icon: <PencilSimple size={20} weight="bold" />, tone: 'blue', run: onOpen },
       { label: 'Delete', icon: <Trash size={20} weight="bold" />, tone: 'red', run: () => deleteHabit(h.id) }
     ]}>
     <motion.div layout className={'card habit' + (done ? ' done' : '')} style={{ ['--hc' as string]: `var(--${h.color})` }}>
-      <button type="button" className="habit-main" onClick={() => { play('tap'); onOpen(); }}>
+      <div className="habit-main">
         <span className="habit-tile" style={{ background: `var(--${h.color}-soft)` }}><HabitIcon icon={h.icon} color={h.color} size={30} /></span>
         <span className="habit-text">
           <b>{h.name}</b>
@@ -35,7 +35,7 @@ export function HabitRow({ h, onOpen, onProve }: { h: Habit; onOpen: () => void;
             {streak > 0 && <span className="mini-streak"><StreakFlame stage={2} size={16} still />{streak}</span>}
           </small>
         </span>
-      </button>
+      </div>
       {done ? (
         <motion.button key="done" type="button" className="check-done" aria-label={`Undo ${h.name}`}
           initial={{ scale: 0.3, rotate: -30 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 500, damping: 14 }}

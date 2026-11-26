@@ -5,7 +5,7 @@ import { haptic } from '../lib/native';
 
 export type SwipeAction = { label: string; icon: ReactNode; tone: 'red' | 'blue' | 'mint'; run: () => void };
 
-export function Swipe({ actions, children, className = '', onSwipeRight }: { actions: SwipeAction[]; children: ReactNode; className?: string; onSwipeRight?: () => void }) {
+export function Swipe({ actions, children, className = '', onSwipeRight, holdOnly }: { actions: SwipeAction[]; children: ReactNode; className?: string; onSwipeRight?: () => void; holdOnly?: boolean }) {
   const width = actions.length * 72;
   const ctl = useAnimation();
   const [open, setOpen] = useState(false);
@@ -19,7 +19,7 @@ export function Swipe({ actions, children, className = '', onSwipeRight }: { act
           <button key={a.label} type="button" className={'swipe-btn ' + a.tone} onClick={() => { close(); a.run(); }}>{a.icon}<small>{a.label}</small></button>
         ))}
       </div>
-      <motion.div className="swipe-front" drag="x" dragDirectionLock dragConstraints={{ left: -width, right: onSwipeRight ? 90 : 0 }} dragElastic={0.12} animate={ctl}
+      <motion.div className="swipe-front" drag={holdOnly ? false : 'x'} dragDirectionLock dragConstraints={{ left: -width, right: onSwipeRight ? 90 : 0 }} dragElastic={0.12} animate={ctl}
         onPointerDown={() => { press.current = window.setTimeout(reveal, 550); }}
         onPointerUp={() => clearTimeout(press.current)} onPointerCancel={() => clearTimeout(press.current)}
         onDragStart={() => clearTimeout(press.current)}

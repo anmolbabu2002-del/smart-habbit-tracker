@@ -3,6 +3,7 @@
 import { getState, update, uid } from './store';
 import { today, weekOf, dueInfo, addDays } from './dates';
 import { nextDue } from './parseTask';
+import { proofOf } from './proof';
 import { play } from './sound';
 import { haptic } from './native';
 import { burst, party, praise, randomPraise, toast } from './celebrate';
@@ -104,7 +105,14 @@ export function saveHabit(input: { id?: string; name: string; icon: string; colo
   if (!name) return;
   if (input.id) {
     const old = getState().habits.find(h => h.id === input.id);
-    if (old && old.name !== name && habitLocked()) { lockedToast('Renaming habits'); return; }
+    if (old && old.name !== name) {
+      if (habitLocked()) { lockedToast('Renaming habits'); return; }
+      // No renaming a finished habit into another one, or a photo habit into an easy tick
+      if (doneToday(old)) { play('locked'); haptic.warning(); toast('It’s done for today. You can rename it tomorrow.', 'lock'); return; }
+      if (proofOf(old.name).mode === 'photo' && proofOf(name).mode !== 'photo') {
+        play('locked'); haptic.warning(); toast('A rename can’t turn a photo habit into a tick. Delete it and add a new one instead.', 'lock'); return;
+      }
+    }
     update(s => { const h = s.habits.find(x => x.id === input.id); if (h) Object.assign(h, { name, icon: input.icon, color: input.color }); });
     play('pop');
   } else {
