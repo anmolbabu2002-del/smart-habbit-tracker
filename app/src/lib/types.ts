@@ -9,6 +9,7 @@ export interface Habit {
   createdAt: string;      // ymd
   history: string[];      // days it was done (ymd)
   passDays?: string[];    // days a free pass covered it
+  doneAt?: number;        // when it was last ticked off (undo only shortly after)
 }
 
 export interface Task {
