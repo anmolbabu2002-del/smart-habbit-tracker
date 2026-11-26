@@ -6,6 +6,7 @@ import { HabitRow, TaskRow } from '../components/Rows';
 import { StreakFlame } from '../components/StreakFlame';
 import { HabitIcon } from '../components/HabitIcon';
 import { EmptyHabits } from '../components/EmptyHabits';
+import { HabitCalendar } from '../components/HabitCalendar';
 import { HabitEditor } from '../components/HabitEditor';
 import { TaskEditor } from '../components/TaskEditor';
 import { StreakSheet } from '../components/StreakSheet';
@@ -23,6 +24,7 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
   const [editHabit, setEditHabit] = useState<Habit | null | undefined>(undefined); // undefined = closed, null = new
   const [editTask, setEditTask] = useState<Task | null | undefined>(undefined);
   const [streakOpen, setStreakOpen] = useState(false);
+  const [calHabit, setCalHabit] = useState<Habit | null>(null);
 
   const day = today();
   const required = requiredHabits(s);
@@ -82,7 +84,7 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
       </h2>
       {s.habits.length ? (
         <div className="stack">
-          {s.habits.map(h => <HabitRow key={h.id} h={h} onOpen={() => setEditHabit(h)} onProve={() => onProve(h)} />)}
+          {s.habits.map(h => <HabitRow key={h.id} h={h} onOpen={() => setEditHabit(h)} onProve={() => onProve(h)} onView={() => setCalHabit(h)} />)}
         </div>
       ) : (
         <EmptyHabits onCustom={() => setEditHabit(null)} />
@@ -102,6 +104,7 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
       <HabitEditor open={editHabit !== undefined} habit={editHabit} onClose={() => setEditHabit(undefined)} />
       <TaskEditor open={editTask !== undefined} task={editTask} defaultDue={day} onClose={() => setEditTask(undefined)} />
       <StreakSheet open={streakOpen} onClose={() => setStreakOpen(false)} />
+      <HabitCalendar habit={calHabit} onClose={() => setCalHabit(null)} />
     </main>
   );
 }

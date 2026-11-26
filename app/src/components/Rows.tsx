@@ -10,7 +10,7 @@ import { HabitIcon } from './HabitIcon';
 import { StreakFlame } from './StreakFlame';
 import type { Habit, Task } from '../lib/types';
 
-export function HabitRow({ h, onOpen, onProve }: { h: Habit; onOpen: () => void; onProve: () => void }) {
+export function HabitRow({ h, onOpen, onProve, onView }: { h: Habit; onOpen: () => void; onProve: () => void; onView?: () => void }) {
   const done = doneToday(h);
   const mode = proofOf(h.name).mode;
   const photo = mode === 'photo';
@@ -24,7 +24,7 @@ export function HabitRow({ h, onOpen, onProve }: { h: Habit; onOpen: () => void;
       { label: 'Delete', icon: <Trash size={20} weight="bold" />, tone: 'red', run: () => deleteHabit(h.id) }
     ]}>
     <motion.div layout className={'card habit' + (done ? ' done' : '')} style={{ ['--hc' as string]: `var(--${h.color})` }}>
-      <div className="habit-main">
+      <div className="habit-main" role="button" tabIndex={0} onClick={() => { if (onView) { play('tap'); onView(); } }}>
         <span className="habit-tile" style={{ background: `var(--${h.color}-soft)` }}><HabitIcon icon={h.icon} color={h.color} size={30} /></span>
         <span className="habit-text">
           <b>{h.name}</b>
