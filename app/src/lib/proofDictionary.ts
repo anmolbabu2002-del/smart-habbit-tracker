@@ -3,7 +3,7 @@
 //   'tick'  → a normal tick (things a photo can't show, and "avoid" habits)
 // Ported from habit-proof-dictionary.js (same lists; tools/photo-proof/precompute.mjs reads that file).
 
-export type Proof = { mode: 'photo' | 'tick'; category?: string | null; show?: string; timer?: boolean; known: boolean };
+export type Proof = { mode: 'photo' | 'tick' | 'voice'; category?: string | null; show?: string; timer?: boolean; known: boolean };
 
 // Order matters: the first category whose keywords match wins (specific before general)
 export const CATEGORIES: { id: string; show: string; words: string[]; timer?: boolean }[] = [

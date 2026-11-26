@@ -17,25 +17,24 @@ export const LOCK_APPS = [
 const PLUGIN = 'UltradianHabitLock';
 
 const minutesNow = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
-/** Habits that count today: ones added before today (a habit added today starts counting
- *  tomorrow, so adding one late never breaks the streak or re-locks apps). On the very first
- *  day, when every habit is new, they all count. */
-export function requiredHabits(s: State = getState(), day = today()) {
-  const old = s.habits.filter(h => h.createdAt < day);
-  return old.length ? old : s.habits;
+/** Every habit counts today, including ones added today */
+export function requiredHabits(s: State = getState(), _day = today()) { // eslint-disable-line @typescript-eslint/no-unused-vars
+  return s.habits;
 }
+/** Today is won: every habit done, or it was already won before a new habit was added */
+export const dayWon = (s: State = getState()) => s.perfectDays.includes(today()) || (s.habits.length > 0 && pendingHabits(s).length === 0);
 export const pendingHabits = (s: State = getState()) => requiredHabits(s).filter(h => !h.history.includes(today()));
 const label = (h: { name: string }) => h.name.trim();
 
 /** Habits are holding the apps locked right now */
 export function habitLocked(s: State = getState()) {
-  return isNative && s.lock.enabled && s.habits.length > 0 && minutesNow() >= LOCK_FROM && pendingHabits(s).length > 0;
+  return isNative && s.lock.enabled && s.habits.length > 0 && minutesNow() >= LOCK_FROM && !dayWon(s);
 }
 
 /** The end of a focus session that locks apps (epoch ms), or 0 */
 export function focusLockUntil(s: State = getState()) {
   const a = s.focus.active;
-  if (!a || !a.lock) return 0;
+  if (!a) return 0; // every focus session locks the phone
   const end = a.start + a.pausedMs + a.planned * 60000;
   // Pausing doesn't unlock apps: keep pushing the end back while paused (re-sent every 30 s)
   return a.pausedAt ? end + (Date.now() - a.pausedAt) + 15 * 60000 : end;
@@ -52,12 +51,13 @@ export function syncLock() {
       lockFrom: LOCK_FROM,
       today: today(),
       habitCount: requiredHabits(s).length,
-      done: s.habits.length > 0 && left.length === 0,
+      done: dayWon(s),
       pending: left.map(label),
       allHabits: requiredHabits(s).map(label),
       blocked: LOCK_APPS.flatMap(x => x.pkgs),
       focusUntil: focusLockUntil(s),
-      focusLabel: a ? a.label : ''
+      focusLabel: a ? a.label : '',
+      focusStrict: !!a
     }).catch(e => console.warn('Habit Lock: update failed', e));
   }, 250);
 }

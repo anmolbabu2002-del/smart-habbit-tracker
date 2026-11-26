@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react';
 
 export type Party =
   | { kind: 'allDone'; streak: number; prev: number; best: boolean; evolvedTo?: number }
-  | { kind: 'focus'; minutes: number; label: string; icon: string; weekMinutes: number; finished: boolean; taskId?: string }
+  | { kind: 'focus'; minutes: number; label: string; icon: string; weekMinutes: number; finished: boolean; taskId?: string; proveHabitId?: string }
   | { kind: 'feat'; icon: string; title: string; text: string; kicker?: string }
   | { kind: 'evolve'; from: number; to: number };
 
@@ -35,14 +35,20 @@ export function centerOf(el: Element | null | undefined) {
 const PRAISE = ['Nice!', 'Boom!', 'Crushed it!', 'Yes!', 'Awesome!', 'On fire!', 'Let’s go!', 'Smashed it!', 'Legend!', 'Unstoppable!'];
 export const randomPraise = () => PRAISE[Math.floor(Math.random() * PRAISE.length)];
 
+/** Ask the app to open the photo-proof camera for a habit */
+export const requestProof = (habitId: string) => window.dispatchEvent(new CustomEvent('ultradian:prove', { detail: habitId }));
+
 // ── Toasts ──
-export type Toast = { id: number; text: string; tone?: 'default' | 'lock' | 'good' };
+export type Toast = { id: number; text: string; tone?: 'default' | 'lock' | 'good'; action?: { label: string; run: () => void } };
 let toasts: Toast[] = [];
 const tsubs = new Set<() => void>();
-export function toast(text: string, tone: Toast['tone'] = 'default') {
-  const t = { id: Date.now() + Math.random(), text, tone };
+export function toast(text: string, tone: Toast['tone'] = 'default', action?: Toast['action']) {
+  const t = { id: Date.now() + Math.random(), text, tone, action };
   toasts = [...toasts.slice(-2), t];
   tsubs.forEach(f => f());
-  setTimeout(() => { toasts = toasts.filter(x => x.id !== t.id); tsubs.forEach(f => f()); }, 2800);
+  setTimeout(() => dismissToast(t.id), action ? 4500 : 2800);
+}
+export function dismissToast(id: number) {
+  toasts = toasts.filter(x => x.id !== id); tsubs.forEach(f => f());
 }
 export const useToasts = () => useSyncExternalStore(f => { tsubs.add(f); return () => tsubs.delete(f); }, () => toasts);

@@ -286,6 +286,251 @@ const ICONS: Record<string, (p: Pal) => JSX.Element> = {
     <path d="M7 19.5 L15 27.3 L12.5 40 L24 33.7 L35.5 40 L33 27.3 L41 19.5 L31 28 L33 36 L24 30.5 L15 36 L17 28Z" fill={e} opacity=".4" />
     {glint(19, 18)}
   </>,
+  speech: ({ c, e }) => <>
+    <path d="M7 7 H35 C38.3 7 41 9.7 41 13 V27 C41 30.3 38.3 33 35 33 H19 L11 40 V33 H7 C4.8 33 3 31.2 3 29 V11 C3 8.8 4.8 7 7 7Z" fill={c} />
+    <path d="M3 26 V29 C3 31.2 4.8 33 7 33 H11 V40 L19 33 H35 C38.3 33 41 30.3 41 27 V26 C40 28.5 38 30 35 30 H7 C5 30 3.5 28.5 3 26Z" fill={e} opacity=".45" />
+    <path d="M10 26 L15 13 L20 26 M11.8 21.5 H18.2" stroke={W} strokeWidth="2.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M25 16 H34 M25 21.5 H31" stroke={W} strokeWidth="2.8" strokeLinecap="round" opacity=".85" />
+    {twinkle(42, 40, 4.5, GOLD)}
+  </>,
+  mic: ({ c, e }) => <>
+    <rect x="16" y="4" width="16" height="26" rx="8" fill={c} />
+    <path d="M24 4 C28.4 4 32 7.6 32 12 V22 C32 26.4 28.4 30 24 30Z" fill={e} opacity=".35" />
+    <path d="M19.5 11 H23 M19.5 16 H23 M19.5 21 H23" stroke={W} strokeWidth="2" strokeLinecap="round" opacity=".75" />
+    <path d="M10 22 C10 30 16.3 35.5 24 35.5 C31.7 35.5 38 30 38 22" stroke={K} strokeWidth="3.2" fill="none" strokeLinecap="round" />
+    <path d="M24 35.5 V42 M17 43 H31" stroke={K} strokeWidth="3.2" strokeLinecap="round" />
+  </>,
+  headphones: ({ c, e }) => <>
+    <path d="M8 29 V24 C8 14.6 15.2 7 24 7 C32.8 7 40 14.6 40 24 V29" stroke={e} strokeWidth="4.5" fill="none" strokeLinecap="round" />
+    <rect x="4" y="24" width="11" height="18" rx="5.5" fill={c} />
+    <rect x="33" y="24" width="11" height="18" rx="5.5" fill={c} />
+    {glint(8.5, 29, 1.6)}{glint(37.5, 29, 1.6)}
+  </>,
+  guitar: ({ c, e }) => <>
+    <path d="M24 24 L40 8" stroke="#c98a4b" strokeWidth="4.5" strokeLinecap="round" />
+    <rect x="37" y="2.5" width="8" height="8" rx="2" transform="rotate(45 41 6.5)" fill={K} />
+    <circle cx="16" cy="32" r="11.5" fill={c} />
+    <circle cx="24" cy="24" r="8" fill={c} />
+    <path d="M6 38 C8 43 15 46 21 42 C14 43 9 41 6 38Z" fill={e} opacity=".5" />
+    <circle cx="19.5" cy="28.5" r="3.6" fill={K} />
+    <rect x="9.5" y="34" width="8" height="2.8" rx="1.2" transform="rotate(-45 13.5 35.4)" fill={K} />
+    <path d="M13 35 L40.5 7.5" stroke={W} strokeWidth=".9" opacity=".8" />
+  </>,
+  piano: ({ c, e, s }) => <>
+    <rect x="3" y="11" width="42" height="28" rx="5" fill={c} />
+    <rect x="6" y="19" width="36" height="17" rx="2" fill={W} />
+    {[11.1, 16.3, 21.4, 26.6, 31.7, 36.9].map(x => <path key={x} d={`M${x} 19 V36`} stroke={s} strokeWidth="1.4" />)}
+    {[9.5, 14.7, 24.9, 30.1, 35.3].map(x => <rect key={x} x={x} y="19" width="3.2" height="10" rx="1" fill={K} />)}
+    <rect x="3" y="36" width="42" height="3" rx="1.5" fill={e} opacity=".6" />
+    <circle cx="10" cy="15" r="1.5" fill={W} opacity=".7" /><circle cx="15" cy="15" r="1.5" fill={W} opacity=".7" />
+  </>,
+  laptop: ({ c, e, s }) => <>
+    <rect x="8" y="8" width="32" height="23" rx="3" fill={c} />
+    <rect x="11" y="11" width="26" height="17" rx="1.5" fill={s} />
+    <path d="M15 15.5 H27 M15 19.5 H32 M15 23.5 H23" stroke={c} strokeWidth="2.2" strokeLinecap="round" />
+    <path d="M2 33 H46 L42.5 39 H5.5Z" fill={e} />
+    <rect x="19" y="33" width="10" height="2" rx="1" fill={W} opacity=".6" />
+  </>,
+  calculator: ({ c, e, s }) => <>
+    <rect x="9" y="3" width="30" height="42" rx="6" fill={c} />
+    <rect x="13" y="7" width="22" height="9" rx="2" fill={s} />
+    <path d="M27 11.5 H31" stroke={c} strokeWidth="2" strokeLinecap="round" />
+    {[22, 29.5, 37].map(y => [17, 24, 31].map((x, i) => <rect key={`${x}${y}`} x={x - 2.8} y={y - 2.8} width="5.6" height="5.6" rx="1.6" fill={i === 2 ? e : W} />))}
+  </>,
+  globe: ({ c, e }) => <>
+    <circle cx="24" cy="24" r="19" fill={c} />
+    <path d="M13 11 C18 9 23 12 21 17 C19 21 13 19.5 11.5 24 C9 21 8.5 14.5 13 11Z" fill={LEAF} />
+    <path d="M27 24 C31.5 21.5 37.5 25 36.3 30.5 C35 36 29.5 39.5 27.2 35.8 C25 32.5 29.5 29.5 27 24Z" fill={LEAF} />
+    <path d="M28 8 C32.5 8.5 37 11.5 38 15.5 C33.5 16.5 29 14 28 8Z" fill={LEAF} />
+    <path d="M6 30 C9 38 16 43 24 43 C32 43 38.5 38.5 41.5 31.5 C36 37 27 39 20 37.5 C14 36 9 33.5 6 30Z" fill={e} opacity=".4" />
+    {glint(15, 13, 2.4)}
+  </>,
+  flask: ({ c, e, s }) => <>
+    <path d="M19 6 H29 V17.5 L39.5 36.5 C41.3 39.8 39 43.5 35.2 43.5 H12.8 C9 43.5 6.7 39.8 8.5 36.5 L19 17.5Z" fill={s} />
+    <path d="M13.5 28 H34.5 L39.5 36.5 C41.3 39.8 39 43.5 35.2 43.5 H12.8 C9 43.5 6.7 39.8 8.5 36.5Z" fill={c} />
+    <path d="M19 6 H29 V17.5 L39.5 36.5 C41.3 39.8 39 43.5 35.2 43.5 H12.8 C9 43.5 6.7 39.8 8.5 36.5 L19 17.5Z" fill="none" stroke={e} strokeWidth="2.2" strokeLinejoin="round" />
+    <rect x="16.5" y="3" width="15" height="4.5" rx="2.2" fill={e} />
+    <circle cx="20" cy="35" r="2.2" fill={W} opacity=".85" /><circle cx="27" cy="38.5" r="1.6" fill={W} opacity=".85" /><circle cx="30" cy="32" r="1.2" fill={W} opacity=".85" />
+  </>,
+  chess: ({ c, e }) => <>
+    <path d="M15 37 C15 31 18 28.5 20 26 C17 25.5 14 24 13.5 21 C13 17 16 12 20.5 9.5 L19 4.5 L24.5 8 C31 8 35 13.5 35 20.5 C35 27 32 31 32 37Z" fill={c} />
+    <path d="M28 9.5 C32.5 11.5 35 15.5 35 20.5 C35 27 32 31 32 37 H26 C27.5 30 30.5 25 30.5 19 C30.5 15 29.5 12 28 9.5Z" fill={e} opacity=".4" />
+    <circle cx="22" cy="15" r="2" fill={W} />
+    <rect x="11" y="36" width="26" height="7" rx="3" fill={e} />
+  </>,
+  puzzle: ({ c, e }) => <>
+    <path d="M7 14 H17.5 C16.5 11 17.5 7.5 21.5 7.5 C25.5 7.5 26.5 11 25.5 14 H35 V23.5 C38 22.5 41.5 23.5 41.5 27.5 C41.5 31.5 38 32.5 35 31.5 V41 H25.5 C26.5 38 25.5 34.5 21.5 34.5 C17.5 34.5 16.5 38 17.5 41 H7Z" fill={c} />
+    <path d="M7 36 V41 H17.5 C16.5 38 17.5 34.5 21.5 34.5 C25.5 34.5 26.5 38 25.5 41 H35 V36Z" fill={e} opacity=".45" />
+    {glint(12, 19)}
+  </>,
+  camera: ({ c, e }) => <>
+    <path d="M5 16 C5 13.8 6.8 12 9 12 H15 L18 7 H30 L33 12 H39 C41.2 12 43 13.8 43 16 V36 C43 38.2 41.2 40 39 40 H9 C6.8 40 5 38.2 5 36Z" fill={c} />
+    <path d="M5 33 V36 C5 38.2 6.8 40 9 40 H39 C41.2 40 43 38.2 43 36 V33Z" fill={e} opacity=".45" />
+    <circle cx="24" cy="25.5" r="10" fill={W} />
+    <circle cx="24" cy="25.5" r="7" fill={K} />
+    <circle cx="21.5" cy="23" r="2" fill={W} opacity=".85" />
+    <rect x="34" y="16" width="5" height="3" rx="1.2" fill={W} opacity=".75" />
+  </>,
+  shower: ({ c, s }) => <>
+    <path d="M10 44 V13 C10 8.5 13.5 5 18 5 H21 C25.5 5 29 8.5 29 13 V14" stroke={K} strokeWidth="3.2" fill="none" strokeLinecap="round" />
+    <path d="M20 14 H38 C38 19.5 34 23 29 23 C24 23 20 19.5 20 14Z" fill={c} />
+    {[[23, 29], [29, 31], [35, 28], [26, 38], [32, 39], [38, 36]].map(([x, y]) => <ellipse key={`${x}${y}`} cx={x} cy={y} rx="1.7" ry="2.8" fill={s} />)}
+  </>,
+  alarm: ({ c, e }) => <>
+    <path d="M5 14 C4 8.5 8.5 4.5 14 5.5 L7.5 15.5Z" fill={e} />
+    <path d="M43 14 C44 8.5 39.5 4.5 34 5.5 L40.5 15.5Z" fill={e} />
+    <path d="M14 39 L10.5 43.5 M34 39 L37.5 43.5" stroke={e} strokeWidth="3.2" strokeLinecap="round" />
+    <circle cx="24" cy="26" r="16" fill={c} />
+    <circle cx="24" cy="26" r="12" fill={W} />
+    <path d="M24 18.5 V26 L29.5 29.5" stroke={K} strokeWidth="2.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+  </>,
+  footsteps: ({ c, e }) => <>
+    <ellipse cx="15" cy="32" rx="6" ry="9" transform="rotate(-10 15 32)" fill={c} />
+    {[[9.5, 20.5, 2.2], [13, 18.3, 2], [16.6, 18.4, 1.8], [19.8, 20, 1.6]].map(([x, y, r]) => <circle key={`a${x}`} cx={x} cy={y} r={r} fill={c} />)}
+    <ellipse cx="33" cy="20" rx="6" ry="9" transform="rotate(10 33 20)" fill={e} />
+    {[[27.5, 8.5, 2.2], [31, 6.3, 2], [34.6, 6.4, 1.8], [37.8, 8, 1.6]].map(([x, y, r]) => <circle key={`b${x}`} cx={x} cy={y} r={r} fill={e} />)}
+  </>,
+  mountain: ({ c, e }) => <>
+    <circle cx="38" cy="10" r="4.5" fill={GOLD} />
+    <path d="M2 41 L18 14 L26 27 L32 18 L46 41Z" fill={c} />
+    <path d="M18 14 L30 34 L26 41 H34 L46 41 L32 18 L28 24Z" fill={e} opacity=".35" />
+    <path d="M18 14 L23.5 23 L20.5 21.5 L17.5 24.5 L14.5 20.5Z" fill={W} />
+    <path d="M32 18 L35.8 24.5 L33 23.5 L31 25.5 L29.3 22.3Z" fill={W} />
+  </>,
+  kettlebell: ({ c, e }) => <>
+    <path d="M15.5 19 C13.5 18 12.5 15.5 12.5 13 C12.5 7.5 17.8 4.5 24 4.5 C30.2 4.5 35.5 7.5 35.5 13 C35.5 15.5 34.5 18 32.5 19" stroke={K} strokeWidth="4" fill="none" strokeLinecap="round" />
+    <circle cx="24" cy="30" r="14" fill={c} />
+    <path d="M10.5 33 C12 39 17.5 44 24 44 C30.5 44 36 39 37.5 33 C34 38 29.5 40.5 24 40.5 C18.5 40.5 14 38 10.5 33Z" fill={e} opacity=".45" />
+    <rect x="13" y="41" width="22" height="4" rx="2" fill={e} />
+    {glint(18, 24, 2.4)}
+  </>,
+  bat: ({ c }) => <>
+    <g transform="rotate(38 24 24)">
+      <rect x="19" y="15" width="10" height="30" rx="4" fill="#e8c38a" />
+      <rect x="24" y="15" width="5" height="30" rx="2.5" fill="#c99a5b" opacity=".5" />
+      <rect x="21.5" y="2" width="5" height="14" rx="2" fill={c} />
+    </g>
+    <circle cx="38" cy="38" r="6" fill={NO} />
+    <path d="M34 34.5 C36 37 36 39.5 34 41.5" stroke={W} strokeWidth="1.2" fill="none" opacity=".8" />
+  </>,
+  racket: ({ c, e, s }) => <>
+    <path d="M27 27 L41 41" stroke={e} strokeWidth="5.5" strokeLinecap="round" />
+    <ellipse cx="19" cy="19" rx="12" ry="14" transform="rotate(-45 19 19)" fill={s} opacity=".6" />
+    <path d="M9 19 H29 M10.5 13 H27.5 M10.5 25 H27.5 M19 9 V29 M13 10.5 V27.5 M25 10.5 V27.5" stroke={c} strokeWidth="1" opacity=".6" />
+    <ellipse cx="19" cy="19" rx="12" ry="14" transform="rotate(-45 19 19)" fill="none" stroke={c} strokeWidth="3.5" />
+  </>,
+  salad: ({ c, e }) => <>
+    <circle cx="15" cy="21" r="6.5" fill={LEAF} /><circle cx="24" cy="17.5" r="7.5" fill={LEAF2} /><circle cx="33" cy="21" r="6.5" fill={LEAF} />
+    <circle cx="20" cy="21" r="3" fill={NO} /><circle cx="29" cy="21.5" r="2.7" fill={GOLD} />
+    <path d="M5 25 H43 C43 35 35 43 24 43 C13 43 5 35 5 25Z" fill={c} />
+    <path d="M7 31 C9.5 38 16 43 24 43 C32 43 38.5 38 41 31 C36 36 30.5 38.5 24 38.5 C17.5 38.5 12 36 7 31Z" fill={e} opacity=".45" />
+    <rect x="3" y="23" width="42" height="4" rx="2" fill={e} />
+  </>,
+  tea: ({ c, e }) => <>
+    <path d="M14 13 C12 10 16 9 14 5 M21 13 C19 10 23 9 21 5" fill="none" stroke={e} strokeWidth="2.2" strokeLinecap="round" opacity=".5" />
+    <path d="M34 22 H37 C40 22 42 24.2 42 27 C42 29.8 40 32 37 32 H33" stroke={c} strokeWidth="3.6" fill="none" />
+    <path d="M7 17 H35 V30 C35 37.2 29.2 42 21 42 C12.8 42 7 37.2 7 30Z" fill={c} />
+    <path d="M7 30 C7 37.2 12.8 42 21 42 C29.2 42 35 37.2 35 30 V28 C33 34 28 37.5 21 37.5 C14 37.5 9 34 7 28Z" fill={e} opacity=".45" />
+    <path d="M28 17 V11" stroke={K} strokeWidth="1.4" /><rect x="25" y="7" width="6" height="5" rx="1" fill={GOLD} />
+    <ellipse cx="21" cy="44" rx="16" ry="2.5" fill={e} opacity=".5" />
+  </>,
+  nocaffeine: ({ c, e }) => <>
+    <path d="M34 20 H37 C40 20 42 22.2 42 25 C42 27.8 40 30 37 30 H33" stroke={c} strokeWidth="3.6" fill="none" />
+    <path d="M7 15 H35 V28 C35 35.2 29.2 40 21 40 C12.8 40 7 35.2 7 28Z" fill={c} />
+    <ellipse cx="21" cy="16" rx="13" ry="2.5" fill={e} />
+    {slash}
+  </>,
+  nocig: ({ c }) => <>
+    <path d="M36 22 C34 18 38 16 36 11 M41 22 C39 18 43 16 41 11" fill="none" stroke="#9aa0ad" strokeWidth="2" strokeLinecap="round" />
+    <rect x="4" y="26" width="34" height="8" rx="2" fill={W} stroke={c} strokeWidth="1.6" />
+    <rect x="4" y="26" width="10" height="8" rx="2" fill={GOLD} />
+    <rect x="37" y="26" width="6" height="8" rx="2" fill={NO} />
+    {slash}
+  </>,
+  noalcohol: ({ c, e }) => <>
+    <path d="M14 5 H34 C34 16 30.5 23 24 23 C17.5 23 14 16 14 5Z" fill={c} />
+    <path d="M14.4 11 H33.6 C33 18 29.5 23 24 23 C18.5 23 15 18 14.4 11Z" fill={e} opacity=".5" />
+    <path d="M24 23 V37" stroke={K} strokeWidth="3" />
+    <path d="M15 39 H33" stroke={K} strokeWidth="3.6" strokeLinecap="round" />
+    {slash}
+  </>,
+  nojunk: () => <>
+    <path d="M8 22 C8 13 15 8 24 8 C33 8 40 13 40 22Z" fill={GOLD} />
+    <circle cx="18" cy="14" r="1.1" fill={W} /><circle cx="25" cy="12" r="1.1" fill={W} /><circle cx="31" cy="15" r="1.1" fill={W} />
+    <path d="M7 23 H41 L38.5 27 L35 24.5 L31.5 27 L28 24.5 L24.5 27 L21 24.5 L17.5 27 L14 24.5 L10.5 27Z" fill={LEAF} />
+    <rect x="7" y="26" width="34" height="6.5" rx="3.2" fill="#8b5a2b" />
+    <path d="M8 33.5 H40 V35 C40 38 38 40 35 40 H13 C10 40 8 38 8 35Z" fill={GOLD} />
+    {slash}
+  </>,
+  smile: ({ c, e }) => <>
+    <circle cx="24" cy="24" r="19" fill={c} />
+    <path d="M6 30 C9 38 16 43 24 43 C32 43 39 38 42 30 C37 36 31 39 24 39 C17 39 11 36 6 30Z" fill={e} opacity=".4" />
+    <ellipse cx="17.5" cy="20" rx="2.6" ry="3.6" fill={K} /><ellipse cx="30.5" cy="20" rx="2.6" ry="3.6" fill={K} />
+    <path d="M15 27.5 C18 33.5 30 33.5 33 27.5" stroke={K} strokeWidth="3" fill="none" strokeLinecap="round" />
+    <ellipse cx="12.5" cy="27" rx="3" ry="2" fill="#ff9fb3" opacity=".8" /><ellipse cx="35.5" cy="27" rx="3" ry="2" fill="#ff9fb3" opacity=".8" />
+    {glint(14, 12)}
+  </>,
+  home: ({ c, e }) => <>
+    <path d="M7 22 L24 8 L41 22 V39 C41 40.7 39.7 42 38 42 H10 C8.3 42 7 40.7 7 39Z" fill={c} />
+    <path d="M3.5 23 L24 6 L44.5 23" stroke={e} strokeWidth="4.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    <rect x="19" y="28" width="10" height="14" rx="2" fill={W} />
+    <path d="M24 22.5 C22 20 18.5 21 18.5 23.5 C18.5 25.5 21 27 24 28.5 C27 27 29.5 25.5 29.5 23.5 C29.5 21 26 20 24 22.5Z" fill={W} transform="translate(0 -6) scale(1)" />
+  </>,
+  calendar: ({ c, e, s }) => <>
+    <rect x="5" y="10" width="38" height="33" rx="6" fill={e} />
+    <rect x="5" y="8" width="38" height="33" rx="6" fill={W} />
+    <path d="M5 14 C5 10.7 7.7 8 11 8 H37 C40.3 8 43 10.7 43 14 V18 H5Z" fill={c} />
+    <rect x="13" y="4" width="4.5" height="9" rx="2.2" fill={K} /><rect x="30.5" y="4" width="4.5" height="9" rx="2.2" fill={K} />
+    {[[12, 24], [20, 24], [28, 24], [36, 24], [12, 32], [20, 32]].map(([x, y]) => <rect key={`${x}${y}`} x={x - 2.8} y={y - 2.6} width="5.6" height="5.2" rx="1.5" fill={s} />)}
+    <rect x="25.2" y="29.4" width="5.6" height="5.2" rx="1.5" fill={c} />
+    <path d="M34 31 L36 33.5 L40 28.5" stroke={LEAF} strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+  </>,
+  piggy: ({ c, e }) => <>
+    <circle cx="24" cy="8.5" r="4.5" fill={GOLD} />
+    <path d="M17 18 L20 11 L25 17Z" fill={e} />
+    <rect x="13" y="34" width="5.5" height="9" rx="2.5" fill={e} /><rect x="28" y="34" width="5.5" height="9" rx="2.5" fill={e} />
+    <ellipse cx="23" cy="28" rx="16" ry="12" fill={c} />
+    <path d="M7 27 C4 26 3.5 23 5.5 22" stroke={c} strokeWidth="2.2" fill="none" strokeLinecap="round" />
+    <ellipse cx="38.5" cy="27" rx="4.5" ry="5" fill={e} />
+    <circle cx="37.5" cy="26" r="1" fill={K} opacity=".6" /><circle cx="40" cy="26" r="1" fill={K} opacity=".6" />
+    <circle cx="31" cy="23" r="1.7" fill={K} />
+    <rect x="18" y="18" width="10" height="2.6" rx="1.3" fill={K} opacity=".55" />
+  </>,
+  leaf: ({ c, e }) => <>
+    <path d="M9 39 C7 22 18 8 41 6 C42 28 31 41 9 39Z" fill={c} />
+    <path d="M9 39 C20 39.5 31 34 37 20 C33 30 22 36 9 39Z" fill={e} opacity=".4" />
+    <path d="M9 39 C17 31 25 23 35 13" stroke={W} strokeWidth="2.4" fill="none" strokeLinecap="round" opacity=".7" />
+    <path d="M9 39 L5 43" stroke={e} strokeWidth="3" strokeLinecap="round" />
+  </>,
+  sunrise: ({ c, e }) => <>
+    {[180, 225, 270, 315, 360].map(a => { const r = (a * Math.PI) / 180; return <path key={a} d={`M${24 + Math.cos(r) * 15} ${31 + Math.sin(r) * 15} L${24 + Math.cos(r) * 20} ${31 + Math.sin(r) * 20}`} stroke={c} strokeWidth="3.6" strokeLinecap="round" />; })}
+    <path d="M12 31 A12 12 0 0 1 36 31Z" fill={c} />
+    <path d="M4 32 H44" stroke={e} strokeWidth="3.6" strokeLinecap="round" />
+    <path d="M12 38.5 H36" stroke={e} strokeWidth="3" strokeLinecap="round" opacity=".6" />
+    <path d="M24 13 V6 M20.5 9 L24 5.5 L27.5 9" stroke={e} strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0" />
+  </>,
+  trophy: ({ c, e }) => <>
+    <path d="M14 10 H8 C8 17.5 11 21 16 21" stroke={c} strokeWidth="3.2" fill="none" />
+    <path d="M34 10 H40 C40 17.5 37 21 32 21" stroke={c} strokeWidth="3.2" fill="none" />
+    <path d="M13 5 H35 V15 C35 22.7 30.1 28 24 28 C17.9 28 13 22.7 13 15Z" fill={c} />
+    <path d="M30 5 H35 V15 C35 22.7 30.1 28 24 28 C28 25 30 20 30 15Z" fill={e} opacity=".4" />
+    <rect x="21.5" y="27" width="5" height="8" fill={e} />
+    <rect x="14" y="34" width="20" height="8" rx="2.5" fill={e} />
+    {twinkle(24, 15, 5, W)}
+  </>,
+  notebook: ({ c, e }) => <>
+    <rect x="9" y="4" width="31" height="40" rx="5" fill={c} />
+    <path d="M9 9 C9 6.2 11.2 4 14 4 H16 V44 H14 C11.2 44 9 41.8 9 39Z" fill={e} />
+    <rect x="21" y="12" width="14" height="8" rx="2" fill={W} />
+    <path d="M30 4 V17 L33 14 L36 17 V4Z" fill={NO} />
+    <path d="M21 27 H34 M21 32 H30" stroke={W} strokeWidth="2.4" strokeLinecap="round" opacity=".6" />
+  </>,
+  brain: ({ c, e }) => <>
+    <path d="M24 8 C20 5 13 6 12 11.5 C7 12.5 5 18 7 22 C4 25.5 5 31.5 9.5 33.5 C9.5 38.5 14.5 42 19 40 C21 43 24 42 24 39Z" fill={c} />
+    <path d="M24 8 C28 5 35 6 36 11.5 C41 12.5 43 18 41 22 C44 25.5 43 31.5 38.5 33.5 C38.5 38.5 33.5 42 29 40 C27 43 24 42 24 39Z" fill={e} />
+    <path d="M24 9 V39" stroke={W} strokeWidth="2" opacity=".7" />
+    <path d="M13 18 C16 18 17 21 15.5 23.5 M11 28 C14 27 17 29 16.5 32 M33 16 C30.5 17 30.5 20.5 32.5 22 M36 27 C33 27 31 30 32.5 33" stroke={W} strokeWidth="2" fill="none" strokeLinecap="round" opacity=".7" />
+  </>,
   chat: ({ c, e }) => <>
     <path d="M8 9 H34 C37.3 9 40 11.7 40 15 V28 C40 31.3 37.3 34 34 34 H20 L12 41 V34 H8 C4.7 34 3 31.3 3 28 V15 C3 11.7 4.7 9 8 9Z" fill={c} />
     <path d="M3 26 V28 C3 31.3 4.7 34 8 34 H12 V41 L20 34 H34 C37.3 34 40 31.3 40 28 V26 C40 29 37 31 34 31 H8 C5 31 3 29 3 26Z" fill={e} opacity=".45" />
@@ -312,6 +557,22 @@ const ICONS: Record<string, (p: Pal) => JSX.Element> = {
 };
 
 export const ICON_IDS = Object.keys(ICONS);
+/** UI-only drawings, not offered for habits */
+export const UI_ICONS = ['flag', 'chat', 'gear'];
+export const HABIT_ICONS = ICON_IDS.filter(i => !UI_ICONS.includes(i));
+
+/** Each icon's natural colour, so habits never need a colour picker */
+const ICON_COLOR: Record<string, Color> = {
+  dumbbell: 'orange', kettlebell: 'orange', lotus: 'mint', shoe: 'blue', footsteps: 'blue', bike: 'purple', ring: 'blue', ball: 'orange',
+  bat: 'blue', racket: 'mint', mountain: 'mint', book: 'blue', notebook: 'purple', cap: 'purple', pencil: 'yellow', speech: 'blue', mic: 'red',
+  headphones: 'purple', guitar: 'orange', piano: 'purple', note: 'red', laptop: 'blue', code: 'purple', calculator: 'orange', globe: 'blue',
+  flask: 'mint', chess: 'purple', puzzle: 'yellow', brain: 'red', bulb: 'yellow', camera: 'purple', palette: 'red', pan: 'orange', apple: 'red',
+  salad: 'mint', plant: 'orange', leaf: 'mint', glass: 'blue', tea: 'mint', nocaffeine: 'orange', nosugar: 'red', nojunk: 'red', nocig: 'red',
+  noalcohol: 'purple', nophone: 'red', sparkle: 'mint', bed: 'blue', broom: 'purple', home: 'orange', shower: 'blue', tooth: 'blue', bottle: 'mint',
+  moon: 'purple', sun: 'yellow', sunrise: 'orange', alarm: 'red', candle: 'orange', coin: 'yellow', piggy: 'red', phone: 'mint', pill: 'purple',
+  heart: 'red', smile: 'yellow', target: 'red', trophy: 'yellow', calendar: 'blue', clock: 'blue', checklist: 'yellow', paw: 'orange', star: 'yellow'
+};
+export const colorFor = (icon: string): Color => ICON_COLOR[icon] || 'orange';
 
 export function HabitIcon({ icon, color = 'orange', size = 32 }: { icon: string; color?: Color; size?: number }) {
   const draw = ICONS[icon] || ICONS.star;
@@ -331,25 +592,58 @@ const BY_CATEGORY: Record<string, string> = {
   teeth: 'tooth', skincare: 'bottle'
 };
 const BY_WORD: [RegExp, string][] = [
-  [/\b(code|coding|program|leetcode|dsa)/i, 'code'],
-  [/(sugar|sweet|candy|chocolate|junk|soda|dessert)/i, 'nosugar'],
+  [/\b(code|coding|program|leetcode|dsa|develop)/i, 'code'],
+  [/(sugar|sweet|candy|chocolate|dessert)/i, 'nosugar'],
+  [/(junk|fast ?food|burger|pizza|fries|fried)/i, 'nojunk'],
+  [/(smok|cigar|vape|tobacco)/i, 'nocig'],
+  [/(alcohol|beer|wine|drunk|liquor|whisk)/i, 'noalcohol'],
+  [/(coffee|caffeine|energy drink)/i, 'nocaffeine'],
   [/(phone|social|screen|instagram|youtube|reels|scroll|tiktok|snap)/i, 'nophone'],
+  [/(english|speak|speech|talk|conversation|pronunc|accent|public speaking|debate)/i, 'speech'],
+  [/(sing|vocal|karaoke|record)/i, 'mic'],
+  [/(podcast|audiobook|listen)/i, 'headphones'],
+  [/guitar|ukulele/i, 'guitar'],
+  [/(piano|keyboard|synth)/i, 'piano'],
+  [/(language|spanish|french|german|japanese|korean|duolingo|vocab|travel|geograph)/i, 'globe'],
+  [/(math|calculus|algebra|account)/i, 'calculator'],
+  [/(science|chemistry|physics|biology|lab)/i, 'flask'],
+  [/chess/i, 'chess'],
+  [/(puzzle|sudoku|crossword|rubik)/i, 'puzzle'],
+  [/(photo|camera|vlog)/i, 'camera'],
+  [/(work|email|office|design|freelanc|client|project|laptop)/i, 'laptop'],
+  [/(shower|bath)/i, 'shower'],
+  [/(wake|alarm|early)/i, 'alarm'],
+  [/(morning routine|sunrise|morning)/i, 'sunrise'],
   [/(sleep|bed ?time|bed by|nap)/i, 'moon'],
-  [/(wake|early|morning|sunrise)/i, 'sun'],
+  [/(steps|10k|10,000)/i, 'footsteps'],
+  [/(hike|hiking|trek|climb)/i, 'mountain'],
+  [/kettlebell/i, 'kettlebell'],
+  [/cricket/i, 'bat'],
+  [/(badminton|tennis|squash|pickleball)/i, 'racket'],
+  [/(salad|vegetable|veggie|greens)/i, 'salad'],
+  [/(tea\b|green tea|herbal)/i, 'tea'],
+  [/(vegan|nature|outdoor|garden)/i, 'leaf'],
+  [/(journal|diary)/i, 'notebook'],
   [/(pray|namaz|puja|worship|god|church|mantra)/i, 'candle'],
-  [/(money|budget|save|saving|invest|spend|expense)/i, 'coin'],
+  [/(save money|saving|piggy)/i, 'piggy'],
+  [/(money|budget|invest|spend|expense)/i, 'coin'],
   [/\b(call|phone mom|phone dad)/i, 'phone'],
+  [/(family|parents|home|house)/i, 'home'],
   [/(vitamin|medicine|pill|tablet|supplement)/i, 'pill'],
-  [/(gratitude|grateful|thank|kind|love|compliment|forgive)/i, 'heart'],
-  [/(plan|goal|review)/i, 'target'],
+  [/(gratitude|grateful|thank|smile|happy|compliment)/i, 'smile'],
+  [/(kind|love|forgive)/i, 'heart'],
+  [/(plan|schedule|review|calendar)/i, 'calendar'],
+  [/(goal|win|achieve)/i, 'trophy'],
   [/(on time|punctual|routine)/i, 'clock'],
-  [/(think|idea|learn|brain|focus)/i, 'bulb']
+  [/(think|brain|memor|focus|learn)/i, 'brain'],
+  [/(idea|create|build|invent|startup)/i, 'bulb']
 ];
 
 export function iconFor(name: string, category: string | null | undefined = classify(name).category) {
   const n = name || '';
   const word = BY_WORD.find(([re]) => re.test(n));
-  if (word && (word[1] === 'code' || word[1] === 'nosugar' || word[1] === 'nophone' || !category)) return word[1];
+  // Specific words win over the broad photo categories (e.g. "practice English" is speaking, not study)
+  if (word && (!category || !['reading', 'workout', 'gym', 'running', 'walking', 'cooking', 'teeth', 'yoga', 'meditate', 'swimming', 'cycling', 'plants', 'water', 'makebed', 'dishes', 'art'].includes(category))) return word[1];
   if (category && BY_CATEGORY[category]) return BY_CATEGORY[category];
   return word ? word[1] : 'star';
 }

@@ -16,6 +16,7 @@ export interface Task {
   title: string;
   note?: string;
   due?: string;           // ymd; none = "Anytime"
+  repeat?: 'daily' | 'weekdays' | 'weekly' | 'monthly';
   doneAt?: string;        // ymd it was completed
   createdAt: number;
 }
@@ -61,4 +62,5 @@ export interface State {
   feats: string[];        // milestones already celebrated
   tasksDone: number;      // lifetime count, for milestones
   migrated: boolean;
+  lockDefaulted?: boolean; // Habit Lock was switched on by default once
 }

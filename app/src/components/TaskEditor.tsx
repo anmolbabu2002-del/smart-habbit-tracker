@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Trash } from '@phosphor-icons/react';
 import { Sheet } from './Sheet';
 import { addTask, deleteTask, editTask } from '../lib/actions';
+import { REPEAT_LABEL, type Repeat } from '../lib/parseTask';
 import { addDays, today, weekOf, prettyDay } from '../lib/dates';
 import { play } from '../lib/sound';
 import type { Task } from '../lib/types';
@@ -28,16 +29,18 @@ export function TaskEditor({ open, task, defaultDue, onClose }: { open: boolean;
   const [title, setTitle] = useState('');
   const [note, setNote] = useState('');
   const [due, setDue] = useState<string | undefined>();
+  const [repeat, setRepeat] = useState<Repeat | undefined>();
   useEffect(() => {
     if (!open) return;
     setTitle(task?.title || '');
     setNote(task?.note || '');
     setDue(task ? task.due : defaultDue);
+    setRepeat(task?.repeat);
   }, [open, task, defaultDue]);
 
   const save = () => {
     if (!title.trim()) return;
-    if (task) { editTask(task.id, { title, note, due }); play('pop'); } else addTask({ title, note, due });
+    if (task) { editTask(task.id, { title, note, due, repeat }); play('pop'); } else addTask({ title, note, due, repeat });
     onClose();
   };
 
@@ -49,6 +52,11 @@ export function TaskEditor({ open, task, defaultDue, onClose }: { open: boolean;
         <textarea className="field" rows={3} placeholder="Note (optional)" value={note} maxLength={500} onChange={e => setNote(e.target.value)} />
         <h3 className="field-label">Due</h3>
         <DuePicker value={due} onChange={setDue} />
+        <h3 className="field-label">Repeat</h3>
+        <div className="chips wrap">
+          <button type="button" className={'chip' + (!repeat ? ' on' : '')} onClick={() => { play('toggle'); setRepeat(undefined); }}>Never</button>
+          {(Object.keys(REPEAT_LABEL) as Repeat[]).map(r => <button key={r} type="button" className={'chip' + (repeat === r ? ' on' : '')} onClick={() => { play('toggle'); setRepeat(r); }}>{REPEAT_LABEL[r]}</button>)}
+        </div>
         <button type="button" className="btn big block" disabled={!title.trim()} onClick={save}>{task ? 'Save' : 'Add task'}</button>
         {task && (
           <button type="button" className="btn block ghost danger" onClick={() => { deleteTask(task.id); onClose(); }}>

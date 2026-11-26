@@ -30,7 +30,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Runs only while Habit Lock is on (from 4 PM until today's habits are done). About twice a
@@ -103,8 +102,7 @@ public class HabitLockService extends Service {
             return;
         }
         String fg = currentForeground();
-        Set<String> blocked = HabitLock.blocked(this);
-        if (fg != null && blocked.contains(fg)) showOverlay(fg);
+        if (HabitLock.shouldBlock(this, fg)) showOverlay(fg);
         else hideOverlay();
         if (System.currentTimeMillis() - lastNotified > 60_000) {
             NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -178,8 +176,9 @@ public class HabitLockService extends Service {
         iconParams.gravity = Gravity.CENTER_HORIZONTAL;
         box.addView(icon, iconParams);
 
+        boolean strict = focus && HabitLock.focusStrict(this);
         TextView title = new TextView(this);
-        title.setText(name + " is locked");
+        title.setText(strict ? "Focus mode is on" : name + " is locked");
         title.setTextColor(Color.WHITE);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
         title.setTypeface(Typeface.DEFAULT_BOLD);
@@ -191,9 +190,10 @@ public class HabitLockService extends Service {
         if (focus) {
             long left = Math.max(1, (HabitLock.focusUntil(this) - System.currentTimeMillis() + 59999) / 60000);
             String label = HabitLock.focusLabel(this);
-            sb.append("You're in a focus session");
+            sb.append(strict ? "Your phone is locked for deep work" : "You're in a focus session");
             if (!label.isEmpty()) sb.append(":\n").append(label);
             sb.append("\n\n").append(left).append(left == 1 ? " minute" : " minutes").append(" to go. You've got this.");
+            if (strict) sb.append("\nCalls still work.");
         } else {
             sb.append("Finish today's habits first:\n");
             int shown = 0;
@@ -247,7 +247,7 @@ public class HabitLockService extends Service {
         });
         LinearLayout.LayoutParams homeParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(50));
         homeParams.topMargin = dp(8);
-        box.addView(home, homeParams);
+        if (!strict) box.addView(home, homeParams); // in strict focus the home screen is locked too
 
         int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY

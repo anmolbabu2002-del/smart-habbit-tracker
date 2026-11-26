@@ -1,22 +1,28 @@
-import { Camera, Check, Ticket } from '@phosphor-icons/react';
+import { Camera, Check, Ticket, Trash, PencilSimple, Microphone, ArrowsClockwise } from '@phosphor-icons/react';
+import { Swipe } from './Swipe';
 import { motion } from 'motion/react';
 import { centerOf } from '../lib/celebrate';
-import { completeHabit, doneToday, habitStreak, toggleTask, undoHabit } from '../lib/actions';
-import { needsPhoto } from '../lib/proof';
+import { completeHabit, deleteHabit, deleteTask, doneToday, habitStreak, toggleTask, undoHabit } from '../lib/actions';
+import { proofOf } from '../lib/proof';
 import { dueInfo, today } from '../lib/dates';
 import { play } from '../lib/sound';
 import { HabitIcon } from './HabitIcon';
 import { StreakFlame } from './StreakFlame';
 import type { Habit, Task } from '../lib/types';
 
-export function HabitRow({ h, isNew, onOpen, onProve }: { h: Habit; isNew?: boolean; onOpen: () => void; onProve: () => void }) {
+export function HabitRow({ h, onOpen, onProve }: { h: Habit; onOpen: () => void; onProve: () => void }) {
   const done = doneToday(h);
-  const photo = needsPhoto(h.name);
+  const mode = proofOf(h.name).mode;
+  const photo = mode !== 'tick'; // photo or voice proof
   const viaPass = done && h.passDays?.includes(today());
   const streak = habitStreak(h);
-  const sub = done ? (viaPass ? 'Free pass used' : 'Done today') : isNew ? 'New · counts from tomorrow' : photo ? 'Prove it with a photo' : 'Tap when done';
+  const sub = done ? (viaPass ? 'Free pass used' : 'Done today') : mode === 'photo' ? 'Prove it with a photo' : mode === 'voice' ? 'Prove it by speaking' : 'Tap when done';
 
   return (
+    <Swipe actions={[
+      { label: 'Edit', icon: <PencilSimple size={20} weight="bold" />, tone: 'blue', run: onOpen },
+      { label: 'Delete', icon: <Trash size={20} weight="bold" />, tone: 'red', run: () => deleteHabit(h.id) }
+    ]}>
     <motion.div layout className={'card habit' + (done ? ' done' : '')} style={{ ['--hc' as string]: `var(--${h.color})` }}>
       <button type="button" className="habit-main" onClick={() => { play('tap'); onOpen(); }}>
         <span className="habit-tile" style={{ background: `var(--${h.color}-soft)` }}><HabitIcon icon={h.icon} color={h.color} size={30} /></span>
@@ -24,7 +30,8 @@ export function HabitRow({ h, isNew, onOpen, onProve }: { h: Habit; isNew?: bool
           <b>{h.name}</b>
           <small>
             {viaPass && <Ticket size={14} weight="fill" />}
-            {!done && photo && !isNew && <Camera size={14} weight="fill" />}
+            {!done && mode === 'photo' && <Camera size={14} weight="fill" />}
+            {!done && mode === 'voice' && <Microphone size={14} weight="fill" />}
             {sub}
             {streak > 0 && <span className="mini-streak"><StreakFlame stage={2} size={16} still />{streak}</span>}
           </small>
@@ -37,17 +44,20 @@ export function HabitRow({ h, isNew, onOpen, onProve }: { h: Habit; isNew?: bool
           <Check size={22} weight="bold" />
         </motion.button>
       ) : photo ? (
-        <button type="button" className="btn round" aria-label={`Prove ${h.name} with a photo`} onClick={() => { play('tap'); onProve(); }}><Camera size={22} weight="fill" /></button>
+        <button type="button" className="btn round" aria-label={`Prove ${h.name}`} onClick={() => { play('tap'); onProve(); }}>{mode === 'voice' ? <Microphone size={22} weight="fill" /> : <Camera size={22} weight="fill" />}</button>
       ) : (
         <button type="button" className="btn round ghost" aria-label={`Mark ${h.name} done`} onClick={e => completeHabit(h.id, centerOf(e.currentTarget))}><Check size={22} weight="bold" /></button>
       )}
     </motion.div>
+    </Swipe>
   );
 }
 
 export function TaskRow({ t, onOpen }: { t: Task; onOpen: () => void }) {
   const due = dueInfo(t.due);
   return (
+    <Swipe actions={[{ label: 'Delete', icon: <Trash size={20} weight="bold" />, tone: 'red', run: () => deleteTask(t.id) }]}
+      onSwipeRight={() => toggleTask(t.id, { x: 60, y: innerHeight / 2 })}>
     <motion.div layout className={'task' + (t.doneAt ? ' done' : '')} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 40 }}>
       <button type="button" className={'task-check' + (t.doneAt ? ' on' : '')} aria-label={t.doneAt ? `Mark ${t.title} not done` : `Complete ${t.title}`}
         onClick={e => toggleTask(t.id, centerOf(e.currentTarget))}>
@@ -57,7 +67,8 @@ export function TaskRow({ t, onOpen }: { t: Task; onOpen: () => void }) {
         <b>{t.title}</b>
         {t.note && <small>{t.note}</small>}
       </button>
-      {due.label && !t.doneAt && <span className={'due ' + due.tone}>{due.label}</span>}
+      {due.label && !t.doneAt && <span className={'due ' + due.tone}>{t.repeat && <ArrowsClockwise size={11} weight="bold" />}{due.label}</span>}
     </motion.div>
+    </Swipe>
   );
 }

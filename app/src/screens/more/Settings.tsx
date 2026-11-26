@@ -8,6 +8,8 @@ import { lockedToast } from '../../lib/actions';
 import { play, setSoundEnabled } from '../../lib/sound';
 import { toast } from '../../lib/celebrate';
 import { Page } from './Page';
+import { TurnOffCoach } from '../../components/TurnOffCoach';
+import { streakOf } from '../../lib/streak';
 
 function Switch({ on }: { on: boolean }) { return <span className={'switch' + (on ? ' on' : '')}><i /></span>; }
 
@@ -19,12 +21,14 @@ export function Settings({ onBack }: { onBack: () => void }) {
   const refresh = () => { if (isNative) lockStatus().then(setSt); };
   useEffect(() => { refresh(); const v = () => { if (!document.hidden) refresh(); }; document.addEventListener('visibilitychange', v); return () => document.removeEventListener('visibilitychange', v); }, []);
 
+  const [coach, setCoach] = useState(false);
+  const setLock = (on: boolean) => { update(d => { d.lock.enabled = on; }); syncLock(); };
   const toggleLock = () => {
     if (s.lock.enabled && habitLocked()) { lockedToast('Turning Habit Lock off'); return; }
-    update(d => { d.lock.enabled = !d.lock.enabled; });
+    if (s.lock.enabled) { play('tap'); setCoach(true); return; }
+    setLock(true);
     play('toggle');
-    syncLock();
-    if (!s.lock.enabled) toast('Habit Lock on: social apps lock at 4 PM until your habits are done', 'lock');
+    toast('Habit Lock on: social apps lock at 4 PM until your habits are done', 'lock');
   };
   const restore = async (f?: File) => {
     if (!f) return;
@@ -81,6 +85,7 @@ export function Settings({ onBack }: { onBack: () => void }) {
         <input ref={file} type="file" accept=".json,application/json" hidden onChange={e => restore(e.target.files?.[0])} />
       </div>
       <p className="fine">Ultradian · made by Anmol Jha</p>
+      <TurnOffCoach open={coach} streak={streakOf(s)} onKeep={() => setCoach(false)} onOff={() => { setCoach(false); setLock(false); play('pop'); toast('Habit Lock is off'); }} />
     </Page>
   );
 }

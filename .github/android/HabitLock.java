@@ -61,6 +61,25 @@ final class HabitLock {
         return prefs(c).getString("focusLabel", "");
     }
 
+    /** Strict focus: every app is covered except Ultradian and calling/emergency apps. */
+    static boolean focusStrict(Context c) {
+        return prefs(c).getBoolean("focusStrict", false);
+    }
+
+    static final Set<String> ALWAYS_ALLOWED = new HashSet<>(java.util.Arrays.asList(
+        "com.android.dialer", "com.google.android.dialer", "com.samsung.android.dialer", "com.android.phone",
+        "com.android.server.telecom", "com.android.incallui", "com.samsung.android.incallui", "com.android.emergency",
+        "com.google.android.apps.safetyhub", "com.android.systemui", "com.android.contacts", "com.google.android.contacts",
+        "com.samsung.android.app.contacts", "com.android.packageinstaller", "com.google.android.packageinstaller",
+        "com.android.permissioncontroller", "com.google.android.permissioncontroller"));
+
+    /** Should this app (now in front) be covered by the lock screen? */
+    static boolean shouldBlock(Context c, String pkg) {
+        if (pkg == null || pkg.equals(c.getPackageName())) return false;
+        if (focusActive(c) && focusStrict(c)) return !ALWAYS_ALLOWED.contains(pkg);
+        return blocked(c).contains(pkg);
+    }
+
     /** Habit lock = switched on, has habits, past the lock time, and today's habits aren't all done. */
     static boolean habitLockActive(Context c) {
         SharedPreferences p = prefs(c);

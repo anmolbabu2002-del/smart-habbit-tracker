@@ -1,71 +1,63 @@
+// A small, friendly sheet: tap the icon to change it, type the name, done. Colour comes from
+// the icon, so there's nothing else to decide.
 import { useEffect, useState } from 'react';
-import { Camera, CheckCircle, Trash } from '@phosphor-icons/react';
+import { Camera, CheckCircle, Trash, Microphone } from '@phosphor-icons/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Sheet } from './Sheet';
-import { HabitIcon, ICON_IDS, iconFor } from './HabitIcon';
+import { HabitIcon, HABIT_ICONS, iconFor, colorFor } from './HabitIcon';
 import { deleteHabit, saveHabit } from '../lib/actions';
-import { needsPhoto } from '../lib/proof';
+import { proofOf } from '../lib/proof';
 import { play } from '../lib/sound';
-import { COLORS, type Color, type Habit } from '../lib/types';
-
-const PICKABLE = ICON_IDS.filter(i => !['flag', 'chat', 'gear'].includes(i));
+import type { Habit } from '../lib/types';
 
 export function HabitEditor({ open, habit, onClose }: { open: boolean; habit?: Habit | null; onClose: () => void }) {
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('star');
-  const [picked, setPicked] = useState(false); // user chose an icon themselves
-  const [color, setColor] = useState<Color>('orange');
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [picked, setPicked] = useState(false);
+  const [icons, setIcons] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setName(habit?.name || '');
     setIcon(habit?.icon || 'star');
     setPicked(!!habit);
-    setColor(habit?.color || COLORS[Math.floor(Math.random() * COLORS.length)]);
-    setConfirmDelete(false);
+    setIcons(false);
   }, [open, habit]);
 
   const onName = (v: string) => { setName(v); if (!picked) setIcon(v.trim() ? iconFor(v) : 'star'); };
-  const save = () => { if (!name.trim()) return; saveHabit({ id: habit?.id, name, icon, color }); onClose(); };
-  const photo = name.trim() ? needsPhoto(name) : null;
+  const save = () => { if (!name.trim()) return; saveHabit({ id: habit?.id, name, icon, color: colorFor(icon) }); onClose(); };
+  const proof = name.trim() ? proofOf(name) : null;
+  const color = colorFor(icon);
 
   return (
-    <Sheet open={open} onClose={onClose} title={habit ? 'Edit habit' : 'New habit'}>
-      <div className="editor">
-        <div className="editor-preview" style={{ background: `var(--${color}-soft)` }}><HabitIcon icon={icon} color={color} size={50} /></div>
-        <input className="field big" autoFocus={!habit} placeholder="e.g. Read 10 pages" value={name} maxLength={60}
+    <Sheet open={open} onClose={onClose} title={habit ? 'Edit habit' : 'New habit'} className="habit-sheet">
+      <div className="hs-row">
+        <button type="button" className={'hs-icon' + (icons ? ' on' : '')} style={{ background: `var(--${color}-soft)` }} onClick={() => { play('tap'); setIcons(i => !i); }} aria-label="Change icon">
+          <HabitIcon icon={icon} color={color} size={34} />
+        </button>
+        <input className="field" autoFocus={!habit} placeholder="e.g. Read 10 pages" value={name} maxLength={50}
           onChange={e => onName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') save(); }} />
-        {photo !== null && (
-          <p className={'proof-note ' + (photo ? 'photo' : 'tick')}>
-            {photo ? <><Camera size={18} weight="fill" /> You’ll prove this one with a live photo</> : <><CheckCircle size={18} weight="fill" /> A photo can’t show this, so it’s a simple tick</>}
-          </p>
+      </div>
+      {proof && (
+        <p className={'proof-note ' + proof.mode}>
+          {proof.mode === 'photo' ? <><Camera size={16} weight="fill" /> Proved with a live photo</> : proof.mode === 'voice' ? <><Microphone size={16} weight="fill" /> Proved by speaking for a minute</> : <><CheckCircle size={16} weight="fill" /> A simple tick</>}
+        </p>
+      )}
+      <AnimatePresence initial={false}>
+        {icons && (
+          <motion.div className="icon-grid" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
+            {HABIT_ICONS.map(id => (
+              <button key={id} type="button" className={'icon-pick' + (id === icon ? ' on' : '')} aria-label={id}
+                onClick={() => { play('toggle'); setIcon(id); setPicked(true); setIcons(false); }}>
+                <HabitIcon icon={id} color={colorFor(id)} size={26} />
+              </button>
+            ))}
+          </motion.div>
         )}
-
-        <h3 className="field-label">Colour</h3>
-        <div className="swatches">
-          {COLORS.map(c => (
-            <button key={c} type="button" className={'swatch' + (c === color ? ' on' : '')} style={{ background: `var(--${c})` }} aria-label={c}
-              onClick={() => { play('toggle'); setColor(c); }} />
-          ))}
-        </div>
-
-        <h3 className="field-label">Icon</h3>
-        <div className="icon-grid">
-          {PICKABLE.map(id => (
-            <button key={id} type="button" className={'icon-pick' + (id === icon ? ' on' : '')} aria-label={id}
-              onClick={() => { play('toggle'); setIcon(id); setPicked(true); }}>
-              <HabitIcon icon={id} color={color} size={28} />
-            </button>
-          ))}
-        </div>
-
-        <button type="button" className="btn big block" disabled={!name.trim()} onClick={save}>{habit ? 'Save' : 'Add habit'}</button>
-        {habit && (
-          <button type="button" className={'btn block ghost danger' + (confirmDelete ? ' armed' : '')}
-            onClick={() => { if (!confirmDelete) { play('tap'); setConfirmDelete(true); return; } if (deleteHabit(habit.id)) onClose(); }}>
-            <Trash size={20} weight="bold" /> {confirmDelete ? 'Tap again to delete' : 'Delete habit'}
-          </button>
-        )}
+      </AnimatePresence>
+      <div className="hs-actions">
+        {habit && <button type="button" className="rd-ic danger" onClick={() => { if (deleteHabit(habit.id)) onClose(); }} aria-label="Delete habit"><Trash size={22} weight="bold" /></button>}
+        <button type="button" className="btn block" disabled={!name.trim()} onClick={save}>{habit ? 'Save' : 'Add habit'}</button>
       </div>
     </Sheet>
   );

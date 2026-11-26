@@ -11,6 +11,8 @@ import { HabitIcon } from './HabitIcon';
 import type { Habit } from '../lib/types';
 
 type Phase = 'camera' | 'checking' | 'pass' | 'fail' | 'error';
+// A transparent poster: without one, Android shows a big "play" image until the camera starts
+const BLANK = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
 export function ProofCamera({ habit, onClose }: { habit: Habit; onClose: () => void }) {
   const video = useRef<HTMLVideoElement>(null);
@@ -18,6 +20,9 @@ export function ProofCamera({ habit, onClose }: { habit: Habit; onClose: () => v
   const stream = useRef<MediaStream | null>(null);
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
   const [phase, setPhase] = useState<Phase>('camera');
+  const phaseRef = useRef<Phase>('camera');
+  phaseRef.current = phase;
+  const [passOpen, setPassOpen] = useState(false);
   const [result, setResult] = useState<CheckResult | null>(null);
   const [count, setCount] = useState(0);
   const [camError, setCamError] = useState('');
@@ -37,15 +42,19 @@ export function ProofCamera({ habit, onClose }: { habit: Habit; onClose: () => v
     }
   }, [facing]);
 
-  useEffect(() => { if (phase === 'camera') start(); }, [start, phase]);
+  useEffect(() => { if (phase === 'camera') start(); return () => stop(); }, [start, phase]);
+  // Once, when the camera opens (not on every re-render: that used to unload the photo check
+  // and leave the shutter disabled until the camera was switched)
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
     loadVision();
     if (!proof.known && proof.show) textFingerprint('a photo of ' + proof.show).catch(() => {});
-    const off = onBack(() => { onClose(); return true; });
-    const vis = () => { if (document.hidden) stop(); };
+    const off = onBack(() => { closeRef.current(); return true; });
+    const vis = () => { if (document.hidden) stop(); else if (phaseRef.current === 'camera') start(); };
     document.addEventListener('visibilitychange', vis);
     return () => { off(); stop(); document.removeEventListener('visibilitychange', vis); setTimeout(unload, 300); };
-  }, [onClose, proof.known, proof.show]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 10-second self-timer for workouts: prop the phone up and get into position
   useEffect(() => {
@@ -95,7 +104,7 @@ export function ProofCamera({ habit, onClose }: { habit: Habit; onClose: () => v
       </header>
 
       <div className="cam-stage">
-        <video ref={video} playsInline muted autoPlay hidden={phase !== 'camera'} style={{ transform: facing === 'user' ? 'scaleX(-1)' : undefined }} />
+        <video ref={video} playsInline muted autoPlay poster={BLANK} hidden={phase !== 'camera'} style={{ transform: facing === 'user' ? 'scaleX(-1)' : undefined }} />
         <canvas ref={canvas} hidden={phase === 'camera'} />
         <AnimatePresence>
           {count > 0 && <motion.span key={count} className="cam-count" initial={{ scale: 1.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }}>{count}</motion.span>}
@@ -122,10 +131,17 @@ export function ProofCamera({ habit, onClose }: { habit: Habit; onClose: () => v
       )}
 
       {phase !== 'pass' && phase !== 'checking' && (
-        <button type="button" className="cam-pass" disabled={!passLeft()} onClick={usePass}>
-          <Ticket size={20} weight="fill" />
-          {passLeft() ? 'Forgot the photo? Use this week’s free pass' : 'Free pass already used this week'}
-        </button>
+        <div className="cam-pass-wrap">
+          <button type="button" className={'cam-pass-ico' + (passOpen ? ' on' : '')} onClick={() => { play('tap'); setPassOpen(o => !o); }} aria-label="Free pass"><Ticket size={20} weight="fill" /></button>
+          <AnimatePresence>
+            {passOpen && (
+              <motion.div className="cam-pass-pop" initial={{ opacity: 0, y: 8, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8 }}>
+                <span>{passLeft() ? 'Forgot to take the photo? You get one free pass a week.' : 'You’ve used this week’s free pass. A new one comes on Monday.'}</span>
+                {passLeft() && <button type="button" className="btn block" onClick={usePass}>Use free pass</button>}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       )}
     </motion.div>
   );
