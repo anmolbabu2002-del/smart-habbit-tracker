@@ -1,52 +1,32 @@
-// The first thing a new user sees: a sleeping ember on a hill at sunrise, and the locked
-// mystery forms it could grow into. One tap on a suggestion creates the first habit.
-import { motion } from 'motion/react';
-import { StreakFlame } from './StreakFlame';
-import { Mascot } from './Mascot';
-import { HabitIcon, iconFor, colorFor } from './HabitIcon';
-import { saveHabit } from '../lib/actions';
+// No habits yet: one calm illustration, one line, one button.
+import { Plus } from '@phosphor-icons/react';
 import { play } from '../lib/sound';
-
-const IDEAS = ['Read 10 pages', 'Workout', 'Meditate', 'Drink water', 'Study 1 hour', 'Journal'];
 
 export function EmptyHabits({ onCustom }: { onCustom: () => void }) {
   return (
-    <section className="card empty-hero">
-      <svg className="eh-scene" viewBox="0 0 360 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <section className="empty-habits">
+      <svg className="eh-art" viewBox="0 0 200 200" aria-hidden="true">
         <defs>
-          <linearGradient id="eh-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ffd9b8" /><stop offset=".55" stopColor="#ffeede" /><stop offset="1" stopColor="#fff7ee" /></linearGradient>
-          <radialGradient id="eh-sun"><stop offset="0" stopColor="#ffc56b" /><stop offset="1" stopColor="#ffc56b" stopOpacity="0" /></radialGradient>
+          <radialGradient id="eh-bg" cx="50%" cy="45%" r="55%"><stop offset="0" stopColor="#fff4ea" /><stop offset="1" stopColor="#ffe2cc" /></radialGradient>
+          <linearGradient id="eh-soil" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ffb27a" /><stop offset="1" stopColor="#ff8c42" /></linearGradient>
+          <linearGradient id="eh-leaf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#5fe0bd" /><stop offset="1" stopColor="#0c9e7a" /></linearGradient>
         </defs>
-        <rect width="360" height="200" fill="url(#eh-sky)" />
-        <circle cx="270" cy="120" r="80" fill="url(#eh-sun)" className="eh-glow" />
-        <circle cx="270" cy="122" r="26" fill="#ffb25c" opacity=".9" />
-        <path d="M0 150 C60 120 120 128 180 140 C240 152 300 130 360 140 V200 H0Z" fill="#a8ecd9" />
-        <path d="M0 170 C70 150 130 160 190 168 C250 176 310 158 360 166 V200 H0Z" fill="#12c79b" opacity=".85" />
-        <path d="M120 148 C150 120 210 120 240 148" fill="#7fdcbf" />
-        {[[40, 40], [90, 24], [150, 50], [320, 34], [210, 22]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="1.8" fill="#fff" className="eh-star" style={{ animationDelay: `${i * 0.6}s` }} />)}
-        <path d="M30 166 q4 -10 8 0 M300 172 q4 -12 8 0 M330 168 q3 -8 6 0" stroke="#0c9e7a" strokeWidth="2" fill="none" strokeLinecap="round" />
+        <circle cx="100" cy="100" r="92" fill="url(#eh-bg)" />
+        <circle cx="100" cy="100" r="92" fill="none" stroke="#ffd2b0" strokeWidth="2" strokeDasharray="3 9" strokeLinecap="round" className="eh-ring" />
+        <ellipse cx="100" cy="146" rx="52" ry="10" fill="#f6c8a4" opacity=".55" />
+        <path d="M56 142 C64 124 82 118 100 118 C118 118 136 124 144 142 Z" fill="url(#eh-soil)" />
+        <path d="M100 120 C100 104 100 92 100 80" stroke="#0c9e7a" strokeWidth="4" strokeLinecap="round" fill="none" />
+        <g className="eh-sprout">
+          <path d="M100 98 C86 98 74 90 72 76 C86 75 98 82 100 98 Z" fill="url(#eh-leaf)" />
+          <path d="M100 86 C112 85 124 76 126 62 C112 62 101 71 100 86 Z" fill="url(#eh-leaf)" />
+        </g>
+        <circle cx="148" cy="64" r="4" fill="#ffc800" className="eh-dot d1" />
+        <circle cx="58" cy="58" r="3" fill="#1cb0f6" className="eh-dot d2" />
+        <circle cx="154" cy="112" r="2.5" fill="#a560e8" className="eh-dot d3" />
       </svg>
-      <div className="eh-ember"><StreakFlame stage={0} size={84} /></div>
-      <motion.div className="eh-mascot" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3, type: 'spring' }}><Mascot size={54} mood="happy" /></motion.div>
-
-      <div className="eh-text">
-        <b>Your flame is asleep</b>
-        <span>Add one habit and it wakes up. Keep it going and it evolves into forms you haven’t seen yet.</span>
-      </div>
-      <div className="eh-mystery" aria-hidden="true">
-        {[1, 3, 5, 7, 9].map(i => <span key={i}><StreakFlame stage={i} size={34} still locked /><small>?</small></span>)}
-      </div>
-      <div className="eh-ideas">
-        {IDEAS.map(n => {
-          const icon = iconFor(n);
-          return (
-            <button key={n} type="button" className="eh-idea" onClick={() => { play('add'); saveHabit({ name: n, icon, color: colorFor(icon) }); }}>
-              <HabitIcon icon={icon} color={colorFor(icon)} size={22} />{n}
-            </button>
-          );
-        })}
-      </div>
-      <button type="button" className="btn block" onClick={() => { play('tap'); onCustom(); }}>Create my own habit</button>
+      <b>No habits yet</b>
+      <span>Start with one small thing you want to do every day.</span>
+      <button type="button" className="btn big eh-btn" onClick={() => { play('tap'); onCustom(); }}><Plus size={20} weight="bold" /> Create habit</button>
     </section>
   );
 }
