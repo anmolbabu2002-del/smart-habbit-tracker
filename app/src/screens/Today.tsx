@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LockSimple, LockSimpleOpen, Plus, ArrowRight } from '@phosphor-icons/react';
+import { LockSimple, Plus, ArrowRight } from '@phosphor-icons/react';
 import { motion } from 'motion/react';
 import { Mascot } from '../components/Mascot';
 import { HabitRow, TaskRow } from '../components/Rows';
@@ -41,7 +41,7 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
   const dueLeft = due.filter(t => !t.doneAt).length;
 
   let title = `${left} ${left === 1 ? 'habit' : 'habits'} to go!`;
-  let line = lockOn ? (afterFour ? 'Your apps are locked until they’re done.' : 'Apps lock at 4 PM if they’re not done.') : 'You’ve got this.';
+  let line = lockOn ? (afterFour ? 'Your 5 apps are locked until they’re done.' : '5 apps lock at 4 PM if they’re not done.') : 'You’ve got this.';
   if (!s.habits.length) { title = 'Let’s build your day!'; line = 'Add a habit you want to do every day.'; }
   else if (allDone) { title = 'All done for today!'; line = streak > 1 ? `That’s ${streak} days in a row.` : 'Come back tomorrow to start a streak.'; }
   else if (done === 0 && left > 2) title = `${left} habits today`;
@@ -70,12 +70,6 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
           <div className="hero-progress">
             <div className="progress"><i style={{ width: `${(done / required.length) * 100}%` }} /></div>
             <b>{done}/{required.length}</b>
-          </div>
-        )}
-        {lockOn && s.habits.length > 0 && (
-          <div className={'lock-pill' + (allDone ? ' open' : '')}>
-            {allDone ? <LockSimpleOpen size={18} weight="fill" /> : <LockSimple size={18} weight="fill" />}
-            {allDone ? 'Apps unlocked for today' : afterFour ? '5 apps locked until habits are done' : '5 apps lock at 4 PM'}
           </div>
         )}
       </section>}
