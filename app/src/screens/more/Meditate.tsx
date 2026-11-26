@@ -8,6 +8,13 @@ import { play } from '../../lib/sound';
 import { onBack as onBackKey } from '../../lib/back';
 
 type Phase = { name: string; s: number; scale: number };
+type Sky = { top: string; mid: string; low: string; far: string; near: string; trees: string; water: string; dawn?: boolean };
+const SKIES: Record<string, Sky> = {
+  calm: { top: '#04121f', mid: '#0d3346', low: '#1f5a63', far: '#163c4d', near: '#0d2a37', trees: '#071a23', water: '#0b2633' },
+  relax: { top: '#070818', mid: '#1d1a4a', low: '#3a2c6e', far: '#241f55', near: '#171540', trees: '#0c0b26', water: '#120f33' },
+  focus: { top: '#24304f', mid: '#a0607a', low: '#f4a868', far: '#6b4a6e', near: '#45334f', trees: '#2a2035', water: '#3b2f4a', dawn: true },
+  sleep: { top: '#02040c', mid: '#0b1636', low: '#1b2c5c', far: '#121f45', near: '#0b1633', trees: '#050b1e', water: '#08122a' }
+};
 const MODES: Record<string, { label: string; sub: string; hue: [string, string, string]; phases: Phase[] }> = {
   calm: { label: 'Calm', sub: '4 in · 2 hold · 6 out', hue: ['#b6f5ea', '#4fd6c3', '#2a8f9e'], phases: [{ name: 'Breathe in', s: 4, scale: 1 }, { name: 'Hold', s: 2, scale: 1 }, { name: 'Breathe out', s: 6, scale: 0.62 }] },
   relax: { label: 'Relax', sub: '4 in · 7 hold · 8 out', hue: ['#d9ccff', '#9b87f5', '#5b47c4'], phases: [{ name: 'Breathe in', s: 4, scale: 1 }, { name: 'Hold', s: 7, scale: 1 }, { name: 'Breathe out', s: 8, scale: 0.62 }] },
@@ -31,6 +38,8 @@ export function Meditate({ onBack }: { onBack: () => void }) {
   const [guide, setGuide] = useState(0);
   const [chrome, setChrome] = useState(false);
   const [stats, setStats] = useState(getStats);
+  const [arrived, setArrived] = useState(false);
+  useEffect(() => { play('breath'); const t = setTimeout(() => setArrived(true), 1800); return () => clearTimeout(t); }, []);
   const audio = useRef<HTMLAudioElement | null>(null);
   const endAt = useRef(0);
   const m = MODES[mode] || MODES.calm;
@@ -93,13 +102,24 @@ export function Meditate({ onBack }: { onBack: () => void }) {
   }
   function stop() { fadeOut(); play('pop'); setState('setup'); }
 
-  const style = { ['--h1' as string]: m.hue[0], ['--h2' as string]: m.hue[1], ['--h3' as string]: m.hue[2] };
+  const sky = SKIES[mode] || SKIES.calm;
+  const style = { ['--h1' as string]: m.hue[0], ['--h2' as string]: m.hue[1], ['--h3' as string]: m.hue[2], background: `linear-gradient(180deg, ${sky.top} 0%, ${sky.mid} 48%, ${sky.low} 70%, ${sky.water} 100%)` };
   return (
     <motion.div className={'zen zen-' + state} style={style} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       onClick={() => { if (state === 'running') setChrome(c => !c); }}>
       <Sky />
-      <div className="aurora"><i /><i /><i /></div>
-      <Landscape />
+      {!sky.dawn && <div className="aurora"><i /><i /><i /></div>}
+      <Celestial dawn={!!sky.dawn} />
+      {[0, 1, 2].map(i => <i key={i} className={'shoot s' + i} />)}
+      <Landscape sky={sky} />
+      <i className={'reflect' + (sky.dawn ? ' dawn' : '')} aria-hidden="true" />
+      <AnimatePresence>
+        {!arrived && (
+          <motion.div className="zen-arrive" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.4 }}>
+            <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 1 }}>Welcome. Let the day go.</motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <header className={'zen-top' + (state === 'running' && !chrome ? ' hide' : '')}>
         <button type="button" className="zen-ic" onClick={e => { e.stopPropagation(); play('tap'); if (state === 'running') stop(); else onBack(); }} aria-label="Back"><ArrowLeft size={22} weight="bold" /></button>
@@ -128,7 +148,7 @@ export function Meditate({ onBack }: { onBack: () => void }) {
       {state === 'running' && <span className={'zen-time' + (chrome ? '' : ' dim')}>{String(Math.floor(left / 60)).padStart(2, '0')}:{String(left % 60).padStart(2, '0')}{chrome && ' · tap ← to end'}</span>}
 
       <AnimatePresence>
-        {state === 'setup' && (
+        {state === 'setup' && arrived && (
           <motion.div className="glass" initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 28 }} onClick={e => e.stopPropagation()}>
             <div className="glass-row modes">
               {Object.entries(MODES).map(([id, x]) => (
@@ -192,22 +212,55 @@ function Sky() {
   return <canvas ref={ref} className="zen-sky" aria-hidden="true" />;
 }
 
-/** Layered mountains reflected in a still lake */
-function Landscape() {
-  const far = 'M0 120 L40 92 L78 108 L120 70 L165 100 L205 80 L250 104 L300 76 L345 98 L400 84 L400 160 L0 160Z';
-  const near = 'M0 132 L55 112 L95 124 L150 100 L200 122 L240 110 L290 126 L340 108 L400 124 L400 160 L0 160Z';
+/** The moon (or a rising sun at dawn) with a soft halo */
+function Celestial({ dawn }: { dawn: boolean }) {
+  return dawn ? (
+    <div className="sun-rise" aria-hidden="true"><i /></div>
+  ) : (
+    <svg className="moon" viewBox="0 0 120 120" aria-hidden="true">
+      <defs>
+        <radialGradient id="mh"><stop offset=".35" stopColor="#fff8e1" stopOpacity=".55" /><stop offset="1" stopColor="#fff8e1" stopOpacity="0" /></radialGradient>
+        <radialGradient id="mb" cx=".4" cy=".35"><stop offset="0" stopColor="#fffdf3" /><stop offset="1" stopColor="#e9e0c8" /></radialGradient>
+      </defs>
+      <circle cx="60" cy="60" r="58" fill="url(#mh)" />
+      <circle cx="60" cy="60" r="22" fill="url(#mb)" />
+      <circle cx="53" cy="55" r="4" fill="#d8ccb0" opacity=".6" /><circle cx="67" cy="66" r="3" fill="#d8ccb0" opacity=".5" /><circle cx="64" cy="52" r="2" fill="#d8ccb0" opacity=".5" />
+    </svg>
+  );
+}
+
+/** A row of pine trees along a ridge */
+function pines(y: number, count: number, h: number, seed: number) {
+  let out = '';
+  for (let i = 0; i < count; i++) {
+    const x = (i / count) * 420 - 10 + ((seed * (i + 3)) % 9);
+    const hh = h * (0.7 + (((seed + i) * 37) % 30) / 100);
+    out += `M${x} ${y} L${x + hh * 0.22} ${y - hh * 0.45} L${x + hh * 0.12} ${y - hh * 0.45} L${x + hh * 0.3} ${y - hh * 0.75} L${x + hh * 0.2} ${y - hh * 0.75} L${x + hh * 0.35} ${y - hh} L${x + hh * 0.5} ${y - hh * 0.75} L${x + hh * 0.4} ${y - hh * 0.75} L${x + hh * 0.58} ${y - hh * 0.45} L${x + hh * 0.48} ${y - hh * 0.45} L${x + hh * 0.7} ${y}Z `;
+  }
+  return out;
+}
+
+/** Three mountain ranges with drifting mist, pine forests and a lake reflecting the sky */
+function Landscape({ sky }: { sky: Sky }) {
+  const far = 'M0 112 L35 86 L70 100 L112 62 L160 96 L205 72 L250 98 L300 66 L348 94 L400 78 L400 150 L0 150Z';
+  const mid = 'M0 126 L48 104 L92 118 L146 94 L196 116 L238 102 L290 120 L338 100 L400 116 L400 150 L0 150Z';
+  const near = 'M0 140 C60 128 110 136 170 132 C230 128 290 138 400 130 L400 152 L0 152Z';
   return (
     <svg className="zen-land" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
       <defs>
-        <linearGradient id="zl-water" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#1b2a55" /><stop offset="1" stopColor="#070b1c" /></linearGradient>
-        <linearGradient id="zl-fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#000" stopOpacity="0" /><stop offset="1" stopColor="#000" stopOpacity=".6" /></linearGradient>
+        <linearGradient id="zl-w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={sky.water} /><stop offset="1" stopColor="#02040a" /></linearGradient>
+        <linearGradient id="zl-moon" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={sky.dawn ? '#ffc890' : '#fff6d8'} stopOpacity=".55" /><stop offset="1" stopColor={sky.dawn ? '#ffc890' : '#fff6d8'} stopOpacity="0" /></linearGradient>
+        <filter id="zl-blur"><feGaussianBlur stdDeviation="6" /></filter>
       </defs>
-      <path d={far} fill="#1c2452" />
-      <path d={near} fill="#121939" />
-      <rect x="0" y="160" width="400" height="140" fill="url(#zl-water)" />
-      <g transform="translate(0 320) scale(1 -1)" opacity=".28"><path d={far} fill="#2a3470" /><path d={near} fill="#1a2250" /></g>
-      {[176, 190, 207, 226, 248].map((y, i) => <rect key={y} className="ripple" x={60 + i * 25} y={y} width={120 - i * 12} height="1.2" rx=".6" fill="#fff" opacity={0.12 - i * 0.015} style={{ animationDelay: `${i * 0.8}s` }} />)}
-      <rect x="0" y="160" width="400" height="140" fill="url(#zl-fade)" />
+      <path d={far} fill={sky.far} />
+      <ellipse className="mist m1" cx="200" cy="104" rx="240" ry="10" fill="#fff" opacity=".08" filter="url(#zl-blur)" />
+      <path d={mid} fill={sky.near} />
+      <ellipse className="mist m2" cx="160" cy="124" rx="200" ry="8" fill="#fff" opacity=".07" filter="url(#zl-blur)" />
+      <path d={pines(136, 26, 26, 7)} fill={sky.trees} />
+      <path d={near} fill={sky.trees} />
+      <rect x="0" y="150" width="400" height="150" fill="url(#zl-w)" />
+      <g transform="translate(0 300) scale(1 -1)" opacity=".22"><path d={pines(150, 26, 26, 7)} fill={sky.near} /></g>
+      {[175, 205, 240].map((y, i) => <rect key={'w' + y} className="ripple" x={40 + i * 60} y={y} width={70} height="1" rx=".5" fill="#fff" opacity=".06" style={{ animationDelay: `${i * 1.3}s` }} />)}
     </svg>
   );
 }
