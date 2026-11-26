@@ -64,4 +64,5 @@ export interface State {
   tasksDone: number;      // lifetime count, for milestones
   migrated: boolean;
   lockDefaulted?: boolean; // Habit Lock was switched on by default once
+  why?: string;           // the user's own line ('' = use the default)
 }

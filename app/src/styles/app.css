@@ -940,3 +940,24 @@ button.voice-row > span, .voice-pick > span { flex: 1; display: grid; }
 @keyframes eh-bounce { 0%, 70%, 100% { transform: translateY(0); } 78% { transform: translateY(-5px); } 86% { transform: translateY(0); } 92% { transform: translateY(-2px); } }
 .eh-btn:active { animation: none; }
 @media (prefers-reduced-motion: reduce) { .eh-ring, .eh-sprout, .eh-dot, .eh-btn { animation: none; } }
+
+/* ── Your why ── */
+.why {
+  position: relative; display: grid; justify-items: start; gap: 5px; width: 100%;
+  margin: -2px 0 14px; padding: 3px 26px 3px 14px; border: 0; background: none;
+  font: inherit; color: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.why::before {
+  content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 4px; border-radius: 99px;
+  background: linear-gradient(180deg, var(--orange), var(--yellow));
+}
+.why q { quotes: '“' '”'; font-size: 1.02rem; font-weight: 800; font-style: italic; line-height: 1.35; color: var(--ink); opacity: 0.72; }
+.why.own q { opacity: 1; }
+.why-cta { display: inline-flex; align-items: center; gap: 5px; font-size: 0.8rem; font-weight: 900; color: var(--orange-edge); }
+.why-pen { position: absolute; right: 4px; top: 6px; color: var(--ink-faint); }
+.why:active q { opacity: 0.55; }
+.why-help { margin: 0; color: var(--ink-soft); font-weight: 700; font-size: 0.92rem; line-height: 1.4; }
+.why-field { font-style: italic; }
+.why-big { display: block; quotes: '“' '”'; font-style: italic; font-weight: 900; line-height: 1.35; }
+.why-big.on-dark { margin-bottom: 8px; font-size: 1.05rem; color: #fff; }
+.why-big.in-card { width: 100%; margin: 2px 0 6px; padding: 10px 14px; border-radius: 14px; background: var(--orange-soft); color: var(--ink); font-size: 0.98rem; }

@@ -186,6 +186,26 @@ public class HabitLockService extends Service {
         title.setPadding(0, dp(12), 0, dp(8));
         box.addView(title);
 
+        // the user's own line ("Your why"), in a soft orange box
+        String why = HabitLock.prefs(this).getString("why", "").trim();
+        if (!why.isEmpty()) {
+            TextView quote = new TextView(this);
+            quote.setText("\u201C" + why + "\u201D");
+            quote.setTextColor(Color.WHITE);
+            quote.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+            quote.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD_ITALIC));
+            quote.setGravity(Gravity.CENTER);
+            quote.setLineSpacing(0, 1.2f);
+            quote.setPadding(dp(16), dp(12), dp(16), dp(12));
+            GradientDrawable qbg = new GradientDrawable();
+            qbg.setColor(Color.argb(46, 255, 140, 66));
+            qbg.setCornerRadius(dp(16));
+            quote.setBackground(qbg);
+            LinearLayout.LayoutParams qp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            qp.bottomMargin = dp(16);
+            box.addView(quote, qp);
+        }
+
         StringBuilder sb = new StringBuilder();
         if (focus) {
             long left = Math.max(1, (HabitLock.focusUntil(this) - System.currentTimeMillis() + 59999) / 60000);

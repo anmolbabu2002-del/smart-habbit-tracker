@@ -6,6 +6,7 @@ import { HabitRow, TaskRow } from '../components/Rows';
 import { StreakFlame } from '../components/StreakFlame';
 import { HabitIcon } from '../components/HabitIcon';
 import { EmptyHabits } from '../components/EmptyHabits';
+import { WhyLine } from '../components/Why';
 import { HabitCalendar } from '../components/HabitCalendar';
 import { HabitEditor } from '../components/HabitEditor';
 import { TaskEditor } from '../components/TaskEditor';
@@ -57,6 +58,8 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
           <b>{streak}</b>
         </button>
       </header>
+
+      {!allDone && <WhyLine />}
 
       {s.lock.enabled && <PermCard />}
 

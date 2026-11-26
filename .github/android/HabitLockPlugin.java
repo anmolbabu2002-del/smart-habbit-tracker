@@ -73,6 +73,7 @@ public class HabitLockPlugin extends Plugin {
         e.putLong("focusUntil", call.getData().optLong("focusUntil", 0L));
         e.putString("focusLabel", call.getString("focusLabel", ""));
         e.putBoolean("focusStrict", call.getBoolean("focusStrict", false));
+        e.putString("why", call.getString("why", ""));
         e.apply();
         HabitLock.refresh(getContext());
         JSObject r = new JSObject();

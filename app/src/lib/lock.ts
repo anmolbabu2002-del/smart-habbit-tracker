@@ -1,6 +1,7 @@
 // Habit Lock (Android app only): from 4 PM until every habit of the day is done, the social apps
 // below are covered by a lock screen. During a focus session with "Lock social apps" on, they are
 // locked until the timer ends. The blocking itself is native (.github/android/HabitLock*.java).
+import { whyText } from './why';
 import { native, isNative, listenNative } from './native';
 import { getState } from './store';
 import { today } from './dates';
@@ -57,7 +58,8 @@ export function syncLock() {
       blocked: LOCK_APPS.flatMap(x => x.pkgs),
       focusUntil: focusLockUntil(s),
       focusLabel: a ? a.label : '',
-      focusStrict: !!a
+      focusStrict: !!a,
+      why: whyText()
     }).catch(e => console.warn('Habit Lock: update failed', e));
   }, 250);
 }

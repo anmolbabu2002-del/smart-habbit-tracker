@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Mascot } from './Mascot';
+import { WhyQuote } from './Why';
 import { play } from '../lib/sound';
 import { haptic } from '../lib/native';
 import { praise, burst } from '../lib/celebrate';
@@ -42,6 +43,7 @@ export function TurnOffCoach({ open, streak, onKeep, onOff }: { open: boolean; s
               <Mascot size={74} mood={st.mood} />
               <b>{st.title}</b>
               <span>{st.text}</span>
+              <WhyQuote className="in-card" />
               <button type="button" className="btn big block mint" onClick={keep}>{st.yes}</button>
               <button type="button" className="coach-no" onClick={no}>{st.no}</button>
             </motion.div>

@@ -11,6 +11,7 @@ import { endFocus, remainingMs, startFocus, weekMinutes, elapsedMs, weekGiveUps 
 import { needsPhoto } from '../lib/proof';
 import { isNative, haptic } from '../lib/native';
 import { onBack } from '../lib/back';
+import { WhyQuote } from '../components/Why';
 import { play } from '../lib/sound';
 import type { ActiveFocus, Color, FocusRef } from '../lib/types';
 
@@ -173,6 +174,7 @@ export function FocusRun({ a }: { a: ActiveFocus }) {
       <AnimatePresence>
         {presses > 0 && quitLeft > 0 && (
           <motion.div className="run-quit" key="quit" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+            <WhyQuote className="on-dark" />
             Press back {quitLeft} more {quitLeft === 1 ? 'time' : 'times'} to give up · {fmtMinutes(Math.floor(elapsedMs(a) / 60000))} focused so far
           </motion.div>
         )}

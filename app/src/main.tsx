@@ -9,6 +9,7 @@ import { App } from './App';
 import { restoreIfWiped, getState, update } from './lib/store';
 import { migrateFromV1 } from './lib/migrate';
 import { clearOldReminders, syncLock } from './lib/lock';
+import { importOldQuote } from './lib/why';
 import { backgroundDownload } from './lib/proof';
 import { afterHabitsChanged } from './lib/actions';
 import { dailyBackup } from './lib/backup';
@@ -32,7 +33,7 @@ async function boot() {
   document.documentElement.dataset.theme = getState().theme;
   createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
   afterHabitsChanged();
-  syncLock();
+  importOldQuote().finally(syncLock);
   clearOldReminders();
   setTimeout(dailyBackup, 8000);
   const idle = (window as unknown as { requestIdleCallback?: (f: () => void) => void }).requestIdleCallback || ((f: () => void) => setTimeout(f, 4000));
