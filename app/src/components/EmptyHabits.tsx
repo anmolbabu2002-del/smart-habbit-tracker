@@ -27,7 +27,7 @@ export function EmptyHabits({ onCustom }: { onCustom: () => void }) {
         <path d="M30 166 q4 -10 8 0 M300 172 q4 -12 8 0 M330 168 q3 -8 6 0" stroke="#0c9e7a" strokeWidth="2" fill="none" strokeLinecap="round" />
       </svg>
       <div className="eh-ember"><StreakFlame stage={0} size={84} /></div>
-      <motion.div className="eh-mascot" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3, type: 'spring' }}><Mascot size={54} mood="happy" className="bob" /></motion.div>
+      <motion.div className="eh-mascot" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3, type: 'spring' }}><Mascot size={54} mood="happy" /></motion.div>
 
       <div className="eh-text">
         <b>Your flame is asleep</b>
