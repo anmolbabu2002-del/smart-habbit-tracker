@@ -6,9 +6,10 @@ const { guard } = require("../lib/guard");
 // Netlify caps function responses at 6 MB
 const MAX_BOOK_BYTES = 5.5 * 1024 * 1024;
 
+// Free book sources the library uses (the website can't call some of them directly)
+const ALLOWED = ["gutenberg.org", "gutendex.com", "standardebooks.org", "archive.org", "open.umn.edu"];
 function isGutenbergUrl(u) {
-  return u.protocol === "https:" &&
-    (u.hostname === "gutenberg.org" || u.hostname.endsWith(".gutenberg.org"));
+  return u.protocol === "https:" && ALLOWED.some(h => u.hostname === h || u.hostname.endsWith("." + h));
 }
 
 exports.handler = async function (event) {
@@ -34,7 +35,7 @@ exports.handler = async function (event) {
   if (!parsed || !isGutenbergUrl(parsed)) {
     return {
       statusCode: 403,
-      body: JSON.stringify({ error: "Only Project Gutenberg URLs are allowed." }),
+      body: JSON.stringify({ error: "Only the library's free book sources are allowed." }),
     };
   }
 
@@ -50,7 +51,7 @@ exports.handler = async function (event) {
       if (response.status < 300 || response.status >= 400) break;
       const next = new URL(response.headers.get("location") || "", target);
       if (!isGutenbergUrl(next)) {
-        return { statusCode: 403, body: JSON.stringify({ error: "Redirected away from Project Gutenberg." }) };
+        return { statusCode: 403, body: JSON.stringify({ error: "Redirected away from an allowed book source." }) };
       }
       target = next;
     }

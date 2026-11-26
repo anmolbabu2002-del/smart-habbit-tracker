@@ -6,7 +6,8 @@ export type Party =
   | { kind: 'allDone'; streak: number; prev: number; best: boolean; evolvedTo?: number }
   | { kind: 'focus'; minutes: number; label: string; icon: string; weekMinutes: number; finished: boolean; taskId?: string; proveHabitId?: string }
   | { kind: 'feat'; icon: string; title: string; text: string; kicker?: string }
-  | { kind: 'evolve'; from: number; to: number };
+  | { kind: 'evolve'; from: number; to: number }
+  | { kind: 'gaveup'; minutes: number; planned: number; week: number };
 
 let queue: Party[] = [];
 const subs = new Set<() => void>();

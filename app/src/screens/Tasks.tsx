@@ -93,7 +93,7 @@ export function Tasks() {
         </section>
       )) : (
         <div className="empty-state">
-          <Mascot size={96} mood={view === 'done' ? 'sleepy' : 'cheer'} className="bob" />
+          <Mascot size={96} mood={view === 'done' ? 'sleepy' : 'cheer'} />
           <b>{view === 'today' ? 'All clear!' : view === 'upcoming' ? 'Nothing coming up' : 'Nothing done yet'}</b>
           <span>{view === 'today' ? 'Add a task above, or enjoy the free time.' : view === 'upcoming' ? 'Tasks with a future date show up here.' : 'Completed tasks land here.'}</span>
         </div>

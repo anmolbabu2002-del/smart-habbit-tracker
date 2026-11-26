@@ -7,7 +7,7 @@ import { Sheet } from '../components/Sheet';
 import { useApp } from '../lib/store';
 import { doneToday } from '../lib/actions';
 import { dueInfo, fmtMinutes, today } from '../lib/dates';
-import { endFocus, remainingMs, startFocus, weekMinutes, elapsedMs } from '../lib/focus';
+import { endFocus, remainingMs, startFocus, weekMinutes, elapsedMs, weekGiveUps } from '../lib/focus';
 import { needsPhoto } from '../lib/proof';
 import { isNative, haptic } from '../lib/native';
 import { onBack } from '../lib/back';
@@ -64,6 +64,7 @@ export function FocusSetup() {
 
       <section className="card week">
         <div className="week-head"><b>This week</b><span>{fmtMinutes(weekTotal)} deep work</span></div>
+        {weekGiveUps(s) > 0 && <p className="giveups">Gave up {weekGiveUps(s)} {weekGiveUps(s) === 1 ? 'time' : 'times'} this week</p>}
         <div className="bars">
           {week.map((d, i) => (
             <div key={d.day} className={'bar' + (i === todayIdx ? ' today' : '')}>
