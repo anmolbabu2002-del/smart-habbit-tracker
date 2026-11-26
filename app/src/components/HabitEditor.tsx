@@ -1,7 +1,7 @@
 // A small, friendly sheet: tap the icon to change it, type the name, done. Colour comes from
 // the icon, so there's nothing else to decide.
 import { useEffect, useState } from 'react';
-import { Camera, CheckCircle, Trash, Microphone } from '@phosphor-icons/react';
+import { Camera, CheckCircle, Trash } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Sheet } from './Sheet';
 import { HabitIcon, HABIT_ICONS, iconFor, colorFor } from './HabitIcon';
@@ -40,7 +40,7 @@ export function HabitEditor({ open, habit, onClose }: { open: boolean; habit?: H
       </div>
       {proof && (
         <p className={'proof-note ' + proof.mode}>
-          {proof.mode === 'photo' ? <><Camera size={16} weight="fill" /> Proved with a live photo</> : proof.mode === 'voice' ? <><Microphone size={16} weight="fill" /> Proved by speaking for a minute</> : <><CheckCircle size={16} weight="fill" /> A simple tick</>}
+          {proof.mode === 'photo' ? <><Camera size={16} weight="fill" /> Proved with a live photo</> : <><CheckCircle size={16} weight="fill" /> A simple tick</>}
         </p>
       )}
       <AnimatePresence initial={false}>

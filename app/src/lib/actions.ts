@@ -77,8 +77,11 @@ export function afterHabitsChanged(undo = false) {
     update(d => { d.bestStreak = Math.max(d.bestStreak, streak); d.celebratedDay = day; });
     if (first) {
       const evolvedTo = stageIndex(streak) > stageIndex(prev) ? stageIndex(streak) : undefined;
-      setTimeout(() => party({ kind: 'allDone', streak, prev, best: best && streak > 1, evolvedTo }), 650);
-      if (new Date().getHours() < 12) feat('early-bird', 'sun', 'Early bird', 'Every habit done before noon.');
+      setTimeout(() => {
+        party({ kind: 'allDone', streak, prev, best: best && streak > 1, evolvedTo });
+        const h = new Date().getHours();
+        if (h >= 4 && h < 12) feat('early-bird', 'sun', 'Early bird', 'Every habit done before noon.'); // queued after the party
+      }, 650);
     }
   } else if (!perfect && had && undo) {
     update(d => { d.perfectDays = d.perfectDays.filter(x => x !== day); });

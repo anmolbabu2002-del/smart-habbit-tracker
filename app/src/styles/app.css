@@ -730,17 +730,3 @@ button.voice-row > span, .voice-pick > span { flex: 1; display: grid; }
 .voice-pick { appearance: none; border: 0; background: none; flex: 1; display: flex; align-items: center; gap: 10px; text-align: left; font: inherit; color: var(--ink); cursor: pointer; padding: 0; }
 .rd-player { gap: 8px; }
 
-/* ── Voice proof ── */
-.cam.voice { background: radial-gradient(120% 70% at 50% 30%, #1d2b55 0%, #0f1218 70%); }
-.voice-stage { position: relative; flex: 1; display: grid; place-items: center; min-height: 260px; }
-.voice-ring { position: absolute; transform: rotate(-90deg); }
-.vr-bg { fill: none; stroke: rgba(255, 255, 255, 0.12); stroke-width: 12; }
-.vr-fg { fill: none; stroke: var(--mint); stroke-width: 12; stroke-linecap: round; transition: stroke-dashoffset 0.2s; }
-.voice-pulse { position: absolute; width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(circle, var(--blue) 0%, transparent 70%); }
-.voice-mic { position: relative; appearance: none; border: 0; width: 132px; height: 132px; border-radius: 50%; display: grid; place-items: center; color: #fff; cursor: pointer;
-  background: radial-gradient(circle at 35% 30%, #6fd0ff, var(--blue) 60%, var(--blue-edge)); box-shadow: 0 16px 40px -12px var(--blue), inset 0 -6px 0 rgba(0, 0, 0, 0.15); }
-.voice-mic.on { background: radial-gradient(circle at 35% 30%, #7ff0cf, var(--mint) 60%, var(--mint-edge)); box-shadow: 0 16px 40px -12px var(--mint); }
-.voice-text { display: grid; gap: 6px; text-align: center; padding: 0 10px 8px; }
-.voice-text b { font-size: 1.35rem; font-weight: 900; }
-.voice-text b small { font-size: 0.9rem; opacity: 0.7; }
-.voice-text span { color: rgba(255, 255, 255, 0.8); font-weight: 700; }

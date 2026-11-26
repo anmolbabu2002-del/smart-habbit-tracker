@@ -63,7 +63,7 @@ export function endFocus(finished: boolean) {
   const week = weekMinutes().reduce((n, x) => n + x.minutes, 0);
   // A full session on a habit: tick-habits are ticked off; photo habits still need their photo
   const habit = finished && a.ref?.kind === 'habit' ? getState().habits.find(h => h.id === a.ref!.id) : undefined;
-  const photo = habit && proofOf(habit.name).mode !== 'tick' && !habit.history.includes(today());
+  const photo = habit && proofOf(habit.name).mode === 'photo' && !habit.history.includes(today());
   party({ kind: 'focus', minutes, label: a.label, icon: a.icon, weekMinutes: week, finished, taskId: finished && a.ref?.kind === 'task' ? a.ref.id : undefined, proveHabitId: photo ? habit!.id : undefined });
   if (habit && !photo) setTimeout(() => completeHabit(habit.id, { x: innerWidth / 2, y: innerHeight / 2 }), 300);
 

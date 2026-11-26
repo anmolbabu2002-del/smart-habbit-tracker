@@ -1,4 +1,4 @@
-import { Camera, Check, Ticket, Trash, PencilSimple, Microphone, ArrowsClockwise } from '@phosphor-icons/react';
+import { Camera, Check, Ticket, Trash, PencilSimple, ArrowsClockwise } from '@phosphor-icons/react';
 import { Swipe } from './Swipe';
 import { motion } from 'motion/react';
 import { centerOf } from '../lib/celebrate';
@@ -13,10 +13,10 @@ import type { Habit, Task } from '../lib/types';
 export function HabitRow({ h, onOpen, onProve }: { h: Habit; onOpen: () => void; onProve: () => void }) {
   const done = doneToday(h);
   const mode = proofOf(h.name).mode;
-  const photo = mode !== 'tick'; // photo or voice proof
+  const photo = mode === 'photo';
   const viaPass = done && h.passDays?.includes(today());
   const streak = habitStreak(h);
-  const sub = done ? (viaPass ? 'Free pass used' : 'Done today') : mode === 'photo' ? 'Prove it with a photo' : mode === 'voice' ? 'Prove it by speaking' : 'Tap when done';
+  const sub = done ? (viaPass ? 'Free pass used' : 'Done today') : photo ? 'Prove it with a photo' : 'Tap when done';
 
   return (
     <Swipe actions={[
@@ -30,8 +30,7 @@ export function HabitRow({ h, onOpen, onProve }: { h: Habit; onOpen: () => void;
           <b>{h.name}</b>
           <small>
             {viaPass && <Ticket size={14} weight="fill" />}
-            {!done && mode === 'photo' && <Camera size={14} weight="fill" />}
-            {!done && mode === 'voice' && <Microphone size={14} weight="fill" />}
+            {!done && photo && <Camera size={14} weight="fill" />}
             {sub}
             {streak > 0 && <span className="mini-streak"><StreakFlame stage={2} size={16} still />{streak}</span>}
           </small>
@@ -44,7 +43,7 @@ export function HabitRow({ h, onOpen, onProve }: { h: Habit; onOpen: () => void;
           <Check size={22} weight="bold" />
         </motion.button>
       ) : photo ? (
-        <button type="button" className="btn round" aria-label={`Prove ${h.name}`} onClick={() => { play('tap'); onProve(); }}>{mode === 'voice' ? <Microphone size={22} weight="fill" /> : <Camera size={22} weight="fill" />}</button>
+        <button type="button" className="btn round" aria-label={`Prove ${h.name}`} onClick={() => { play('tap'); onProve(); }}><Camera size={22} weight="fill" /></button>
       ) : (
         <button type="button" className="btn round ghost" aria-label={`Mark ${h.name} done`} onClick={e => completeHabit(h.id, centerOf(e.currentTarget))}><Check size={22} weight="bold" /></button>
       )}
