@@ -109,10 +109,8 @@ export function Meditate({ onBack }: { onBack: () => void }) {
       onClick={() => { if (state === 'running') setChrome(c => !c); }}>
       <Sky />
       {!sky.dawn && <div className="aurora"><i /><i /><i /></div>}
-      <Celestial dawn={!!sky.dawn} />
       {[0, 1, 2].map(i => <i key={i} className={'shoot s' + i} />)}
       <Landscape sky={sky} />
-      <i className={'reflect' + (sky.dawn ? ' dawn' : '')} aria-hidden="true" />
       <AnimatePresence>
         {!arrived && (
           <motion.div className="zen-arrive" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.4 }}>
@@ -210,23 +208,6 @@ function Sky() {
     return () => { cancelAnimationFrame(raf); removeEventListener('resize', size); };
   }, []);
   return <canvas ref={ref} className="zen-sky" aria-hidden="true" />;
-}
-
-/** The moon (or a rising sun at dawn) with a soft halo */
-function Celestial({ dawn }: { dawn: boolean }) {
-  return dawn ? (
-    <div className="sun-rise" aria-hidden="true"><i /></div>
-  ) : (
-    <svg className="moon" viewBox="0 0 120 120" aria-hidden="true">
-      <defs>
-        <radialGradient id="mh"><stop offset=".35" stopColor="#fff8e1" stopOpacity=".55" /><stop offset="1" stopColor="#fff8e1" stopOpacity="0" /></radialGradient>
-        <radialGradient id="mb" cx=".4" cy=".35"><stop offset="0" stopColor="#fffdf3" /><stop offset="1" stopColor="#e9e0c8" /></radialGradient>
-      </defs>
-      <circle cx="60" cy="60" r="58" fill="url(#mh)" />
-      <circle cx="60" cy="60" r="22" fill="url(#mb)" />
-      <circle cx="53" cy="55" r="4" fill="#d8ccb0" opacity=".6" /><circle cx="67" cy="66" r="3" fill="#d8ccb0" opacity=".5" /><circle cx="64" cy="52" r="2" fill="#d8ccb0" opacity=".5" />
-    </svg>
-  );
 }
 
 /** A row of pine trees along a ridge */
