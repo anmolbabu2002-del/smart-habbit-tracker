@@ -45,3 +45,22 @@ export function listenWidget() {
     if (d?.id && getState().habits.some(h => h.id === d.id)) requestProof(d.id);
   });
 }
+
+// ── Adding the widget from the app ──
+export type WidgetStatus = { supported: boolean; placed: boolean };
+export const widgetStatus = (): Promise<WidgetStatus> =>
+  isNative ? native<WidgetStatus>(PLUGIN, 'widgetStatus').catch(() => ({ supported: false, placed: false })) : Promise.resolve({ supported: false, placed: false });
+/** Ask the launcher to add it (Android shows its own "Add" dialog). False = do it by hand. */
+export const pinWidget = () => native<{ asked: boolean }>(PLUGIN, 'pinWidget').then(r => !!r?.asked).catch(() => false);
+
+const DAY_MS = 86400000;
+/** Time for the occasional prompt? Never on day one, at most every 4 days, and never after 3 "Not now"s. */
+export async function shouldAskWidget() {
+  const s = getState(), a = s.widgetAsk || { no: 0, last: 0 };
+  if (!isNative || a.no >= 3 || Date.now() - a.last < 4 * DAY_MS) return false;
+  if (!s.habits.some(h => h.createdAt < today())) return false;
+  const st = await widgetStatus();
+  return st.supported && !st.placed;
+}
+export const markWidgetAsked = (declined: boolean) =>
+  update(s => { const a = s.widgetAsk || { no: 0, last: 0 }; s.widgetAsk = { no: a.no + (declined ? 1 : 0), last: Date.now() }; });

@@ -1,3 +1,4 @@
+import { WidgetPrompt } from './components/WidgetPrompt';
 import { takeWidgetTicks, listenWidget } from './lib/widget';
 import { DeleteHabitConfirm } from './components/DeleteHabitConfirm';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
@@ -81,6 +82,7 @@ export function App() {
       <AnimatePresence>{proving && <ProofCamera key={proving.id} habit={proving} onClose={() => setProving(null)} />}</AnimatePresence>
       <AnimatePresence>{s.focus.active && <FocusRun key="run" a={s.focus.active} />}</AnimatePresence>
       <DeleteHabitConfirm />
+      <WidgetPrompt />
       <Toasts />
       <CelebrationHost />
       <FxLayer />
