@@ -64,4 +64,7 @@ export interface State {
   tasksDone: number;      // lifetime count, for milestones
   migrated: boolean;
   lockDefaulted?: boolean; // Habit Lock was switched on by default once
+  why?: string;
+  hadHabits?: boolean;
+  widgetAsk?: { no: number; last: number }; // the occasional "add the widget" prompt: times declined, when last shown     // has ever had a habit (empty screen says "clean slate" instead of "first habit")           // the user's own line ('' = use the default)
 }

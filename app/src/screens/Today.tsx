@@ -1,22 +1,26 @@
 import { useEffect, useState } from 'react';
-import { LockSimple, LockSimpleOpen, Plus, ArrowRight } from '@phosphor-icons/react';
+import { LockSimple, Plus, ArrowRight } from '@phosphor-icons/react';
 import { motion } from 'motion/react';
 import { Mascot } from '../components/Mascot';
 import { HabitRow, TaskRow } from '../components/Rows';
 import { StreakFlame } from '../components/StreakFlame';
 import { HabitIcon } from '../components/HabitIcon';
 import { EmptyHabits } from '../components/EmptyHabits';
+import { WhyLine } from '../components/Why';
 import { HabitCalendar } from '../components/HabitCalendar';
 import { HabitEditor } from '../components/HabitEditor';
 import { TaskEditor } from '../components/TaskEditor';
 import { StreakSheet } from '../components/StreakSheet';
 import { useApp } from '../lib/store';
 import { doneToday } from '../lib/actions';
-import { requiredHabits, LOCK_FROM, lockStatus, openUsageAccess, openOverlay, type LockStatus } from '../lib/lock';
+import { requiredHabits, pendingHabits, LOCK_APPS, LOCK_FROM, lockStatus, openUsageAccess, openOverlay, type LockStatus } from '../lib/lock';
 import { isNative } from '../lib/native';
 import { stageIndex, streakOf } from '../lib/streak';
 import { dueInfo, longDay, today } from '../lib/dates';
 import { play } from '../lib/sound';
+import { readUsage, type Usage } from '../lib/usage';
+import { bubbleFor } from '../lib/bubble';
+import { UsageSheet } from '../components/UsageSheet';
 import type { Habit, Task } from '../lib/types';
 
 export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFocus: () => void }) {
@@ -32,25 +36,37 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
   const left = required.length - done;
   const allDone = required.length > 0 && (left === 0 || s.perfectDays.includes(day));
   const streak = streakOf(s);
-  const afterFour = new Date().getHours() * 60 + new Date().getMinutes() >= LOCK_FROM;
+  const [usage, setUsage] = useState<Usage | null>(null);
+  const [usageOpen, setUsageOpen] = useState(false);
+  const [now, setNow] = useState(() => new Date());
+  // screen time: on open, when coming back to the app, and every 2 minutes
+  useEffect(() => {
+    let alive = true;
+    const load = () => { setNow(new Date()); readUsage().then(u => { if (alive) setUsage(u); }); };
+    load();
+    let n = 0;
+    const t = setInterval(() => { if (++n % 2) setNow(new Date()); else load(); }, 60000); // clock every minute, screen time every 2
+    const v = () => { if (document.visibilityState === 'visible') load(); };
+    document.addEventListener('visibilitychange', v);
+    return () => { alive = false; clearInterval(t); document.removeEventListener('visibilitychange', v); };
+  }, [done]);
   const lockOn = s.lock.enabled;
 
   const due = s.tasks.filter(t => { const g = dueInfo(t.due).group; return (g === 'today' || g === 'overdue') && (!t.doneAt || t.doneAt === day); })
     .sort((a, b) => Number(!!a.doneAt) - Number(!!b.doneAt) || (a.due || '').localeCompare(b.due || ''));
   const dueLeft = due.filter(t => !t.doneAt).length;
 
-  let title = `${left} ${left === 1 ? 'habit' : 'habits'} to go!`;
-  let line = lockOn ? (afterFour ? 'Your apps are locked until they’re done.' : 'Apps lock at 4 PM if they’re not done.') : 'You’ve got this.';
-  if (!s.habits.length) { title = 'Let’s build your day!'; line = 'Add a habit you want to do every day.'; }
-  else if (allDone) { title = 'All done for today!'; line = streak > 1 ? `That’s ${streak} days in a row.` : 'Come back tomorrow to start a streak.'; }
-  else if (done === 0 && left > 2) title = `${left} habits today`;
+  const bubble = bubbleFor({
+    habits: required.length, hadHabits: !!s.hadHabits, bestStreak: s.bestStreak, left: pendingHabits(s).map(h => h.name.trim()), allDone, lockOn, lockFrom: LOCK_FROM,
+    lockApps: LOCK_APPS.length, now, streak, focusMinutes: s.focus.lastPlanned || 50, usage
+  });
 
   return (
     <main className="screen">
       <header className="today-head">
         <div>
           <small className="eyebrow">{longDay()}</small>
-          <h1>Hey {s.name || 'there'}!</h1>
+          <WhyLine />
         </div>
         <button type="button" className={'streak-pill' + (streak ? '' : ' cold')} onClick={() => { play('tap'); setStreakOpen(true); }} aria-label={`${streak} day streak`}>
           <StreakFlame stage={stageIndex(streak)} size={28} />
@@ -60,10 +76,12 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
 
       {s.lock.enabled && <PermCard />}
 
-      {s.habits.length > 0 && <section className={'card hero' + (allDone ? ' won' : '')}>
+      <section className={'card hero' + (allDone ? ' won' : '')}>
         <div className="hero-top">
-          <Mascot size={58} mood={allDone ? 'cheer' : afterFour && left ? 'focus' : 'happy'} />
-          <div className="bubble"><b>{title}</b><span>{line}</span></div>
+          <Mascot size={58} mood={bubble?.mood || 'happy'} />
+          {bubble?.tappable
+            ? <button type="button" className="bubble tap" onClick={() => { play('tap'); setUsageOpen(true); }}><b>{bubble.title}</b><span>{bubble.line}</span></button>
+            : <div className="bubble"><b>{bubble?.title}</b><span>{bubble?.line}</span></div>}
         </div>
         {required.length > 0 && (
           <div className="hero-progress">
@@ -71,13 +89,7 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
             <b>{done}/{required.length}</b>
           </div>
         )}
-        {lockOn && s.habits.length > 0 && (
-          <div className={'lock-pill' + (allDone ? ' open' : '')}>
-            {allDone ? <LockSimpleOpen size={18} weight="fill" /> : <LockSimple size={18} weight="fill" />}
-            {allDone ? 'Apps unlocked for today' : afterFour ? '5 apps locked until habits are done' : '5 apps lock at 4 PM'}
-          </div>
-        )}
-      </section>}
+      </section>
 
       <h2 className="section-title">Habits
         <button type="button" className="add-mini" onClick={() => { play('tap'); setEditHabit(null); }} aria-label="Add habit"><Plus size={18} weight="bold" /></button>
@@ -104,6 +116,7 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
       <HabitEditor open={editHabit !== undefined} habit={editHabit} onClose={() => setEditHabit(undefined)} />
       <TaskEditor open={editTask !== undefined} task={editTask} defaultDue={day} onClose={() => setEditTask(undefined)} />
       <StreakSheet open={streakOpen} onClose={() => setStreakOpen(false)} />
+      <UsageSheet open={usageOpen} usage={usage} onClose={() => setUsageOpen(false)} onFocus={left > 0 ? onFocus : undefined} />
       <HabitCalendar habit={calHabit} onClose={() => setCalHabit(null)} />
     </main>
   );

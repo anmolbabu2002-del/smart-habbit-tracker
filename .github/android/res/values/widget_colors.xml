@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_card">#FFFFFF</color>
+    <color name="widget_card_edge">#E4E7EF</color>
+    <color name="widget_ink">#2F3542</color>
+    <color name="widget_done_ink">#5AA58D</color>
+    <color name="widget_soft">#9AA1B1</color>
+    <color name="widget_track">#EEF1F6</color>
+    <color name="wrow_orange">#fff0e5</color>
+    <color name="wrow_orange_edge">#ffd9bf</color>
+    <color name="wrow_mint">#dcf8ef</color>
+    <color name="wrow_mint_edge">#b5ecd9</color>
+    <color name="wrow_blue">#ddf4ff</color>
+    <color name="wrow_blue_edge">#b9e6fb</color>
+    <color name="wrow_purple">#f3e8ff</color>
+    <color name="wrow_purple_edge">#e0ccfa</color>
+    <color name="wrow_yellow">#fff6cc</color>
+    <color name="wrow_yellow_edge">#ffe89a</color>
+    <color name="wrow_red">#ffe1e1</color>
+    <color name="wrow_red_edge">#ffc4c4</color>
+    <color name="wrow_done">#dcf8ef</color>
+    <color name="wrow_done_edge">#b5ecd9</color>
+    <string name="widget_name">Today\'s habits</string>
+</resources>

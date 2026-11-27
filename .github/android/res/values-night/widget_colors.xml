@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_card">#191D26</color>
+    <color name="widget_card_edge">#0D1016</color>
+    <color name="widget_ink">#F1F3F7</color>
+    <color name="widget_done_ink">#5FAE96</color>
+    <color name="widget_soft">#8A91A3</color>
+    <color name="widget_track">#2A303D</color>
+    <color name="wrow_orange">#3a2616</color>
+    <color name="wrow_orange_edge">#24170d</color>
+    <color name="wrow_mint">#123a30</color>
+    <color name="wrow_mint_edge">#0b2a22</color>
+    <color name="wrow_blue">#10314a</color>
+    <color name="wrow_blue_edge">#0a2133</color>
+    <color name="wrow_purple">#2e1e45</color>
+    <color name="wrow_purple_edge">#1f142f</color>
+    <color name="wrow_yellow">#3a3110</color>
+    <color name="wrow_yellow_edge">#26200a</color>
+    <color name="wrow_red">#3f1a1d</color>
+    <color name="wrow_red_edge">#2a1113</color>
+    <color name="wrow_done">#123a30</color>
+    <color name="wrow_done_edge">#0b2a22</color>
+</resources>

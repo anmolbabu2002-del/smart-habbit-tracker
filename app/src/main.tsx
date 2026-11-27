@@ -9,6 +9,7 @@ import { App } from './App';
 import { restoreIfWiped, getState, update } from './lib/store';
 import { migrateFromV1 } from './lib/migrate';
 import { clearOldReminders, syncLock } from './lib/lock';
+import { importOldQuote } from './lib/why';
 import { backgroundDownload } from './lib/proof';
 import { afterHabitsChanged } from './lib/actions';
 import { dailyBackup } from './lib/backup';
@@ -28,11 +29,13 @@ async function boot() {
   await restoreIfWiped(['ultradian.v2', 'journalEntries']);
   migrateFromV1();
   // Habit Lock is on by default (switched on once for people who had it off)
+  // remember that habits existed, so an empty list later reads as a clean slate
+  { const g = getState(); if (!g.hadHabits && (g.habits.length || g.perfectDays.length || g.bestStreak > 0)) update(d => { d.hadHabits = true; }); }
   if (!getState().lockDefaulted) update(d => { d.lock.enabled = true; d.lockDefaulted = true; });
   document.documentElement.dataset.theme = getState().theme;
   createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
   afterHabitsChanged();
-  syncLock();
+  importOldQuote().finally(syncLock);
   clearOldReminders();
   setTimeout(dailyBackup, 8000);
   const idle = (window as unknown as { requestIdleCallback?: (f: () => void) => void }).requestIdleCallback || ((f: () => void) => setTimeout(f, 4000));

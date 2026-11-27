@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { LockSimple, Moon, SpeakerHigh, DownloadSimple, UploadSimple, User, CheckCircle, WarningCircle } from '@phosphor-icons/react';
+import { LockSimple, SquaresFour, Moon, SpeakerHigh, DownloadSimple, UploadSimple, User, CheckCircle, WarningCircle } from '@phosphor-icons/react';
 import { useApp, update } from '../../lib/store';
 import { habitLocked, lockStatus, openOverlay, openUsageAccess, syncLock, LOCK_APPS, type LockStatus } from '../../lib/lock';
 import { isNative } from '../../lib/native';
@@ -10,6 +10,8 @@ import { toast } from '../../lib/celebrate';
 import { Page } from './Page';
 import { TurnOffCoach } from '../../components/TurnOffCoach';
 import { streakOf } from '../../lib/streak';
+import { widgetStatus, pinWidget, type WidgetStatus } from '../../lib/widget';
+import { MANUAL_STEPS } from '../../components/WidgetPrompt';
 
 function Switch({ on }: { on: boolean }) { return <span className={'switch' + (on ? ' on' : '')}><i /></span>; }
 
@@ -65,6 +67,7 @@ export function Settings({ onBack }: { onBack: () => void }) {
           <span className="set-text"><b>Dark mode</b></span>
           <Switch on={s.theme === 'dark'} />
         </button>
+        {isNative && <WidgetRow />}
         <button type="button" className="set-row" onClick={() => { const on = !s.sound; setSoundEnabled(on); update(d => { d.sound = on; }); if (on) play('toggle'); }}>
           <span className="set-ico mint"><SpeakerHigh size={22} weight="fill" /></span>
           <span className="set-text"><b>Sound effects</b></span>
@@ -96,6 +99,29 @@ function PermRow({ ok, title, text, onClick }: { ok: boolean; title: string; tex
       <span className={'set-ico ' + (ok ? 'mint' : 'red')}>{ok ? <CheckCircle size={22} weight="fill" /> : <WarningCircle size={22} weight="fill" />}</span>
       <span className="set-text"><b>{title}</b><small>{ok ? 'Allowed' : text}</small></span>
       {!ok && <span className="btn small-btn">Allow</span>}
+    </button>
+  );
+}
+
+/** Settings: add the home-screen widget (the launcher's own "Add" dialog, or how to do it by hand) */
+function WidgetRow() {
+  const [st, setSt] = useState<WidgetStatus | null>(null);
+  useEffect(() => {
+    const load = () => { widgetStatus().then(setSt); };
+    load();
+    const v = () => { if (document.visibilityState === 'visible') load(); };
+    document.addEventListener('visibilitychange', v);
+    return () => document.removeEventListener('visibilitychange', v);
+  }, []);
+  const add = async () => {
+    play('tap');
+    if (st?.placed) { toast('Noto is already on your home screen. You can add another one too.'); }
+    if (!(await pinWidget())) toast(MANUAL_STEPS);
+  };
+  return (
+    <button type="button" className="set-row" onClick={add}>
+      <span className="set-ico orange"><SquaresFour size={22} weight="fill" /></span>
+      <span className="set-text"><b>Home-screen widget</b><small>{st?.placed ? 'Added. Tap to add another' : 'Tick habits right from your home screen'}</small></span>
     </button>
   );
 }

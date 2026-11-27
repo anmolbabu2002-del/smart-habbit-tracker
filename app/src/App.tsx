@@ -1,3 +1,6 @@
+import { WidgetPrompt } from './components/WidgetPrompt';
+import { takeWidgetTicks, listenWidget } from './lib/widget';
+import { DeleteHabitConfirm } from './components/DeleteHabitConfirm';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { TabBar, type Tab } from './components/TabBar';
@@ -48,7 +51,9 @@ export function App() {
     let last = today();
     const tick = () => { const d = today(); if (d !== last) { last = d; setDay(d); afterHabitsChanged(); } else syncLock(); };
     const iv = setInterval(tick, 30000);
-    const vis = () => { if (!document.hidden) tick(); };
+    const vis = () => { if (!document.hidden) { takeWidgetTicks().finally(tick); } };
+    takeWidgetTicks();
+    listenWidget();
     document.addEventListener('visibilitychange', vis);
     return () => { off(); clearInterval(iv); document.removeEventListener('visibilitychange', vis); window.removeEventListener('ultradian:prove', prove); };
   }, []);
@@ -76,6 +81,8 @@ export function App() {
       </AnimatePresence></Suspense>
       <AnimatePresence>{proving && <ProofCamera key={proving.id} habit={proving} onClose={() => setProving(null)} />}</AnimatePresence>
       <AnimatePresence>{s.focus.active && <FocusRun key="run" a={s.focus.active} />}</AnimatePresence>
+      <DeleteHabitConfirm />
+      <WidgetPrompt />
       <Toasts />
       <CelebrationHost />
       <FxLayer />

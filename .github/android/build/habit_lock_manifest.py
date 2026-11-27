@@ -52,6 +52,17 @@ components = '''
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
         <receiver
+            android:name="com.anmoljha.ultradian.NotoWidget"
+            android:label="@string/widget_name"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/noto_widget_info" />
+        </receiver>
+        <receiver
             android:name="com.anmoljha.ultradian.HabitLockReceiver"
             android:exported="false">
             <intent-filter>

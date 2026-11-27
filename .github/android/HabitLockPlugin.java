@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.provider.Settings;
 import com.getcapacitor.JSArray;
+import org.json.JSONArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -20,6 +21,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 @CapacitorPlugin(name = "UltradianHabitLock")
 public class HabitLockPlugin extends Plugin {
     static final String EXTRA_OPEN = "com.anmoljha.ultradian.HABIT_LOCK_OPEN";
+    static final String EXTRA_PROVE = "com.anmoljha.ultradian.PROVE_HABIT";
 
     @Override
     public void load() {
@@ -34,7 +36,16 @@ public class HabitLockPlugin extends Plugin {
     }
 
     private void checkIntent(Intent intent) {
-        if (intent == null || !intent.getBooleanExtra(EXTRA_OPEN, false)) return;
+        if (intent == null) return;
+        String prove = intent.getStringExtra(EXTRA_PROVE);
+        if (prove != null) {
+            // the widget's camera button: open that habit's photo check
+            intent.removeExtra(EXTRA_PROVE);
+            JSObject d = new JSObject();
+            d.put("id", prove);
+            notifyListeners("proveHabit", d, true);
+        }
+        if (!intent.getBooleanExtra(EXTRA_OPEN, false)) return;
         JSObject data = new JSObject();
         data.put("app", intent.getStringExtra("app"));
         intent.removeExtra(EXTRA_OPEN);
@@ -73,11 +84,121 @@ public class HabitLockPlugin extends Plugin {
         e.putLong("focusUntil", call.getData().optLong("focusUntil", 0L));
         e.putString("focusLabel", call.getString("focusLabel", ""));
         e.putBoolean("focusStrict", call.getBoolean("focusStrict", false));
+        e.putString("why", call.getString("why", ""));
+        // the widget's habit list; ticks made on the widget and not yet taken stay ticked
+        try {
+            JSONArray w = call.getArray("widget", new JSArray());
+            org.json.JSONArray ticks = new org.json.JSONArray(HabitLock.prefs(getContext()).getString("widgetTicks", "[]"));
+            for (int i = 0; i < w.length(); i++) {
+                org.json.JSONObject o = w.getJSONObject(i);
+                for (int j = 0; j < ticks.length(); j++) {
+                    org.json.JSONObject t = ticks.getJSONObject(j);
+                    if (t.optString("id").equals(o.optString("id")) && t.optString("day").equals(day)) o.put("done", true);
+                }
+            }
+            e.putString("widget", w.toString());
+            // widget ticks the app hasn't taken yet still count (no flicker of the lock meanwhile)
+            if (w.length() > 0 && ticks.length() > 0) {
+                JSONArray left = new JSONArray();
+                for (int i = 0; i < w.length(); i++) if (!w.getJSONObject(i).optBoolean("done")) left.put(w.getJSONObject(i).optString("name"));
+                e.putString("pending", left.toString());
+                if (left.length() == 0) e.putString("doneDay", day);
+            }
+        } catch (Exception ignored) {
+            // keep the old list
+        }
         e.apply();
         HabitLock.refresh(getContext());
         JSObject r = new JSObject();
         r.put("locked", HabitLock.isLockActive(getContext()));
         call.resolve(r);
+    }
+
+    /** Can this launcher add the widget for us, and is one on the home screen already? */
+    @PluginMethod
+    public void widgetStatus(PluginCall call) {
+        Context c = getContext();
+        android.appwidget.AppWidgetManager m = android.appwidget.AppWidgetManager.getInstance(c);
+        JSObject r = new JSObject();
+        boolean supported = false;
+        int placed = 0;
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) supported = m.isRequestPinAppWidgetSupported();
+            placed = m.getAppWidgetIds(new android.content.ComponentName(c, NotoWidget.class)).length;
+        } catch (Exception ignored) {
+            // unknown launcher: treat as unsupported
+        }
+        r.put("supported", supported);
+        r.put("placed", placed > 0);
+        call.resolve(r);
+    }
+
+    /** Ask the launcher to put the widget on the home screen (it shows its own "Add" dialog). */
+    @PluginMethod
+    public void pinWidget(PluginCall call) {
+        Context c = getContext();
+        boolean asked = false;
+        try {
+            android.appwidget.AppWidgetManager m = android.appwidget.AppWidgetManager.getInstance(c);
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O && m.isRequestPinAppWidgetSupported()) {
+                asked = m.requestPinAppWidget(new android.content.ComponentName(c, NotoWidget.class), null, null);
+            }
+        } catch (Exception ignored) {
+            // fall through: the app shows how to add it by hand
+        }
+        JSObject r = new JSObject();
+        r.put("asked", asked);
+        call.resolve(r);
+    }
+
+    /** Ticks made on the home-screen widget since the app last looked (then forgets them). */
+    @PluginMethod
+    public void takeWidgetTicks(PluginCall call) {
+        SharedPreferences p = HabitLock.prefs(getContext());
+        String raw = p.getString("widgetTicks", "[]");
+        p.edit().putString("widgetTicks", "[]").apply();
+        JSObject r = new JSObject();
+        try { r.put("ticks", new JSArray(raw)); } catch (Exception ex) { r.put("ticks", new JSArray()); }
+        call.resolve(r);
+    }
+
+    /** Screen time of the given apps: today, and the 7 days before (see UsageReport). */
+    @PluginMethod
+    public void usage(PluginCall call) {
+        Context c = getContext();
+        if (!HabitLock.hasUsageAccess(c)) {
+            JSObject r = new JSObject();
+            r.put("access", false);
+            call.resolve(r);
+            return;
+        }
+        JSArray arr = call.getArray("pkgs", new JSArray());
+        java.util.List<String> pkgs = new java.util.ArrayList<>();
+        for (int i = 0; i < arr.length(); i++) {
+            try { pkgs.add(arr.getString(i)); } catch (Exception ignored) { /* skip */ }
+        }
+        new Thread(() -> {
+            try {
+                java.util.Map<String, UsageReport.App> data = UsageReport.read(c, pkgs);
+                JSObject apps = new JSObject();
+                for (java.util.Map.Entry<String, UsageReport.App> en : data.entrySet()) {
+                    UsageReport.App a = en.getValue();
+                    JSObject o = new JSObject();
+                    o.put("today", a.today);
+                    JSArray full = new JSArray(), same = new JSArray();
+                    for (int i = 0; i < UsageReport.PAST; i++) { full.put(a.full[i]); same.put(a.same[i]); }
+                    o.put("full", full);
+                    o.put("same", same);
+                    apps.put(en.getKey(), o);
+                }
+                JSObject r = new JSObject();
+                r.put("access", true);
+                r.put("apps", apps);
+                call.resolve(r);
+            } catch (Exception ex) {
+                call.reject("Couldn't read screen time");
+            }
+        }).start();
     }
 
     @PluginMethod

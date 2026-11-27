@@ -5,7 +5,7 @@ import { Camera, CheckCircle, Trash } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Sheet } from './Sheet';
 import { HabitIcon, HABIT_ICONS, iconFor, colorFor } from './HabitIcon';
-import { deleteHabit, saveHabit } from '../lib/actions';
+import { requestDeleteHabit, saveHabit } from '../lib/actions';
 import { proofOf } from '../lib/proof';
 import { play } from '../lib/sound';
 import type { Habit } from '../lib/types';
@@ -56,7 +56,7 @@ export function HabitEditor({ open, habit, onClose }: { open: boolean; habit?: H
         )}
       </AnimatePresence>
       <div className="hs-actions">
-        {habit && <button type="button" className="rd-ic danger" onClick={() => { if (deleteHabit(habit.id)) onClose(); }} aria-label="Delete habit"><Trash size={22} weight="bold" /></button>}
+        {habit && <button type="button" className="rd-ic danger" onClick={() => { if (requestDeleteHabit(habit.id)) onClose(); }} aria-label="Delete habit"><Trash size={22} weight="bold" /></button>}
         <button type="button" className="btn block" disabled={!name.trim()} onClick={save}>{habit ? 'Save' : 'Add habit'}</button>
       </div>
     </Sheet>

@@ -116,7 +116,7 @@ export function saveHabit(input: { id?: string; name: string; icon: string; colo
     update(s => { const h = s.habits.find(x => x.id === input.id); if (h) Object.assign(h, { name, icon: input.icon, color: input.color }); });
     play('pop');
   } else {
-    update(s => { s.habits.push({ id: uid(), name, icon: input.icon, color: input.color, createdAt: today(), history: [] }); });
+    update(s => { s.habits.push({ id: uid(), name, icon: input.icon, color: input.color, createdAt: today(), history: [] }); s.hadHabits = true; });
     play('add');
     haptic.medium();
   }
@@ -128,6 +128,19 @@ export function deleteHabit(id: string) {
   update(s => { s.habits = s.habits.filter(h => h.id !== id); });
   play('whoosh');
   afterHabitsChanged();
+  return true;
+}
+
+/**
+ * Delete from the long-press menu or the editor. A habit with done days asks first (in
+ * DeleteHabitConfirm), so a long streak is never lost by a slip of the finger.
+ * Returns false only when deleting is blocked.
+ */
+export function requestDeleteHabit(id: string) {
+  if (habitLocked()) { lockedToast('Deleting habits'); return false; }
+  const h = getState().habits.find(x => x.id === id);
+  if (h && h.history.length) window.dispatchEvent(new CustomEvent('ask-delete-habit', { detail: id }));
+  else deleteHabit(id);
   return true;
 }
 
