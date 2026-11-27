@@ -47,6 +47,8 @@ const D = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
     <color name="splash_bg">#121212</color>
 </resources>
 `);
+  // home-screen widget: Noto in each mood (rounded tile)
+  for (const st of ['normal', 'done', 'risk']) await shot(notoFull(st), 168, `${RES}/drawable-nodpi/widget_noto_${st}.png`, 'square');
   // web / installed-website icon: full tile, content well inside the maskable safe zone
   await shot(notoFull('normal'), 512, `${PUB}/icon-512-v3.png`);
   await shot(notoFull('normal'), 192, `${PUB}/icon-192-v3.png`);

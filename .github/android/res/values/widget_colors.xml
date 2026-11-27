@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_card">#FFFFFF</color>
+    <color name="widget_ink">#2F3542</color>
+    <color name="widget_soft">#7A8294</color>
+    <color name="widget_track">#E5E8EF</color>
+    <color name="widget_mint">#12C79B</color>
+    <string name="widget_name">Today\'s habits</string>
+</resources>

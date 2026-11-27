@@ -145,6 +145,7 @@ final class HabitLock {
             c.stopService(new Intent(c, HabitLockService.class));
         }
         AppIcon.sync(c);
+        NotoWidget.refreshAll(c);
         scheduleNext(c);
     }
 
