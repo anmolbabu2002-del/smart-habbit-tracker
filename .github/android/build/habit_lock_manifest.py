@@ -52,18 +52,6 @@ components = '''
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
         <service
-            android:name="com.anmoljha.ultradian.HabitLockAccessibility"
-            android:exported="true"
-            android:label="@string/lock_accessibility_name"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/habit_lock_accessibility" />
-        </service>
-        <service
             android:name="com.anmoljha.ultradian.NotoWidgetService"
             android:exported="false"
             android:permission="android.permission.BIND_REMOTEVIEWS" />

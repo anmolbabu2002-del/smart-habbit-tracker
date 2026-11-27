@@ -39,21 +39,6 @@ import java.util.List;
  */
 public class HabitLockService extends Service {
     static volatile boolean running = false;
-    private static volatile HabitLockService instance;
-
-    /** From HabitLockAccessibility: an app just came to the front; react at once */
-    static void onFront(Context c, String pkg) {
-        HabitLockService svc = instance;
-        if (svc != null && running) {
-            svc.handler.post(() -> {
-                if (!HabitLock.isLockActive(svc)) return;
-                if (HabitLock.shouldBlock(svc, pkg)) svc.showOverlay(pkg);
-                else svc.hideOverlay();
-            });
-        } else if (HabitLock.isLockActive(c) && HabitLock.shouldBlock(c, pkg)) {
-            HabitLock.refresh(c); // the service was killed: start it again right now
-        }
-    }
 
     private static final String CHANNEL = "habit_lock";
     private static final int NOTIFICATION_ID = 7302;
@@ -77,7 +62,6 @@ public class HabitLockService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        instance = this;
         windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel ch = new NotificationChannel(CHANNEL, "Habit Lock", NotificationManager.IMPORTANCE_LOW);
@@ -129,18 +113,18 @@ public class HabitLockService extends Service {
     }
 
     /**
-     * The app in front. With the instant lock (Accessibility) on, Android tells us directly.
-     * Otherwise it's read from usage events: always the last 10 minutes, taking the newest one by
-     * time, because some phones (Xiaomi and others) write these events seconds late, and a late
-     * event must still count (reading only "new since last time" missed them).
+     * The app in front, from usage events: always the last 10 minutes, taking the newest one by
+     * time. Some phones (Xiaomi and others) write these events seconds late, and a late event must
+     * still count (reading only "new since last time" missed them, so reopening a locked app from
+     * recent apps or the home screen slipped through).
      */
     private String currentForeground() {
-        if (HabitLockAccessibility.connected && HabitLockAccessibility.frontAt > 0) return HabitLockAccessibility.front;
         UsageStatsManager usm = (UsageStatsManager) getSystemService(Context.USAGE_STATS_SERVICE);
         if (usm == null) return foreground;
         long now = System.currentTimeMillis();
         UsageEvents events;
-        try { events = usm.queryEvents(now - 10 * 60 * 1000L, now + 1000); } catch (Exception ex) { return foreground; }
+        long span = (lastQuery == 0 ? 60 : 10) * 60 * 1000L; // first look after (re)starting: the last hour
+        try { events = usm.queryEvents(now - span, now + 1000); } catch (Exception ex) { return foreground; }
         UsageEvents.Event e = new UsageEvents.Event();
         long newest = -1;
         String pkg = null;
@@ -375,7 +359,6 @@ public class HabitLockService extends Service {
 
     @Override
     public void onDestroy() {
-        if (instance == this) instance = null;
         handler.removeCallbacks(tick);
         hideOverlay();
         running = false;
