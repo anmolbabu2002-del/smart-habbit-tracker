@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.provider.Settings;
 import com.getcapacitor.JSArray;
+import org.json.JSONArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -20,6 +21,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 @CapacitorPlugin(name = "UltradianHabitLock")
 public class HabitLockPlugin extends Plugin {
     static final String EXTRA_OPEN = "com.anmoljha.ultradian.HABIT_LOCK_OPEN";
+    static final String EXTRA_PROVE = "com.anmoljha.ultradian.PROVE_HABIT";
 
     @Override
     public void load() {
@@ -34,7 +36,16 @@ public class HabitLockPlugin extends Plugin {
     }
 
     private void checkIntent(Intent intent) {
-        if (intent == null || !intent.getBooleanExtra(EXTRA_OPEN, false)) return;
+        if (intent == null) return;
+        String prove = intent.getStringExtra(EXTRA_PROVE);
+        if (prove != null) {
+            // the widget's camera button: open that habit's photo check
+            intent.removeExtra(EXTRA_PROVE);
+            JSObject d = new JSObject();
+            d.put("id", prove);
+            notifyListeners("proveHabit", d, true);
+        }
+        if (!intent.getBooleanExtra(EXTRA_OPEN, false)) return;
         JSObject data = new JSObject();
         data.put("app", intent.getStringExtra("app"));
         intent.removeExtra(EXTRA_OPEN);
@@ -74,10 +85,43 @@ public class HabitLockPlugin extends Plugin {
         e.putString("focusLabel", call.getString("focusLabel", ""));
         e.putBoolean("focusStrict", call.getBoolean("focusStrict", false));
         e.putString("why", call.getString("why", ""));
+        // the widget's habit list; ticks made on the widget and not yet taken stay ticked
+        try {
+            JSONArray w = call.getArray("widget", new JSArray());
+            org.json.JSONArray ticks = new org.json.JSONArray(HabitLock.prefs(getContext()).getString("widgetTicks", "[]"));
+            for (int i = 0; i < w.length(); i++) {
+                org.json.JSONObject o = w.getJSONObject(i);
+                for (int j = 0; j < ticks.length(); j++) {
+                    org.json.JSONObject t = ticks.getJSONObject(j);
+                    if (t.optString("id").equals(o.optString("id")) && t.optString("day").equals(day)) o.put("done", true);
+                }
+            }
+            e.putString("widget", w.toString());
+            // widget ticks the app hasn't taken yet still count (no flicker of the lock meanwhile)
+            if (w.length() > 0 && ticks.length() > 0) {
+                JSONArray left = new JSONArray();
+                for (int i = 0; i < w.length(); i++) if (!w.getJSONObject(i).optBoolean("done")) left.put(w.getJSONObject(i).optString("name"));
+                e.putString("pending", left.toString());
+                if (left.length() == 0) e.putString("doneDay", day);
+            }
+        } catch (Exception ignored) {
+            // keep the old list
+        }
         e.apply();
         HabitLock.refresh(getContext());
         JSObject r = new JSObject();
         r.put("locked", HabitLock.isLockActive(getContext()));
+        call.resolve(r);
+    }
+
+    /** Ticks made on the home-screen widget since the app last looked (then forgets them). */
+    @PluginMethod
+    public void takeWidgetTicks(PluginCall call) {
+        SharedPreferences p = HabitLock.prefs(getContext());
+        String raw = p.getString("widgetTicks", "[]");
+        p.edit().putString("widgetTicks", "[]").apply();
+        JSObject r = new JSObject();
+        try { r.put("ticks", new JSArray(raw)); } catch (Exception ex) { r.put("ticks", new JSArray()); }
         call.resolve(r);
     }
 

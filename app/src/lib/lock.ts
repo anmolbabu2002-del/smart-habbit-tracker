@@ -2,6 +2,7 @@
 // below are covered by a lock screen. During a focus session with "Lock social apps" on, they are
 // locked until the timer ends. The blocking itself is native (.github/android/HabitLock*.java).
 import { whyText } from './why';
+import { needsPhoto } from './proof';
 import { native, isNative, listenNative } from './native';
 import { getState } from './store';
 import { today } from './dates';
@@ -59,7 +60,8 @@ export function syncLock() {
       focusUntil: focusLockUntil(s),
       focusLabel: a ? a.label : '',
       focusStrict: !!a,
-      why: whyText()
+      why: whyText(),
+      widget: requiredHabits(s).map(h => ({ id: h.id, name: label(h), color: h.color, photo: needsPhoto(h.name), done: h.history.includes(today()) }))
     }).catch(e => console.warn('Habit Lock: update failed', e));
   }, 250);
 }
