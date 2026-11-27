@@ -9,6 +9,7 @@ import { dueInfo, today } from '../lib/dates';
 import { play } from '../lib/sound';
 import { HabitIcon } from './HabitIcon';
 import { StreakFlame } from './StreakFlame';
+import { WeekStrip } from './WeekStrip';
 import type { Habit, Task } from '../lib/types';
 
 export function HabitRow({ h, onOpen, onProve, onView, off }: { h: Habit; onOpen: () => void; onProve: () => void; onView?: () => void; off?: boolean }) {
@@ -36,8 +37,10 @@ export function HabitRow({ h, onOpen, onProve, onView, off }: { h: Habit; onOpen
           <b>{h.name}</b>
           <small>
             {viaPass && <Ticket size={14} weight="fill" />}
-            {!done && !off && photo && <Camera size={14} weight="fill" />}
-            {sub}
+            {sch.kind === 'days' || (off && upcomingSchedule(h).kind === 'days') ? <WeekStrip h={h} /> : <>
+              {!done && !off && photo && <Camera size={14} weight="fill" />}
+              {sub}
+            </>}
             {streak > 0 && !off && <span className="mini-streak"><StreakFlame stage={2} size={16} still />{streak}{unit === 'week' ? 'w' : ''}</span>}
           </small>
         </span>

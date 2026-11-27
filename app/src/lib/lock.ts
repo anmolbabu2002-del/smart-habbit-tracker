@@ -3,7 +3,9 @@
 // locked until the timer ends. The blocking itself is native (.github/android/HabitLock*.java).
 import { whyText } from './why';
 import { needsPhoto } from './proof';
-import { isRequired, isShown } from './schedule';
+import { doneThisWeek, isRequired, isShown, scheduleOn } from './schedule';
+/** "1/3" for times-a-week habits (shown on the widget), else empty */
+const weekLabel = (h: import('./types').Habit) => { const s = scheduleOn(h); return s.kind === 'weekly' ? `${doneThisWeek(h)}/${s.times}` : ''; };
 import { native, isNative, listenNative } from './native';
 import { getState } from './store';
 import { today } from './dates';
@@ -64,7 +66,7 @@ export function syncLock() {
       focusLabel: a ? a.label : '',
       focusStrict: !!a,
       why: whyText(),
-      widget: shownHabits(s).map(h => ({ id: h.id, name: label(h), color: h.color, photo: needsPhoto(h.name), done: h.history.includes(today()), req: isRequired(h) }))
+      widget: shownHabits(s).map(h => ({ id: h.id, name: label(h), color: h.color, photo: needsPhoto(h.name), done: h.history.includes(today()), req: isRequired(h), week: weekLabel(h) }))
     }).catch(e => console.warn('Habit Lock: update failed', e));
   }, 250);
 }

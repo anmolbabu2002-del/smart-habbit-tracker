@@ -63,7 +63,7 @@ function RepeatPicker({ value, onChange, changed }: { value: Schedule; onChange:
       )}
       <p className="rp-note">
         {value.kind === 'days' ? `At least ${MIN_PER_WEEK} days. It only shows up, and only counts, on these days.`
-          : value.kind === 'weekly' ? `At least ${MIN_PER_WEEK}. Any days you like, but leave it too late in the week and it’s due every day.`
+          : value.kind === 'weekly' ? `Do it on any ${times} days each week. If you fall behind, it’ll show “due today”.`
           : 'Shows up and counts every day.'}
         {changed && <b> Starts tomorrow.</b>}
       </p>

@@ -62,6 +62,7 @@ public class NotoWidget extends AppWidgetProvider {
 
     static final class Habit {
         String id, name, color;
+        String week = ""; // "1/3" for times-a-week habits
         boolean photo, done, req; // req: counts today (a weekly habit can be on the list without being due yet)
     }
 
@@ -81,6 +82,7 @@ public class NotoWidget extends AppWidgetProvider {
                 h.photo = o.optBoolean("photo", false);
                 h.done = fresh && o.optBoolean("done", false);
                 h.req = o.optBoolean("req", true);
+                h.week = o.optString("week", "");
                 out.add(h);
             }
         } catch (Exception ignored) {
@@ -182,6 +184,12 @@ public class NotoWidget extends AppWidgetProvider {
                 s.setSpan(new StrikethroughSpan(), 0, s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 v.setTextViewText(NAME[i], s);
                 v.setTextColor(NAME[i], c.getResources().getColor(R.color.widget_done_ink));
+            } else if (!h.week.isEmpty()) {
+                // "Run  1/3" with the count in a lighter colour
+                SpannableString s = new SpannableString(h.name + "  " + h.week);
+                s.setSpan(new android.text.style.ForegroundColorSpan(c.getResources().getColor(R.color.widget_soft)), h.name.length(), s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                v.setTextViewText(NAME[i], s);
+                v.setTextColor(NAME[i], c.getResources().getColor(R.color.widget_ink));
             } else {
                 v.setTextViewText(NAME[i], h.name);
                 v.setTextColor(NAME[i], c.getResources().getColor(R.color.widget_ink));
