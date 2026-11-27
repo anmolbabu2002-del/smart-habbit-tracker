@@ -29,14 +29,11 @@ import org.json.JSONObject;
  */
 public class NotoWidget extends AppWidgetProvider {
     static final String ACTION_TICK = "com.anmoljha.ultradian.WIDGET_TICK";
-    private static final int ROWS = 3;
-    private static final int[] ROW = {R.id.w_row0, R.id.w_row1, R.id.w_row2};
-    private static final int[] NAME = {R.id.w_name0, R.id.w_name1, R.id.w_name2};
-    private static final int[] BTN = {R.id.w_btn0, R.id.w_btn1, R.id.w_btn2};
 
     @Override
     public void onUpdate(Context c, AppWidgetManager mgr, int[] ids) {
-        for (int id : ids) mgr.updateAppWidget(id, build(c));
+        for (int id : ids) mgr.updateAppWidget(id, build(c, id));
+        mgr.notifyAppWidgetViewDataChanged(ids, R.id.w_list);
     }
 
     @Override
@@ -51,8 +48,8 @@ public class NotoWidget extends AppWidgetProvider {
             AppWidgetManager mgr = AppWidgetManager.getInstance(c);
             int[] ids = mgr.getAppWidgetIds(new ComponentName(c, NotoWidget.class));
             if (ids == null || ids.length == 0) return;
-            RemoteViews v = build(c);
-            for (int id : ids) mgr.updateAppWidget(id, v);
+            for (int id : ids) mgr.updateAppWidget(id, build(c, id));
+            mgr.notifyAppWidgetViewDataChanged(ids, R.id.w_list);
         } catch (Exception ignored) {
             // the widget keeps its last picture
         }
@@ -62,7 +59,8 @@ public class NotoWidget extends AppWidgetProvider {
 
     static final class Habit {
         String id, name, color;
-        boolean photo, done;
+        String week = ""; // "1/3" for times-a-week habits
+        boolean photo, done, req; // req: counts today (a weekly habit can be on the list without being due yet)
     }
 
     /** Today's habits as the app last sent them; done flags only count if they're from today */
@@ -80,6 +78,8 @@ public class NotoWidget extends AppWidgetProvider {
                 h.color = o.optString("color", "orange");
                 h.photo = o.optBoolean("photo", false);
                 h.done = fresh && o.optBoolean("done", false);
+                h.req = o.optBoolean("req", true);
+                h.week = o.optString("week", "");
                 out.add(h);
             }
         } catch (Exception ignored) {
@@ -89,7 +89,7 @@ public class NotoWidget extends AppWidgetProvider {
     }
 
     /** Tick a habit from the home screen (tick habits only; photo habits need the camera). */
-    private static void tick(Context c, String id) {
+    static void tick(Context c, String id) {
         if (id == null) return;
         SharedPreferences p = HabitLock.prefs(c);
         String today = HabitLock.today();
@@ -102,13 +102,15 @@ public class NotoWidget extends AppWidgetProvider {
             JSONArray a = new JSONArray(p.getString("widget", "[]"));
             JSONArray pending = new JSONArray();
             boolean changed = false;
+            int reqCount = 0;
             for (int i = 0; i < a.length(); i++) {
                 JSONObject o = a.getJSONObject(i);
                 if (id.equals(o.optString("id")) && !o.optBoolean("done") && !o.optBoolean("photo")) {
                     o.put("done", true);
                     changed = true;
                 }
-                if (!o.optBoolean("done")) pending.put(o.optString("name"));
+                if (!o.optBoolean("done") && o.optBoolean("req", true)) pending.put(o.optString("name"));
+                if (o.optBoolean("req", true)) reqCount++;
             }
             if (!changed) return;
             JSONArray ticks = new JSONArray(p.getString("widgetTicks", "[]"));
@@ -121,7 +123,7 @@ public class NotoWidget extends AppWidgetProvider {
                 .putString("widget", a.toString())
                 .putString("pending", pending.toString())
                 .putString("widgetTicks", ticks.toString());
-            if (pending.length() == 0 && a.length() > 0) e.putString("doneDay", today); // last one: apps unlock now
+            if (pending.length() == 0 && reqCount > 0) e.putString("doneDay", today); // last one due: apps unlock now
             e.apply();
         } catch (Exception ignored) {
             return;
@@ -129,14 +131,50 @@ public class NotoWidget extends AppWidgetProvider {
         HabitLock.refresh(c); // lock, icon mood and every widget
     }
 
+    /** Open habits first, then done ones, each in the app's order */
+    static List<Habit> ordered(Context c) {
+        List<Habit> all = habits(c), order = new ArrayList<>();
+        for (Habit h : all) if (!h.done) order.add(h);
+        for (Habit h : all) if (h.done) order.add(h);
+        return order;
+    }
+
+    /** One row of the list (used by NotoWidgetService) */
+    static RemoteViews row(Context c, Habit h) {
+        RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.noto_widget_row);
+        boolean d = h.done;
+        if (d) {
+            SpannableString s = new SpannableString(h.name);
+            s.setSpan(new StrikethroughSpan(), 0, s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            v.setTextViewText(R.id.w_name, s);
+            v.setTextColor(R.id.w_name, c.getResources().getColor(R.color.widget_done_ink));
+        } else if (!h.week.isEmpty()) {
+            // "Run  1/3" with the count in a lighter colour
+            SpannableString s = new SpannableString(h.name + "  " + h.week);
+            s.setSpan(new android.text.style.ForegroundColorSpan(c.getResources().getColor(R.color.widget_soft)), h.name.length(), s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            v.setTextViewText(R.id.w_name, s);
+            v.setTextColor(R.id.w_name, c.getResources().getColor(R.color.widget_ink));
+        } else {
+            v.setTextViewText(R.id.w_name, h.name);
+            v.setTextColor(R.id.w_name, c.getResources().getColor(R.color.widget_ink));
+        }
+        v.setInt(R.id.w_row, "setBackgroundResource", d ? R.drawable.widget_row_done : rowBg(h.color));
+        v.setImageViewResource(R.id.w_btn, d ? R.drawable.widget_btn_done : h.photo ? camBtn(h.color) : tickBtn(h.color));
+        // what a tap does: WidgetActionActivity reads these
+        Intent fill = new Intent().putExtra("id", h.id).putExtra("action", d ? "open" : h.photo ? "prove" : "tick");
+        v.setOnClickFillInIntent(R.id.w_item, fill);
+        return v;
+    }
+
     // ── drawing ──
 
-    private static RemoteViews build(Context c) {
+    private static RemoteViews build(Context c, int widgetId) {
         SharedPreferences p = HabitLock.prefs(c);
         RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.noto_widget);
         List<Habit> all = habits(c);
-        int total = all.size(), done = 0;
-        for (Habit h : all) if (h.done) done++;
+        int total = 0, done = 0; // only habits due today count
+        for (Habit h : all) if (h.req) { total++; if (h.done) done++; }
+        boolean rest = total == 0 && !all.isEmpty();
         boolean allDone = total > 0 && (done == total || HabitLock.today().equals(p.getString("doneDay", "")));
         if (allDone) done = total;
         int left = total - done;
@@ -152,7 +190,8 @@ public class NotoWidget extends AppWidgetProvider {
         String why = p.getString("why", "").trim();
         v.setTextViewText(R.id.w_why, "“" + (why.isEmpty() ? "I’m not going to stay average." : why) + "”");
         String status;
-        if (total == 0) status = "Add your first habit";
+        if (rest) status = "Rest day \u00B7 nothing due";
+        else if (total == 0) status = "Add your first habit";
         else if (allDone) status = "All done! " + total + " of " + total;
         else if (locked) status = "Apps locked · " + left + " left";
         else if (lockOn) status = done + " of " + total + " done · locks at " + clock(lockFrom);
@@ -163,41 +202,15 @@ public class NotoWidget extends AppWidgetProvider {
         v.setProgressBar(R.id.w_progress, Math.max(total, 1), done, false);
         v.setOnClickPendingIntent(R.id.w_banner, openIntent(c, null, 7310));
 
-        // rows: open habits first, in the app's order
-        List<Habit> order = new ArrayList<>();
-        for (Habit h : all) if (!h.done && !allDone) order.add(h);
-        for (Habit h : all) if (h.done || allDone) order.add(h);
-        for (int i = 0; i < ROWS; i++) {
-            if (i >= order.size()) { v.setViewVisibility(ROW[i], View.GONE); continue; }
-            Habit h = order.get(i);
-            boolean d = h.done || allDone;
-            v.setViewVisibility(ROW[i], View.VISIBLE);
-            if (d) {
-                SpannableString s = new SpannableString(h.name);
-                s.setSpan(new StrikethroughSpan(), 0, s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                v.setTextViewText(NAME[i], s);
-                v.setTextColor(NAME[i], c.getResources().getColor(R.color.widget_done_ink));
-            } else {
-                v.setTextViewText(NAME[i], h.name);
-                v.setTextColor(NAME[i], c.getResources().getColor(R.color.widget_ink));
-            }
-            v.setInt(ROW[i], "setBackgroundResource", d ? R.drawable.widget_row_done : rowBg(h.color));
-            v.setImageViewResource(BTN[i], d ? R.drawable.widget_btn_done : h.photo ? camBtn(h.color) : tickBtn(h.color));
-            PendingIntent tap;
-            if (d) tap = openIntent(c, null, 7320 + i);
-            else if (h.photo) tap = openIntent(c, h.id, 7320 + i);
-            else {
-                Intent t = new Intent(c, NotoWidget.class).setAction(ACTION_TICK).putExtra("id", h.id);
-                t.setData(Uri.parse("ultradian://tick/" + Uri.encode(h.id))); // one PendingIntent per habit
-                tap = PendingIntent.getBroadcast(c, 7330 + i, t, flags());
-            }
-            v.setOnClickPendingIntent(ROW[i], tap);
-        }
-        int hidden = order.size() - Math.min(order.size(), ROWS);
-        if (total == 0) v.setTextViewText(R.id.w_more, "Tap to add a habit in Ultradian");
-        else v.setTextViewText(R.id.w_more, hidden > 0 ? "+ " + hidden + " more in the app" : "");
-        v.setViewVisibility(R.id.w_more, total == 0 || hidden > 0 ? View.VISIBLE : View.GONE);
-        v.setOnClickPendingIntent(R.id.w_more, openIntent(c, null, 7311));
+        // every habit, scrolling: rows come from NotoWidgetService; taps go to WidgetActionActivity
+        Intent svc = new Intent(c, NotoWidgetService.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
+        svc.setData(Uri.parse("ultradian://widget/" + widgetId));
+        v.setRemoteAdapter(R.id.w_list, svc);
+        v.setEmptyView(R.id.w_list, R.id.w_empty);
+        int mutable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? PendingIntent.FLAG_MUTABLE : 0;
+        Intent tap = new Intent(c, WidgetActionActivity.class);
+        v.setPendingIntentTemplate(R.id.w_list, PendingIntent.getActivity(c, 7320, tap, PendingIntent.FLAG_UPDATE_CURRENT | mutable));
+        v.setOnClickPendingIntent(R.id.w_empty, openIntent(c, null, 7311));
         return v;
     }
 
@@ -206,7 +219,7 @@ public class NotoWidget extends AppWidgetProvider {
     }
 
     /** Open the app; with a habit id it goes straight to that habit's camera. */
-    private static PendingIntent openIntent(Context c, String proveId, int code) {
+    static PendingIntent openIntent(Context c, String proveId, int code) {
         Intent open = c.getPackageManager().getLaunchIntentForPackage(c.getPackageName());
         if (open == null) open = new Intent(c, MainActivity.class);
         open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
@@ -217,7 +230,7 @@ public class NotoWidget extends AppWidgetProvider {
         return PendingIntent.getActivity(c, code, open, flags());
     }
 
-    private static void openApp(Context c) {
+    static void openApp(Context c) {
         try { openIntent(c, null, 7312).send(); } catch (Exception ignored) { /* nothing to open */ }
     }
 

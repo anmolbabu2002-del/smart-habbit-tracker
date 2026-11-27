@@ -29,7 +29,7 @@ export function StreakSheet({ open, onClose }: { open: boolean; onClose: () => v
       )}
       <div className="week-dots">
         {lastWeek(s).map(d => (
-          <span key={d.day} className={'wd' + (d.done ? ' done' : '') + (d.isToday ? ' today' : '')}>
+          <span key={d.day} className={'wd' + (d.done ? ' done' : '') + (d.rest ? ' rest' : '') + (d.isToday ? ' today' : '')}>
             {['S', 'M', 'T', 'W', 'T', 'F', 'S'][parseYmd(d.day).getDay()]}<i />
           </span>
         ))}

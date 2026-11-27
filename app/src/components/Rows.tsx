@@ -2,41 +2,50 @@ import { Camera, Check, Ticket, Trash, PencilSimple, ArrowsClockwise } from '@ph
 import { Swipe } from './Swipe';
 import { motion } from 'motion/react';
 import { centerOf } from '../lib/celebrate';
-import { completeHabit, requestDeleteHabit, deleteTask, doneToday, habitStreak, toggleTask, undoHabit } from '../lib/actions';
+import { completeHabit, requestDeleteHabit, deleteTask, doneToday, toggleTask, undoHabit } from '../lib/actions';
+import { describe, doneThisWeek, habitStreakOf, isRequired, scheduleOn, upcomingSchedule } from '../lib/schedule';
 import { proofOf } from '../lib/proof';
 import { dueInfo, today } from '../lib/dates';
 import { play } from '../lib/sound';
 import { HabitIcon } from './HabitIcon';
 import { StreakFlame } from './StreakFlame';
+import { WeekStrip } from './WeekStrip';
 import type { Habit, Task } from '../lib/types';
 
-export function HabitRow({ h, onOpen, onProve, onView }: { h: Habit; onOpen: () => void; onProve: () => void; onView?: () => void }) {
+export function HabitRow({ h, onOpen, onProve, onView, off }: { h: Habit; onOpen: () => void; onProve: () => void; onView?: () => void; off?: boolean }) {
   const done = doneToday(h);
   const mode = proofOf(h.name).mode;
   const photo = mode === 'photo';
   const viaPass = done && h.passDays?.includes(today());
-  const streak = habitStreak(h);
-  const sub = done ? (viaPass ? 'Free pass used' : 'Done today') : photo ? 'Prove it with a photo' : 'Tap when done';
+  const { n: streak, unit } = habitStreakOf(h);
+  const sch = scheduleOn(h);
+  const week = sch.kind === 'weekly' ? `${doneThisWeek(h)} of ${sch.times} this week` : '';
+  const sub = off ? describe(upcomingSchedule(h))
+    : done ? (viaPass ? 'Free pass used' : week || 'Done today')
+    : week ? (isRequired(h) ? `${week} · due today` : week)
+    : photo ? 'Prove it with a photo' : 'Tap when done';
 
   return (
     <Swipe holdOnly actions={[
       { label: 'Edit', icon: <PencilSimple size={20} weight="bold" />, tone: 'blue', run: onOpen },
       { label: 'Delete', icon: <Trash size={20} weight="bold" />, tone: 'red', run: () => requestDeleteHabit(h.id) }
     ]}>
-    <motion.div layout className={'card habit' + (done ? ' done' : '')} style={{ ['--hc' as string]: `var(--${h.color})` }}>
+    <motion.div layout className={'card habit' + (done ? ' done' : '') + (off ? ' off' : '')} style={{ ['--hc' as string]: `var(--${h.color})` }}>
       <div className="habit-main" role="button" tabIndex={0} onClick={() => { if (onView) { play('tap'); onView(); } }}>
         <span className="habit-tile" style={{ background: `var(--${h.color}-soft)` }}><HabitIcon icon={h.icon} color={h.color} size={30} /></span>
         <span className="habit-text">
           <b>{h.name}</b>
           <small>
             {viaPass && <Ticket size={14} weight="fill" />}
-            {!done && photo && <Camera size={14} weight="fill" />}
-            {sub}
-            {streak > 0 && <span className="mini-streak"><StreakFlame stage={2} size={16} still />{streak}</span>}
+            {sch.kind === 'days' || (off && upcomingSchedule(h).kind === 'days') ? <WeekStrip h={h} /> : <>
+              {!done && !off && photo && <Camera size={14} weight="fill" />}
+              {sub}
+            </>}
+            {streak > 0 && !off && <span className="mini-streak"><StreakFlame stage={2} size={16} still />{streak}{unit === 'week' ? 'w' : ''}</span>}
           </small>
         </span>
       </div>
-      {done ? (
+      {off ? null : done ? (
         <motion.button key="done" type="button" className="check-done" aria-label={`Undo ${h.name}`}
           initial={{ scale: 0.3, rotate: -30 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 500, damping: 14 }}
           onClick={() => undoHabit(h.id)}>

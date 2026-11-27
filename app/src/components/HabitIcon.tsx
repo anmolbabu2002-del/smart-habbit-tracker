@@ -1,5 +1,6 @@
 // Ultradian's own illustrated icons (no emoji anywhere): chunky, rounded, with a darker lower
 // shade and a white glint, drawn in the habit's colour so the whole set looks like one family.
+import { artOf, isCustom, parseCustom } from '../lib/customIcons';
 import type { JSX } from 'react';
 import type { Color } from '../lib/types';
 import { classify } from '../lib/proofDictionary';
@@ -572,9 +573,17 @@ const ICON_COLOR: Record<string, Color> = {
   moon: 'purple', sun: 'yellow', sunrise: 'orange', alarm: 'red', candle: 'orange', coin: 'yellow', piggy: 'red', phone: 'mint', pill: 'purple',
   heart: 'red', smile: 'yellow', target: 'red', trophy: 'yellow', calendar: 'blue', clock: 'blue', checklist: 'yellow', paw: 'orange', star: 'yellow'
 };
-export const colorFor = (icon: string): Color => ICON_COLOR[icon] || 'orange';
+export const colorFor = (icon: string): Color => (isCustom(icon) ? parseCustom(icon).color : ICON_COLOR[icon] || 'orange');
 
 export function HabitIcon({ icon, color = 'orange', size = 32 }: { icon: string; color?: Color; size?: number }) {
+  if (isCustom(icon)) {
+    const art = artOf(icon), { kind } = parseCustom(icon);
+    if (kind === 'img' && art) return <img src={art} width={size} height={size} alt="" className="hicon photo" style={{ borderRadius: size * 0.28 }} />;
+    if (kind === 'ph' && art) {
+      const pal = PALETTES[color] || PALETTES.orange;
+      return <svg width={size} height={size} viewBox="-24 -24 304 304" aria-hidden="true" className="hicon" fill={pal.c} style={{ filter: `drop-shadow(0 ${Math.max(1, size / 22)}px 0 ${pal.e})` }} dangerouslySetInnerHTML={{ __html: art }} />;
+    }
+  }
   const draw = ICONS[icon] || ICONS.star;
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true" className="hicon">

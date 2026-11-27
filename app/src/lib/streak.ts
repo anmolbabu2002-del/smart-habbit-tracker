@@ -3,11 +3,12 @@
 // streak breaks.
 import { addDays, today } from './dates';
 import type { State } from './types';
+import { isRestDay } from './schedule';
 
 export type StageId = 'ember' | 'spark' | 'flame' | 'blaze' | 'wildfire' | 'azure' | 'phoenix' | 'solar' | 'nova' | 'eternal';
 
 export const STAGES: { id: StageId; min: number; name: string; blurb: string }[] = [
-  { id: 'ember', min: 0, name: 'Ember', blurb: 'A sleepy little coal. Finish all your habits today to wake it up.' },
+  { id: 'ember', min: 0, name: 'Ember', blurb: 'A sleepy little coal. Finish everything due today to wake it up.' },
   { id: 'spark', min: 1, name: 'Spark', blurb: 'It woke up! Keep feeding it every day.' },
   { id: 'flame', min: 3, name: 'Flame', blurb: 'Three days strong. It’s starting to dance.' },
   { id: 'blaze', min: 7, name: 'Blaze', blurb: 'A full week! It grew two new flames.' },
@@ -27,12 +28,18 @@ export function stageIndex(days: number) {
 export const stageFor = (days: number) => STAGES[stageIndex(days)];
 export const nextStage = (days: number) => STAGES[stageIndex(days) + 1];
 
-/** Days in a row ending today (if today is done) or yesterday */
+/**
+ * Perfect days in a row ending today (if today is done) or yesterday. Rest days (nothing was
+ * due, e.g. a Mon/Wed/Fri habit on a Tuesday) are passed over: they don't break it or add to it.
+ */
 export function streakOf(s: State, now = today()) {
   const days = new Set(s.perfectDays);
-  let d = days.has(now) ? now : addDays(now, -1);
+  let d = days.has(now) || isRestDay(s.habits, now) ? now : addDays(now, -1);
   let n = 0;
-  while (days.has(d)) { n++; d = addDays(d, -1); }
+  for (let i = 0; i < 4000; i++, d = addDays(d, -1)) {
+    if (days.has(d)) n++;
+    else if (!isRestDay(s.habits, d)) break;
+  }
   return n;
 }
 
@@ -41,6 +48,6 @@ export function lastWeek(s: State, now = today()) {
   const days = new Set(s.perfectDays);
   return Array.from({ length: 7 }, (_, i) => {
     const d = addDays(now, i - 6);
-    return { day: d, done: days.has(d), isToday: d === now };
+    return { day: d, done: days.has(d), rest: !days.has(d) && isRestDay(s.habits, d), isToday: d === now };
   });
 }

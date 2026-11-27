@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One habit in the widget's list: name and a round button (tick, camera, or done) -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_item"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingBottom="4dp">
+    <LinearLayout
+        android:id="@+id/w_row"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:background="@drawable/widget_row_orange"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="11dp"
+        android:paddingEnd="5dp"
+        android:paddingBottom="3dp">
+        <TextView
+            android:id="@+id/w_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/widget_ink"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+        <ImageView
+            android:id="@+id/w_btn"
+            android:layout_width="24dp"
+            android:layout_height="26dp"
+            android:layout_marginStart="8dp"
+            android:contentDescription="@null"
+            android:src="@drawable/widget_btn_orange" />
+    </LinearLayout>
+</FrameLayout>

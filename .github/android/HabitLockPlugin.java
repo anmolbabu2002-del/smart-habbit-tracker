@@ -100,9 +100,15 @@ public class HabitLockPlugin extends Plugin {
             // widget ticks the app hasn't taken yet still count (no flicker of the lock meanwhile)
             if (w.length() > 0 && ticks.length() > 0) {
                 JSONArray left = new JSONArray();
-                for (int i = 0; i < w.length(); i++) if (!w.getJSONObject(i).optBoolean("done")) left.put(w.getJSONObject(i).optString("name"));
+                int req = 0;
+                for (int i = 0; i < w.length(); i++) {
+                    org.json.JSONObject o = w.getJSONObject(i);
+                    if (!o.optBoolean("req", true)) continue;
+                    req++;
+                    if (!o.optBoolean("done")) left.put(o.optString("name"));
+                }
                 e.putString("pending", left.toString());
-                if (left.length() == 0) e.putString("doneDay", day);
+                if (left.length() == 0 && req > 0) e.putString("doneDay", day);
             }
         } catch (Exception ignored) {
             // keep the old list

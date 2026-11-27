@@ -1,3 +1,4 @@
+import { isShown } from '../lib/schedule';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LockSimple, CaretDown, Check, PencilSimple, Phone } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'motion/react';
@@ -25,7 +26,7 @@ export function FocusSetup() {
   const picks: Pick[] = useMemo(() => [
     ...s.tasks.filter(t => !t.doneAt && ['overdue', 'today', 'anytime'].includes(dueInfo(t.due).group))
       .map((t): Pick => ({ key: 't' + t.id, label: t.title, icon: 'checklist', color: 'blue', kind: dueInfo(t.due).label ? `Task · ${dueInfo(t.due).label.toLowerCase()}` : 'Task', ref: { kind: 'task', id: t.id } })),
-    ...s.habits.filter(h => !doneToday(h))
+    ...s.habits.filter(h => isShown(h) && !doneToday(h))
       .map((h): Pick => ({ key: 'h' + h.id, label: h.name, icon: h.icon, color: h.color, kind: needsPhoto(h.name) ? 'Habit · prove with a photo after' : 'Habit · ticked off when you finish', ref: { kind: 'habit', id: h.id } }))
   ], [s.tasks, s.habits]);
   const [sel, setSel] = useState<string>(picks[0]?.key || 'other');

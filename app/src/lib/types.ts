@@ -1,6 +1,9 @@
 export type Color = 'orange' | 'mint' | 'blue' | 'purple' | 'yellow' | 'red';
 export const COLORS: Color[] = ['orange', 'mint', 'blue', 'purple', 'yellow', 'red'];
 
+/** When a habit is due (see lib/schedule.ts) */
+export type Schedule = { kind: 'daily' } | { kind: 'days'; days: number[] } | { kind: 'weekly'; times: number };
+
 export interface Habit {
   id: string;
   name: string;
@@ -10,6 +13,8 @@ export interface Habit {
   history: string[];      // days it was done (ymd)
   passDays?: string[];    // days a free pass covered it
   doneAt?: number;        // when it was last ticked off (undo only shortly after)
+  identity?: string;      // who it makes you, in the user's words (else from the icon, lib/identity.ts)
+  schedules?: { from: string; s: Schedule }[]; // schedule changes, each from a day on (none = every day)
 }
 
 export interface Task {
@@ -65,6 +70,8 @@ export interface State {
   migrated: boolean;
   lockDefaulted?: boolean; // Habit Lock was switched on by default once
   why?: string;
+  iconArt?: Record<string, string>; // custom habit icons: Phosphor SVG markup or a photo (data URL)
+  myIcons?: string[];      // custom icons made so far, latest first (the "Yours" row)
   hadHabits?: boolean;
   widgetAsk?: { no: number; last: number }; // the occasional "add the widget" prompt: times declined, when last shown     // has ever had a habit (empty screen says "clean slate" instead of "first habit")           // the user's own line ('' = use the default)
 }

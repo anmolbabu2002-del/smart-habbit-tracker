@@ -1,6 +1,7 @@
 // The journal that does something: a morning plan that becomes today's tasks, an evening
 // review that fills itself in with what you actually did, a brain dump you can turn into
 // tasks, and Anmol AI reading your week back to you. Same storage as before.
+import { isRequired } from '../../lib/schedule';
 import { useMemo, useState } from 'react';
 import { Plus, MagnifyingGlass, Trash, Check, Sparkle, ArrowRight } from '@phosphor-icons/react';
 import { AnimatePresence } from 'motion/react';
@@ -42,7 +43,8 @@ function todaySummary() {
   const habits = s.habits.filter(h => doneToday(h, d));
   const tasks = s.tasks.filter(t => t.doneAt === d);
   const focus = s.focus.sessions.filter(x => x.day === d).reduce((n, x) => n + x.minutes, 0);
-  return { habits: `${habits.length}/${s.habits.length}`, habitNames: habits.map(h => h.name), tasks: tasks.map(t => t.title), focus };
+  const due = s.habits.filter(h => isRequired(h, d) || doneToday(h, d));
+  return { habits: `${habits.length}/${due.length}`, habitNames: habits.map(h => h.name), tasks: tasks.map(t => t.title), focus };
 }
 
 export function Journal({ onBack }: { onBack: () => void }) {

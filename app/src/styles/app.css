@@ -1004,3 +1004,70 @@ button.bubble:active { transform: scale(0.985); }
 .wp-list { list-style: none; margin: 0 0 4px; padding: 0; display: grid; gap: 8px; width: 100%; text-align: left; }
 .wp-list li { display: flex; align-items: center; gap: 10px; font-weight: 800; color: var(--ink); font-size: 0.95rem; }
 .wp-list svg { flex: none; color: var(--orange); }
+
+/* ── Habits not due today ── */
+.not-today { margin-top: 10px; }
+.not-today-head { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 8px 4px; border: 0; background: none; font: inherit; color: var(--ink-soft); font-weight: 800; cursor: pointer; }
+.not-today-head small { margin-left: 6px; padding: 1px 8px; border-radius: 99px; background: var(--line); color: var(--ink-soft); font-size: 0.78rem; }
+.not-today-head svg { transition: transform 0.2s; }
+.not-today-head svg.up { transform: rotate(180deg); }
+.card.habit.off .habit-main { opacity: 0.6; }
+
+/* ── Habit editor: repeat ── */
+.repeat { display: grid; gap: 10px; margin-top: 12px; }
+.repeat .seg.three button { font-size: 0.86rem; padding: 9px 0; }
+.rp-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.rp-day { appearance: none; aspect-ratio: 1; max-height: 42px; border-radius: 50%; border: 2px solid var(--line-strong); background: var(--card); color: var(--ink-soft); font: inherit; font-weight: 900; font-size: 0.92rem; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s; }
+.rp-day.on { background: var(--orange); border-color: var(--orange-edge); color: #fff; box-shadow: 0 3px 0 var(--orange-edge); }
+.rp-day:active { transform: scale(0.92); }
+.rp-times { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px; border-radius: 16px; background: var(--bg); }
+.rp-times b { font-size: 1rem; font-weight: 900; color: var(--ink); }
+.rp-step { appearance: none; width: 40px; height: 40px; border-radius: 12px; border: 0; background: var(--card); color: var(--orange-edge); font: inherit; font-size: 1.4rem; font-weight: 900; box-shadow: 0 3px 0 var(--line-strong); cursor: pointer; }
+.rp-step:disabled { color: var(--ink-faint); box-shadow: none; }
+.rp-note { margin: 0 2px; color: var(--ink-soft); font-size: 0.85rem; font-weight: 700; line-height: 1.35; }
+.rp-note b { color: var(--orange-edge); font-weight: 900; }
+.cal-day.off { opacity: 0.4; }
+.wd.rest i { background: none; border: 2px dashed var(--line-strong); box-sizing: border-box; }
+
+/* ── Week strip on "certain days" habits ── */
+.wstrip { display: inline-flex; gap: 3px; }
+.wstrip i { font-style: normal; width: 17px; height: 17px; border-radius: 6px; display: grid; place-items: center; font-size: 0.66rem; font-weight: 900; color: var(--ink-faint); background: var(--bg); }
+.wstrip i.up { background: var(--orange-soft); color: var(--orange-edge); }
+.wstrip i.today { background: var(--orange); color: #fff; }
+.wstrip i.done { background: var(--mint); color: #fff; }
+.wstrip i.miss { background: var(--red-soft); color: var(--red-edge); }
+
+/* ── Calendar: schedule line and weekly scores ── */
+.cal-title { display: grid; }
+.cal-title small { font-size: 0.82rem; font-weight: 800; color: var(--ink-soft); }
+.cal-grid.weeks { grid-template-columns: repeat(7, 1fr) 1.25fr; }
+.cal-score { align-self: center; justify-self: stretch; height: 70%; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 2px; font-size: 0.74rem; font-weight: 900; }
+.cal-score.met { background: var(--mint); color: #fff; box-shadow: 0 3px 0 var(--mint-edge); }
+.cal-score.missed { background: var(--red-soft); color: var(--red-edge); }
+.cal-score.now { background: var(--orange-soft); color: var(--orange-edge); border: 1.5px dashed var(--orange); }
+
+/* ── Identity votes (habit calendar) ── */
+.votes { appearance: none; width: 100%; margin-top: 12px; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 0; border-radius: 18px; background: var(--hs); font: inherit; color: var(--ink); text-align: left; cursor: pointer; box-shadow: 0 3px 0 color-mix(in srgb, var(--hc) 25%, transparent); }
+.votes-ico { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--hc); color: #fff; flex: none; }
+.votes-text { flex: 1; display: grid; min-width: 0; }
+.votes-text b { font-size: 1.15rem; font-weight: 900; }
+.votes-text small { font-size: 0.92rem; font-weight: 800; color: var(--ink-soft); }
+.votes-pen { color: var(--ink-faint); flex: none; }
+.votes.editing { display: grid; gap: 8px; background: var(--bg); box-shadow: none; cursor: default; }
+.votes-lead { font-weight: 800; color: var(--ink-soft); font-size: 0.9rem; }
+.votes-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ── Custom icons: Search and Photo tiles, search panel ── */
+.icon-pick.tool { display: grid; place-items: center; gap: 0; color: var(--orange-edge); background: var(--orange-soft); }
+.icon-pick.tool small { font-size: 0.6rem; font-weight: 900; line-height: 1; margin-top: -2px; }
+.hicon.photo { object-fit: cover; display: block; }
+.isearch { grid-column: 1 / -1; display: grid; gap: 10px; }
+.isearch-bar { display: flex; align-items: center; gap: 8px; padding: 0 6px 0 12px; height: 44px; border-radius: 14px; background: var(--bg); border: 1.5px solid var(--line); color: var(--ink-soft); }
+.isearch-bar input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; font-weight: 700; color: var(--ink); outline: none; }
+.isearch-bar button { appearance: none; border: 0; background: none; color: var(--ink-soft); width: 32px; height: 32px; display: grid; place-items: center; cursor: pointer; }
+.isearch-colors { display: flex; gap: 10px; justify-content: center; }
+.isearch-colors button { appearance: none; width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--card); box-shadow: 0 0 0 2px transparent; cursor: pointer; }
+.isearch-colors button.on { box-shadow: 0 0 0 2.5px var(--ink); }
+.isearch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; max-height: 240px; overflow-y: auto; }
+.isearch-note { grid-column: 1 / -1; text-align: center; color: var(--ink-soft); font-weight: 700; margin: 12px 0; }
+.icon-grid:has(.isearch) > .icon-pick { display: none; } /* while searching, only the results */

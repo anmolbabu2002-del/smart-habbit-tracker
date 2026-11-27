@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useApp } from '../lib/store';
-import { deleteHabit, habitStreak } from '../lib/actions';
+import { deleteHabit } from '../lib/actions';
+import { habitStreakOf } from '../lib/schedule';
 import { onBack } from '../lib/back';
 import { play } from '../lib/sound';
 import { HabitIcon } from './HabitIcon';
@@ -19,10 +20,11 @@ export function DeleteHabitConfirm() {
   useEffect(() => (id ? onBack(() => { setId(null); return true; }) : undefined), [id]);
 
   const h = id ? s.habits.find(x => x.id === id) : undefined;
-  const streak = h ? habitStreak(h) : 0;
+  const st = h ? habitStreakOf(h) : { n: 0, unit: 'day' as const };
+  const streak = st.n;
   const days = h ? h.history.length : 0;
   const what = streak > 1
-    ? `Its ${streak}-day streak and all ${days} done days go with it.`
+    ? `Its ${streak}-${st.unit} streak and all ${days} done days go with it.`
     : `All ${days} done ${days === 1 ? 'day goes' : 'days go'} with it.`;
 
   return (

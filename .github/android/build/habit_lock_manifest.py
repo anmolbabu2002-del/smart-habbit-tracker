@@ -51,6 +51,17 @@ components = '''
             android:name="com.anmoljha.ultradian.ReadAloudService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+        <service
+            android:name="com.anmoljha.ultradian.NotoWidgetService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
+        <activity
+            android:name="com.anmoljha.ultradian.WidgetActionActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <receiver
             android:name="com.anmoljha.ultradian.NotoWidget"
             android:label="@string/widget_name"

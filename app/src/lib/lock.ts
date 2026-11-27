@@ -3,6 +3,9 @@
 // locked until the timer ends. The blocking itself is native (.github/android/HabitLock*.java).
 import { whyText } from './why';
 import { needsPhoto } from './proof';
+import { doneThisWeek, isRequired, isShown, scheduleOn } from './schedule';
+/** "1/3" for times-a-week habits (shown on the widget), else empty */
+const weekLabel = (h: import('./types').Habit) => { const s = scheduleOn(h); return s.kind === 'weekly' ? `${doneThisWeek(h)}/${s.times}` : ''; };
 import { native, isNative, listenNative } from './native';
 import { getState } from './store';
 import { today } from './dates';
@@ -20,17 +23,19 @@ const PLUGIN = 'UltradianHabitLock';
 
 const minutesNow = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
 /** Every habit counts today, including ones added today */
-export function requiredHabits(s: State = getState(), _day = today()) { // eslint-disable-line @typescript-eslint/no-unused-vars
-  return s.habits;
+export function requiredHabits(s: State = getState(), day = today()) {
+  return s.habits.filter(h => isRequired(h, day));
 }
+/** On Today's list (a weekly habit shows until its target is met, even when not yet required) */
+export const shownHabits = (s: State = getState(), day = today()) => s.habits.filter(h => isShown(h, day));
 /** Today is won: every habit done, or it was already won before a new habit was added */
-export const dayWon = (s: State = getState()) => s.perfectDays.includes(today()) || (s.habits.length > 0 && pendingHabits(s).length === 0);
+export const dayWon = (s: State = getState()) => s.perfectDays.includes(today()) || (requiredHabits(s).length > 0 && pendingHabits(s).length === 0);
 export const pendingHabits = (s: State = getState()) => requiredHabits(s).filter(h => !h.history.includes(today()));
 const label = (h: { name: string }) => h.name.trim();
 
 /** Habits are holding the apps locked right now */
 export function habitLocked(s: State = getState()) {
-  return isNative && s.lock.enabled && s.habits.length > 0 && minutesNow() >= LOCK_FROM && !dayWon(s);
+  return isNative && s.lock.enabled && requiredHabits(s).length > 0 && minutesNow() >= LOCK_FROM && !dayWon(s);
 }
 
 /** The end of a focus session that locks apps (epoch ms), or 0 */
@@ -61,7 +66,7 @@ export function syncLock() {
       focusLabel: a ? a.label : '',
       focusStrict: !!a,
       why: whyText(),
-      widget: requiredHabits(s).map(h => ({ id: h.id, name: label(h), color: h.color, photo: needsPhoto(h.name), done: h.history.includes(today()) }))
+      widget: shownHabits(s).map(h => ({ id: h.id, name: label(h), color: h.color, photo: needsPhoto(h.name), done: h.history.includes(today()), req: isRequired(h), week: weekLabel(h) }))
     }).catch(e => console.warn('Habit Lock: update failed', e));
   }, 250);
 }
