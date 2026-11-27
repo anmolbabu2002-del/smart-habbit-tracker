@@ -29,32 +29,11 @@ import org.json.JSONObject;
  */
 public class NotoWidget extends AppWidgetProvider {
     static final String ACTION_TICK = "com.anmoljha.ultradian.WIDGET_TICK";
-    private static final int ROWS = 3;
-    private static final int[] ROW = {R.id.w_row0, R.id.w_row1, R.id.w_row2};
-    private static final int[] NAME = {R.id.w_name0, R.id.w_name1, R.id.w_name2};
-    private static final int[] BTN = {R.id.w_btn0, R.id.w_btn1, R.id.w_btn2};
 
     @Override
     public void onUpdate(Context c, AppWidgetManager mgr, int[] ids) {
-        for (int id : ids) mgr.updateAppWidget(id, build(c, rowsFor(mgr, id)));
-    }
-
-    /** Resized on the home screen: show as many habit rows as fit (1–3) */
-    @Override
-    public void onAppWidgetOptionsChanged(Context c, AppWidgetManager mgr, int id, android.os.Bundle options) {
-        mgr.updateAppWidget(id, build(c, rowsFor(mgr, id)));
-    }
-
-    /** Banner 70 + bar 4 + padding and the "+ more" line ~26; each habit row 40 (36 + gap) */
-    private static int rowsFor(AppWidgetManager mgr, int id) {
-        try {
-            android.os.Bundle o = mgr.getAppWidgetOptions(id);
-            int h = Math.max(o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT), o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT));
-            if (h <= 0) return 2;
-            return Math.max(1, Math.min(ROWS, (h - 100) / 40));
-        } catch (Exception e) {
-            return 2;
-        }
+        for (int id : ids) mgr.updateAppWidget(id, build(c, id));
+        mgr.notifyAppWidgetViewDataChanged(ids, R.id.w_list);
     }
 
     @Override
@@ -69,7 +48,8 @@ public class NotoWidget extends AppWidgetProvider {
             AppWidgetManager mgr = AppWidgetManager.getInstance(c);
             int[] ids = mgr.getAppWidgetIds(new ComponentName(c, NotoWidget.class));
             if (ids == null || ids.length == 0) return;
-            for (int id : ids) mgr.updateAppWidget(id, build(c, rowsFor(mgr, id)));
+            for (int id : ids) mgr.updateAppWidget(id, build(c, id));
+            mgr.notifyAppWidgetViewDataChanged(ids, R.id.w_list);
         } catch (Exception ignored) {
             // the widget keeps its last picture
         }
@@ -109,7 +89,7 @@ public class NotoWidget extends AppWidgetProvider {
     }
 
     /** Tick a habit from the home screen (tick habits only; photo habits need the camera). */
-    private static void tick(Context c, String id) {
+    static void tick(Context c, String id) {
         if (id == null) return;
         SharedPreferences p = HabitLock.prefs(c);
         String today = HabitLock.today();
@@ -151,9 +131,44 @@ public class NotoWidget extends AppWidgetProvider {
         HabitLock.refresh(c); // lock, icon mood and every widget
     }
 
+    /** Open habits first, then done ones, each in the app's order */
+    static List<Habit> ordered(Context c) {
+        List<Habit> all = habits(c), order = new ArrayList<>();
+        for (Habit h : all) if (!h.done) order.add(h);
+        for (Habit h : all) if (h.done) order.add(h);
+        return order;
+    }
+
+    /** One row of the list (used by NotoWidgetService) */
+    static RemoteViews row(Context c, Habit h) {
+        RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.noto_widget_row);
+        boolean d = h.done;
+        if (d) {
+            SpannableString s = new SpannableString(h.name);
+            s.setSpan(new StrikethroughSpan(), 0, s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            v.setTextViewText(R.id.w_name, s);
+            v.setTextColor(R.id.w_name, c.getResources().getColor(R.color.widget_done_ink));
+        } else if (!h.week.isEmpty()) {
+            // "Run  1/3" with the count in a lighter colour
+            SpannableString s = new SpannableString(h.name + "  " + h.week);
+            s.setSpan(new android.text.style.ForegroundColorSpan(c.getResources().getColor(R.color.widget_soft)), h.name.length(), s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            v.setTextViewText(R.id.w_name, s);
+            v.setTextColor(R.id.w_name, c.getResources().getColor(R.color.widget_ink));
+        } else {
+            v.setTextViewText(R.id.w_name, h.name);
+            v.setTextColor(R.id.w_name, c.getResources().getColor(R.color.widget_ink));
+        }
+        v.setInt(R.id.w_row, "setBackgroundResource", d ? R.drawable.widget_row_done : rowBg(h.color));
+        v.setImageViewResource(R.id.w_btn, d ? R.drawable.widget_btn_done : h.photo ? camBtn(h.color) : tickBtn(h.color));
+        // what a tap does: WidgetActionActivity reads these
+        Intent fill = new Intent().putExtra("id", h.id).putExtra("action", d ? "open" : h.photo ? "prove" : "tick");
+        v.setOnClickFillInIntent(R.id.w_item, fill);
+        return v;
+    }
+
     // ── drawing ──
 
-    private static RemoteViews build(Context c, int rows) {
+    private static RemoteViews build(Context c, int widgetId) {
         SharedPreferences p = HabitLock.prefs(c);
         RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.noto_widget);
         List<Habit> all = habits(c);
@@ -187,47 +202,15 @@ public class NotoWidget extends AppWidgetProvider {
         v.setProgressBar(R.id.w_progress, Math.max(total, 1), done, false);
         v.setOnClickPendingIntent(R.id.w_banner, openIntent(c, null, 7310));
 
-        // rows: open habits first, in the app's order
-        List<Habit> order = new ArrayList<>();
-        for (Habit h : all) if (!h.done) order.add(h);
-        for (Habit h : all) if (h.done) order.add(h);
-        for (int i = 0; i < ROWS; i++) {
-            if (i >= order.size() || i >= rows) { v.setViewVisibility(ROW[i], View.GONE); continue; }
-            Habit h = order.get(i);
-            boolean d = h.done;
-            v.setViewVisibility(ROW[i], View.VISIBLE);
-            if (d) {
-                SpannableString s = new SpannableString(h.name);
-                s.setSpan(new StrikethroughSpan(), 0, s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                v.setTextViewText(NAME[i], s);
-                v.setTextColor(NAME[i], c.getResources().getColor(R.color.widget_done_ink));
-            } else if (!h.week.isEmpty()) {
-                // "Run  1/3" with the count in a lighter colour
-                SpannableString s = new SpannableString(h.name + "  " + h.week);
-                s.setSpan(new android.text.style.ForegroundColorSpan(c.getResources().getColor(R.color.widget_soft)), h.name.length(), s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                v.setTextViewText(NAME[i], s);
-                v.setTextColor(NAME[i], c.getResources().getColor(R.color.widget_ink));
-            } else {
-                v.setTextViewText(NAME[i], h.name);
-                v.setTextColor(NAME[i], c.getResources().getColor(R.color.widget_ink));
-            }
-            v.setInt(ROW[i], "setBackgroundResource", d ? R.drawable.widget_row_done : rowBg(h.color));
-            v.setImageViewResource(BTN[i], d ? R.drawable.widget_btn_done : h.photo ? camBtn(h.color) : tickBtn(h.color));
-            PendingIntent tap;
-            if (d) tap = openIntent(c, null, 7320 + i);
-            else if (h.photo) tap = openIntent(c, h.id, 7320 + i);
-            else {
-                Intent t = new Intent(c, NotoWidget.class).setAction(ACTION_TICK).putExtra("id", h.id);
-                t.setData(Uri.parse("ultradian://tick/" + Uri.encode(h.id))); // one PendingIntent per habit
-                tap = PendingIntent.getBroadcast(c, 7330 + i, t, flags());
-            }
-            v.setOnClickPendingIntent(ROW[i], tap);
-        }
-        int hidden = order.size() - Math.min(order.size(), rows);
-        if (all.isEmpty()) v.setTextViewText(R.id.w_more, "Tap to add a habit in Ultradian");
-        else v.setTextViewText(R.id.w_more, hidden > 0 ? "+ " + hidden + " more in the app" : "");
-        v.setViewVisibility(R.id.w_more, all.isEmpty() || hidden > 0 ? View.VISIBLE : View.GONE);
-        v.setOnClickPendingIntent(R.id.w_more, openIntent(c, null, 7311));
+        // every habit, scrolling: rows come from NotoWidgetService; taps go to WidgetActionActivity
+        Intent svc = new Intent(c, NotoWidgetService.class).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
+        svc.setData(Uri.parse("ultradian://widget/" + widgetId));
+        v.setRemoteAdapter(R.id.w_list, svc);
+        v.setEmptyView(R.id.w_list, R.id.w_empty);
+        int mutable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? PendingIntent.FLAG_MUTABLE : 0;
+        Intent tap = new Intent(c, WidgetActionActivity.class);
+        v.setPendingIntentTemplate(R.id.w_list, PendingIntent.getActivity(c, 7320, tap, PendingIntent.FLAG_UPDATE_CURRENT | mutable));
+        v.setOnClickPendingIntent(R.id.w_empty, openIntent(c, null, 7311));
         return v;
     }
 
@@ -236,7 +219,7 @@ public class NotoWidget extends AppWidgetProvider {
     }
 
     /** Open the app; with a habit id it goes straight to that habit's camera. */
-    private static PendingIntent openIntent(Context c, String proveId, int code) {
+    static PendingIntent openIntent(Context c, String proveId, int code) {
         Intent open = c.getPackageManager().getLaunchIntentForPackage(c.getPackageName());
         if (open == null) open = new Intent(c, MainActivity.class);
         open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
@@ -247,7 +230,7 @@ public class NotoWidget extends AppWidgetProvider {
         return PendingIntent.getActivity(c, code, open, flags());
     }
 
-    private static void openApp(Context c) {
+    static void openApp(Context c) {
         try { openIntent(c, null, 7312).send(); } catch (Exception ignored) { /* nothing to open */ }
     }
 
