@@ -71,7 +71,8 @@ public class NotoWidget extends AppWidgetProvider {
         v.setTextViewText(R.id.w_left, leftN > 0 ? "Left: " + names(left) : "");
         v.setViewVisibility(R.id.w_left, leftN > 0 ? View.VISIBLE : View.GONE);
         String why = p.getString("why", "").trim();
-        v.setTextViewText(R.id.w_why, why.isEmpty() ? "" : "“" + why + "”");
+        v.setTextViewText(R.id.w_why, why.isEmpty() ? "" : "\u201C" + why + "\u201D");
+        v.setViewVisibility(R.id.w_why, why.isEmpty() ? View.GONE : View.VISIBLE);
         v.setImageViewResource(R.id.w_noto,
             "done".equals(mood) ? R.drawable.widget_noto_done
             : "risk".equals(mood) ? R.drawable.widget_noto_risk
