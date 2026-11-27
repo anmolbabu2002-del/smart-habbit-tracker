@@ -36,7 +36,25 @@ public class NotoWidget extends AppWidgetProvider {
 
     @Override
     public void onUpdate(Context c, AppWidgetManager mgr, int[] ids) {
-        for (int id : ids) mgr.updateAppWidget(id, build(c));
+        for (int id : ids) mgr.updateAppWidget(id, build(c, rowsFor(mgr, id)));
+    }
+
+    /** Resized on the home screen: show as many habit rows as fit (1–3) */
+    @Override
+    public void onAppWidgetOptionsChanged(Context c, AppWidgetManager mgr, int id, android.os.Bundle options) {
+        mgr.updateAppWidget(id, build(c, rowsFor(mgr, id)));
+    }
+
+    /** Banner 70 + bar 4 + padding and the "+ more" line ~26; each habit row 40 (36 + gap) */
+    private static int rowsFor(AppWidgetManager mgr, int id) {
+        try {
+            android.os.Bundle o = mgr.getAppWidgetOptions(id);
+            int h = Math.max(o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT), o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT));
+            if (h <= 0) return 2;
+            return Math.max(1, Math.min(ROWS, (h - 100) / 40));
+        } catch (Exception e) {
+            return 2;
+        }
     }
 
     @Override
@@ -51,8 +69,7 @@ public class NotoWidget extends AppWidgetProvider {
             AppWidgetManager mgr = AppWidgetManager.getInstance(c);
             int[] ids = mgr.getAppWidgetIds(new ComponentName(c, NotoWidget.class));
             if (ids == null || ids.length == 0) return;
-            RemoteViews v = build(c);
-            for (int id : ids) mgr.updateAppWidget(id, v);
+            for (int id : ids) mgr.updateAppWidget(id, build(c, rowsFor(mgr, id)));
         } catch (Exception ignored) {
             // the widget keeps its last picture
         }
@@ -136,7 +153,7 @@ public class NotoWidget extends AppWidgetProvider {
 
     // ── drawing ──
 
-    private static RemoteViews build(Context c) {
+    private static RemoteViews build(Context c, int rows) {
         SharedPreferences p = HabitLock.prefs(c);
         RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.noto_widget);
         List<Habit> all = habits(c);
@@ -175,7 +192,7 @@ public class NotoWidget extends AppWidgetProvider {
         for (Habit h : all) if (!h.done) order.add(h);
         for (Habit h : all) if (h.done) order.add(h);
         for (int i = 0; i < ROWS; i++) {
-            if (i >= order.size()) { v.setViewVisibility(ROW[i], View.GONE); continue; }
+            if (i >= order.size() || i >= rows) { v.setViewVisibility(ROW[i], View.GONE); continue; }
             Habit h = order.get(i);
             boolean d = h.done;
             v.setViewVisibility(ROW[i], View.VISIBLE);
@@ -206,7 +223,7 @@ public class NotoWidget extends AppWidgetProvider {
             }
             v.setOnClickPendingIntent(ROW[i], tap);
         }
-        int hidden = order.size() - Math.min(order.size(), ROWS);
+        int hidden = order.size() - Math.min(order.size(), rows);
         if (all.isEmpty()) v.setTextViewText(R.id.w_more, "Tap to add a habit in Ultradian");
         else v.setTextViewText(R.id.w_more, hidden > 0 ? "+ " + hidden + " more in the app" : "");
         v.setViewVisibility(R.id.w_more, all.isEmpty() || hidden > 0 ? View.VISIBLE : View.GONE);

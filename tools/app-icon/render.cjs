@@ -56,7 +56,7 @@ const D = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
   }
   const NP = `${RES}/drawable-nodpi`;
   for (const st of ['normal', 'done', 'risk']) {
-    await raw(banner(st, 330, 88), 990, 264, `${NP}/widget_banner_${st}.png`);
+    await raw(banner(st, 330, 70), 990, 210, `${NP}/widget_banner_${st}.png`);
     // Noto as a tilted sticker: white border, solid drop shadow (64 units, 3x)
     const tile = notoFull(st).replace('<svg ', '<svg width="150" height="150" ').replace('viewBox="0 0 108 108"', 'viewBox="18 18 72 72"');
     await p.setViewportSize({ width: 192, height: 192 });
