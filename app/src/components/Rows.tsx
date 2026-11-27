@@ -2,7 +2,7 @@ import { Camera, Check, Ticket, Trash, PencilSimple, ArrowsClockwise } from '@ph
 import { Swipe } from './Swipe';
 import { motion } from 'motion/react';
 import { centerOf } from '../lib/celebrate';
-import { completeHabit, deleteHabit, deleteTask, doneToday, habitStreak, toggleTask, undoHabit } from '../lib/actions';
+import { completeHabit, requestDeleteHabit, deleteTask, doneToday, habitStreak, toggleTask, undoHabit } from '../lib/actions';
 import { proofOf } from '../lib/proof';
 import { dueInfo, today } from '../lib/dates';
 import { play } from '../lib/sound';
@@ -21,7 +21,7 @@ export function HabitRow({ h, onOpen, onProve, onView }: { h: Habit; onOpen: () 
   return (
     <Swipe holdOnly actions={[
       { label: 'Edit', icon: <PencilSimple size={20} weight="bold" />, tone: 'blue', run: onOpen },
-      { label: 'Delete', icon: <Trash size={20} weight="bold" />, tone: 'red', run: () => deleteHabit(h.id) }
+      { label: 'Delete', icon: <Trash size={20} weight="bold" />, tone: 'red', run: () => requestDeleteHabit(h.id) }
     ]}>
     <motion.div layout className={'card habit' + (done ? ' done' : '')} style={{ ['--hc' as string]: `var(--${h.color})` }}>
       <div className="habit-main" role="button" tabIndex={0} onClick={() => { if (onView) { play('tap'); onView(); } }}>

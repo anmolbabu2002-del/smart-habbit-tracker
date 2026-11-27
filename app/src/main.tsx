@@ -29,6 +29,8 @@ async function boot() {
   await restoreIfWiped(['ultradian.v2', 'journalEntries']);
   migrateFromV1();
   // Habit Lock is on by default (switched on once for people who had it off)
+  // remember that habits existed, so an empty list later reads as a clean slate
+  { const g = getState(); if (!g.hadHabits && (g.habits.length || g.perfectDays.length || g.bestStreak > 0)) update(d => { d.hadHabits = true; }); }
   if (!getState().lockDefaulted) update(d => { d.lock.enabled = true; d.lockDefaulted = true; });
   document.documentElement.dataset.theme = getState().theme;
   createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);

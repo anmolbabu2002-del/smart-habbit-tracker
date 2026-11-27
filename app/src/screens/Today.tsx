@@ -57,7 +57,7 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
   const dueLeft = due.filter(t => !t.doneAt).length;
 
   const bubble = bubbleFor({
-    habits: required.length, left: pendingHabits(s).map(h => h.name.trim()), allDone, lockOn, lockFrom: LOCK_FROM,
+    habits: required.length, hadHabits: !!s.hadHabits, bestStreak: s.bestStreak, left: pendingHabits(s).map(h => h.name.trim()), allDone, lockOn, lockFrom: LOCK_FROM,
     lockApps: LOCK_APPS.length, now, streak, focusMinutes: s.focus.lastPlanned || 50, usage
   });
 
@@ -76,7 +76,7 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
 
       {s.lock.enabled && <PermCard />}
 
-      {s.habits.length > 0 && <section className={'card hero' + (allDone ? ' won' : '')}>
+      <section className={'card hero' + (allDone ? ' won' : '')}>
         <div className="hero-top">
           <Mascot size={58} mood={bubble?.mood || 'happy'} />
           {bubble?.tappable
@@ -89,7 +89,7 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
             <b>{done}/{required.length}</b>
           </div>
         )}
-      </section>}
+      </section>
 
       <h2 className="section-title">Habits
         <button type="button" className="add-mini" onClick={() => { play('tap'); setEditHabit(null); }} aria-label="Add habit"><Plus size={18} weight="bold" /></button>

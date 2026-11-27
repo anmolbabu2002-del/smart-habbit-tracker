@@ -995,3 +995,5 @@ button.bubble:active { transform: scale(0.985); }
 .us-col small { font-size: 0.72rem; font-weight: 800; color: var(--ink-faint); text-align: center; }
 .us-col.on small { color: var(--ink); }
 .us-note { margin: 0; color: var(--ink-soft); font-weight: 700; font-size: 0.9rem; }
+.del-ico { width: 64px; height: 64px; border-radius: 20px; display: grid; place-items: center; }
+.coach-no.danger { color: var(--red-edge); font-weight: 900; font-size: 0.95rem; text-decoration: none; }

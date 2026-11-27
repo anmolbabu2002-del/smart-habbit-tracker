@@ -7,6 +7,8 @@ export interface Bubble { title: string; line: string; mood: Mood; tappable: boo
 
 export interface BubbleCtx {
   habits: number;           // habits in total
+  hadHabits: boolean;       // had habits before (all deleted) vs brand new
+  bestStreak: number;
   left: string[];           // names of habits not done yet, in list order
   allDone: boolean;
   lockOn: boolean;
@@ -56,19 +58,32 @@ export function bubbleFor(c: BubbleCtx): Bubble | null {
   const level = levelOf(u, nowMin);
   const togo = `${plural(n, 'habit')} to go`;
 
-  // 1. Nothing to talk about yet (the "No habits yet" screen shows instead)
-  if (!c.habits) return null;
+
+  // Screen time phrasing: name the app when one clearly leads, else the total
+  const top = u?.apps[0];
+  const subject = u && top && top.today >= 0.6 * u.today ? `${top.name}: ${fmtTime(top.today)} today` : u ? `${fmtTime(u.today)} on social media today` : '';
+  const tappable = !!u;
+
+  // 1. No habits yet: invite the first one (the "No habits yet" screen sits below)
+  if (!c.habits) {
+    if (u && (level === 'veryHigh' || level === 'high')) return { title: `${subject}.`, line: 'Add one habit and win some of that time back.', mood: 'focus', tappable };
+    if (c.hadHabits) return {
+      title: 'A clean slate.',
+      line: c.bestStreak > 2 ? `Your best run was ${c.bestStreak} days. Pick one habit and beat it.` : 'Pick one habit you’ll actually keep. Small beats perfect.',
+      mood: 'happy', tappable
+    };
+    return {
+      title: 'Let’s build your day!',
+      line: c.lockOn ? `Add your first habit. ${c.lockApps} apps lock at ${clock(c.lockFrom)} until it’s done.` : 'Start with one small thing you’ll do every day.',
+      mood: 'happy', tappable
+    };
+  }
 
   // 2. All done: habits matter more than screen time, so no screen time here
   if (c.allDone) {
     const lines = c.streak > 1 ? [...DONE_LINES, `That’s ${c.streak} days in a row. Keep it going.`] : DONE_LINES;
     return { title: 'All done for today!', line: pick(lines, c.now), mood: 'cheer', tappable: false };
   }
-
-  // Screen time phrasing: name the app when one clearly leads, else the total
-  const top = u?.apps[0];
-  const subject = u && top && top.today >= 0.6 * u.today ? `${top.name}: ${fmtTime(top.today)} today` : u ? `${fmtTime(u.today)} on social media today` : '';
-  const tappable = !!u;
 
   // 3. Apps are locked right now
   if (c.lockOn && nowMin >= c.lockFrom) {

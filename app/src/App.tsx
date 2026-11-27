@@ -1,3 +1,4 @@
+import { DeleteHabitConfirm } from './components/DeleteHabitConfirm';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { TabBar, type Tab } from './components/TabBar';
@@ -76,6 +77,7 @@ export function App() {
       </AnimatePresence></Suspense>
       <AnimatePresence>{proving && <ProofCamera key={proving.id} habit={proving} onClose={() => setProving(null)} />}</AnimatePresence>
       <AnimatePresence>{s.focus.active && <FocusRun key="run" a={s.focus.active} />}</AnimatePresence>
+      <DeleteHabitConfirm />
       <Toasts />
       <CelebrationHost />
       <FxLayer />
