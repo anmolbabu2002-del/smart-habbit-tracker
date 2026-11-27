@@ -71,10 +71,12 @@ export function syncLock() {
   }, 250);
 }
 
-export type LockStatus = { usageAccess: boolean; overlay: boolean };
+export type LockStatus = { usageAccess: boolean; overlay: boolean; instant?: boolean };
 export const lockStatus = () => native<LockStatus>(PLUGIN, 'getStatus').catch(() => ({ usageAccess: false, overlay: false }));
 export const openUsageAccess = () => native(PLUGIN, 'openUsageAccessSettings');
 export const openOverlay = () => native(PLUGIN, 'openOverlaySettings');
+/** Settings > Accessibility: the instant lock (no gap when switching apps) */
+export const openInstantLock = () => native(PLUGIN, 'openAccessibilitySettings');
 
 /** The lock screen's "Do it now" button opens the app on Today */
 export function onOpenHabits(cb: (app?: string) => void) {

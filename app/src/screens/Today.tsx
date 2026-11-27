@@ -13,7 +13,7 @@ import { TaskEditor } from '../components/TaskEditor';
 import { StreakSheet } from '../components/StreakSheet';
 import { useApp } from '../lib/store';
 import { doneToday } from '../lib/actions';
-import { requiredHabits, pendingHabits, shownHabits, LOCK_APPS, LOCK_FROM, lockStatus, openUsageAccess, openOverlay, type LockStatus } from '../lib/lock';
+import { requiredHabits, pendingHabits, shownHabits, LOCK_APPS, LOCK_FROM, lockStatus, openUsageAccess, openOverlay, openInstantLock, type LockStatus } from '../lib/lock';
 import { isNative } from '../lib/native';
 import { stageIndex, streakOf } from '../lib/streak';
 import { dueInfo, longDay, today } from '../lib/dates';
@@ -149,12 +149,17 @@ function PermCard() {
     document.addEventListener('visibilitychange', v);
     return () => document.removeEventListener('visibilitychange', v);
   }, []);
-  if (!st || (st.usageAccess && st.overlay)) return null;
-  const missing = !st.usageAccess ? 'Usage access' : 'Display over other apps';
+  if (!st || (st.usageAccess && st.overlay && st.instant)) return null;
+  const basic = st.usageAccess && st.overlay;
+  const missing = !st.usageAccess ? 'Usage access' : !st.overlay ? 'Display over other apps' : 'Ultradian Habit Lock';
+  const open = !st.usageAccess ? openUsageAccess : !st.overlay ? openOverlay : openInstantLock;
   return (
-    <button type="button" className="card perm-card" onClick={() => { play('tap'); (!st.usageAccess ? openUsageAccess() : openOverlay()).catch(() => {}); }}>
+    <button type="button" className="card perm-card" onClick={() => { play('tap'); open().catch(() => {}); }}>
       <span className="set-ico orange"><LockSimple size={20} weight="fill" /></span>
-      <span><b>Habit Lock can’t lock apps yet</b><small>Tap to allow “{missing}” for Ultradian</small></span>
+      <span>
+        <b>{basic ? 'Make Habit Lock instant' : 'Habit Lock can’t lock apps yet'}</b>
+        <small>{basic ? 'Without it, apps can slip through when you switch from recent apps. Tap, then turn on “Ultradian Habit Lock” in Accessibility.' : `Tap to allow “${missing}” for Ultradian`}</small>
+      </span>
       <ArrowRight size={18} weight="bold" />
     </button>
   );

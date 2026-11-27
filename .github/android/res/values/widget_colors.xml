@@ -21,4 +21,6 @@
     <color name="wrow_done">#dcf8ef</color>
     <color name="wrow_done_edge">#b5ecd9</color>
     <string name="widget_name">Today\'s habits</string>
+    <string name="lock_accessibility_name">Ultradian Habit Lock</string>
+    <string name="lock_accessibility_desc">Locks Instagram, YouTube, Facebook, Snapchat and TikTok the instant they open, until your habits are done. It only checks which app is in front. Nothing on your screen is read, stored or sent.</string>
 </resources>

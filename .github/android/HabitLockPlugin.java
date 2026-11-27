@@ -58,6 +58,7 @@ public class HabitLockPlugin extends Plugin {
         JSObject r = new JSObject();
         r.put("usageAccess", HabitLock.hasUsageAccess(c));
         r.put("overlay", HabitLock.canDrawOverlays(c));
+        r.put("instant", HabitLockAccessibility.enabled(c));
         r.put("locked", HabitLock.isLockActive(c));
         r.put("running", HabitLockService.running);
         call.resolve(r);
@@ -220,6 +221,14 @@ public class HabitLockPlugin extends Plugin {
             Intent general = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             try { c.startActivity(general); } catch (Exception ignored) { call.reject("Couldn't open Usage access settings"); return; }
         }
+        call.resolve();
+    }
+
+    /** Settings > Accessibility, to switch on the instant lock */
+    @PluginMethod
+    public void openAccessibilitySettings(PluginCall call) {
+        Intent i = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try { getContext().startActivity(i); } catch (Exception ex) { call.reject("Couldn't open Accessibility settings"); return; }
         call.resolve();
     }
 

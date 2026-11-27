@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { LockSimple, SquaresFour, Moon, SpeakerHigh, DownloadSimple, UploadSimple, User, CheckCircle, WarningCircle } from '@phosphor-icons/react';
 import { useApp, update } from '../../lib/store';
-import { habitLocked, lockStatus, openOverlay, openUsageAccess, syncLock, LOCK_APPS, type LockStatus } from '../../lib/lock';
+import { habitLocked, lockStatus, openOverlay, openUsageAccess, openInstantLock, syncLock, LOCK_APPS, type LockStatus } from '../../lib/lock';
 import { isNative } from '../../lib/native';
 import { saveBackup, restoreBackup } from '../../lib/backup';
 import { lockedToast } from '../../lib/actions';
@@ -56,6 +56,7 @@ export function Settings({ onBack }: { onBack: () => void }) {
         {isNative && <>
           <PermRow ok={st.usageAccess} title="Usage access" text="Lets the lock see which app is open." onClick={() => openUsageAccess().catch(() => {})} />
           <PermRow ok={st.overlay} title="Display over other apps" text="Lets the lock screen cover a blocked app." onClick={() => openOverlay().catch(() => {})} />
+          <PermRow ok={!!st.instant} title="Instant lock (Accessibility)" text="Locks the moment a blocked app opens, even from recent apps. Turn on “Ultradian Habit Lock”." onClick={() => openInstantLock().catch(() => {})} />
         </>}
         <p className="fine left">While apps are locked you can’t turn this off, delete or rename habits, or restore a backup. Focus sessions use the same two permissions. Nothing about your app use is saved or sent.</p>
       </div>
