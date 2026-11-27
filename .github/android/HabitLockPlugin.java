@@ -114,6 +114,43 @@ public class HabitLockPlugin extends Plugin {
         call.resolve(r);
     }
 
+    /** Can this launcher add the widget for us, and is one on the home screen already? */
+    @PluginMethod
+    public void widgetStatus(PluginCall call) {
+        Context c = getContext();
+        android.appwidget.AppWidgetManager m = android.appwidget.AppWidgetManager.getInstance(c);
+        JSObject r = new JSObject();
+        boolean supported = false;
+        int placed = 0;
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) supported = m.isRequestPinAppWidgetSupported();
+            placed = m.getAppWidgetIds(new android.content.ComponentName(c, NotoWidget.class)).length;
+        } catch (Exception ignored) {
+            // unknown launcher: treat as unsupported
+        }
+        r.put("supported", supported);
+        r.put("placed", placed > 0);
+        call.resolve(r);
+    }
+
+    /** Ask the launcher to put the widget on the home screen (it shows its own "Add" dialog). */
+    @PluginMethod
+    public void pinWidget(PluginCall call) {
+        Context c = getContext();
+        boolean asked = false;
+        try {
+            android.appwidget.AppWidgetManager m = android.appwidget.AppWidgetManager.getInstance(c);
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O && m.isRequestPinAppWidgetSupported()) {
+                asked = m.requestPinAppWidget(new android.content.ComponentName(c, NotoWidget.class), null, null);
+            }
+        } catch (Exception ignored) {
+            // fall through: the app shows how to add it by hand
+        }
+        JSObject r = new JSObject();
+        r.put("asked", asked);
+        call.resolve(r);
+    }
+
     /** Ticks made on the home-screen widget since the app last looked (then forgets them). */
     @PluginMethod
     public void takeWidgetTicks(PluginCall call) {
