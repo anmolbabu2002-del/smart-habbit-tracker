@@ -9,7 +9,8 @@ import { haptic } from './native';
 import { burst, party, praise, randomPraise, toast } from './celebrate';
 import { streakOf, stageIndex } from './streak';
 import { syncLock, habitLocked, requiredHabits } from './lock';
-import type { Color, Habit, State, Task } from './types';
+import { DAILY, habitStreakOf, isShown, normalise, sameSchedule, upcomingSchedule } from './schedule';
+import type { Color, Habit, Schedule, State, Task } from './types';
 
 type At = { x: number; y: number };
 const BRAND = ['#ff8c42', '#ffc800', '#12c79b', '#1cb0f6', '#a560e8', '#ff4b4b'];
@@ -17,18 +18,13 @@ const BRAND = ['#ff8c42', '#ffc800', '#12c79b', '#1cb0f6', '#a560e8', '#ff4b4b']
 // ── Habits ──
 export const doneToday = (h: Habit, day = today()) => h.history.includes(day);
 /** Days in a row this one habit was done (ending today, or yesterday if not done yet) */
-export function habitStreak(h: Habit, day = today()) {
-  const done = new Set(h.history);
-  let d = done.has(day) ? day : addDays(day, -1), n = 0;
-  while (done.has(d)) { n++; d = addDays(d, -1); }
-  return n;
-}
+export const habitStreak = (h: Habit, day = today()) => habitStreakOf(h, day).n;
 export const passLeft = (s: State = getState()) => !s.passes[weekOf()];
 
 export function completeHabit(id: string, at?: At, viaPass = false) {
   const day = today();
   const h = getState().habits.find(x => x.id === id);
-  if (!h || doneToday(h)) return;
+  if (!h || doneToday(h) || !isShown(h, day)) return; // not on today's list (e.g. a Mon/Wed/Fri habit on Tuesday)
   update(s => {
     const x = s.habits.find(y => y.id === id)!;
     x.history.push(day);
@@ -77,7 +73,8 @@ export function undoHabit(id: string) {
  *  added after everything was done) an earned day stays earned. */
 export function afterHabitsChanged(undo = false) {
   const s = getState(), day = today();
-  const perfect = s.habits.length > 0 && requiredHabits(s, day).every(h => doneToday(h, day));
+  const req = requiredHabits(s, day);
+  const perfect = req.length > 0 && req.every(h => doneToday(h, day));
   const had = s.perfectDays.includes(day);
   if (perfect && !had) {
     const prev = streakOf(s);
@@ -100,7 +97,7 @@ export function afterHabitsChanged(undo = false) {
   syncLock();
 }
 
-export function saveHabit(input: { id?: string; name: string; icon: string; color: Color }) {
+export function saveHabit(input: { id?: string; name: string; icon: string; color: Color; schedule?: Schedule }) {
   const name = input.name.trim();
   if (!name) return;
   if (input.id) {
@@ -113,10 +110,22 @@ export function saveHabit(input: { id?: string; name: string; icon: string; colo
         play('locked'); haptic.warning(); toast('A rename can’t turn a photo habit into a tick. Delete it and add a new one instead.', 'lock'); return;
       }
     }
-    update(s => { const h = s.habits.find(x => x.id === input.id); if (h) Object.assign(h, { name, icon: input.icon, color: input.color }); });
+    // a new schedule starts tomorrow, so it can't be used to dodge today
+    const next = input.schedule ? normalise(input.schedule) : null;
+    if (old && next && !sameSchedule(next, upcomingSchedule(old)) && habitLocked()) { lockedToast('Changing a habit’s days'); return; }
+    update(s => {
+      const h = s.habits.find(x => x.id === input.id);
+      if (!h) return;
+      Object.assign(h, { name, icon: input.icon, color: input.color });
+      if (next && !sameSchedule(next, upcomingSchedule(h))) {
+        const from = h.createdAt === today() ? today() : addDays(today(), 1); // added today: nothing to dodge yet
+        h.schedules = [...(h.schedules || []).filter(e => e.from < from), { from, s: next }];
+      }
+    });
     play('pop');
   } else {
-    update(s => { s.habits.push({ id: uid(), name, icon: input.icon, color: input.color, createdAt: today(), history: [] }); s.hadHabits = true; });
+    const sch = input.schedule ? normalise(input.schedule) : DAILY;
+    update(s => { s.habits.push({ id: uid(), name, icon: input.icon, color: input.color, createdAt: today(), history: [], ...(sch.kind === 'daily' ? {} : { schedules: [{ from: today(), s: sch }] }) }); s.hadHabits = true; });
     play('add');
     haptic.medium();
   }

@@ -6,6 +6,7 @@ import { getState, update } from './store';
 import { completeHabit, afterHabitsChanged } from './actions';
 import { requestProof } from './celebrate';
 import { today } from './dates';
+import { isRequired } from './schedule';
 
 const PLUGIN = 'UltradianHabitLock';
 type Tick = { id: string; day: string; at: number };
@@ -25,7 +26,7 @@ export async function takeWidgetTicks() {
         if (h && !h.history.includes(t.day)) h.history.push(t.day);
       }
       for (const d of new Set(past.map(t => t.day))) {
-        const due = s.habits.filter(h => h.createdAt <= d);
+        const due = s.habits.filter(h => isRequired(h, d));
         if (due.length && due.every(h => h.history.includes(d)) && !s.perfectDays.includes(d)) s.perfectDays.push(d);
       }
       s.perfectDays.sort();

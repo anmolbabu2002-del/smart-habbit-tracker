@@ -62,7 +62,7 @@ public class NotoWidget extends AppWidgetProvider {
 
     static final class Habit {
         String id, name, color;
-        boolean photo, done;
+        boolean photo, done, req; // req: counts today (a weekly habit can be on the list without being due yet)
     }
 
     /** Today's habits as the app last sent them; done flags only count if they're from today */
@@ -80,6 +80,7 @@ public class NotoWidget extends AppWidgetProvider {
                 h.color = o.optString("color", "orange");
                 h.photo = o.optBoolean("photo", false);
                 h.done = fresh && o.optBoolean("done", false);
+                h.req = o.optBoolean("req", true);
                 out.add(h);
             }
         } catch (Exception ignored) {
@@ -102,13 +103,15 @@ public class NotoWidget extends AppWidgetProvider {
             JSONArray a = new JSONArray(p.getString("widget", "[]"));
             JSONArray pending = new JSONArray();
             boolean changed = false;
+            int reqCount = 0;
             for (int i = 0; i < a.length(); i++) {
                 JSONObject o = a.getJSONObject(i);
                 if (id.equals(o.optString("id")) && !o.optBoolean("done") && !o.optBoolean("photo")) {
                     o.put("done", true);
                     changed = true;
                 }
-                if (!o.optBoolean("done")) pending.put(o.optString("name"));
+                if (!o.optBoolean("done") && o.optBoolean("req", true)) pending.put(o.optString("name"));
+                if (o.optBoolean("req", true)) reqCount++;
             }
             if (!changed) return;
             JSONArray ticks = new JSONArray(p.getString("widgetTicks", "[]"));
@@ -121,7 +124,7 @@ public class NotoWidget extends AppWidgetProvider {
                 .putString("widget", a.toString())
                 .putString("pending", pending.toString())
                 .putString("widgetTicks", ticks.toString());
-            if (pending.length() == 0 && a.length() > 0) e.putString("doneDay", today); // last one: apps unlock now
+            if (pending.length() == 0 && reqCount > 0) e.putString("doneDay", today); // last one due: apps unlock now
             e.apply();
         } catch (Exception ignored) {
             return;
@@ -135,8 +138,9 @@ public class NotoWidget extends AppWidgetProvider {
         SharedPreferences p = HabitLock.prefs(c);
         RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.noto_widget);
         List<Habit> all = habits(c);
-        int total = all.size(), done = 0;
-        for (Habit h : all) if (h.done) done++;
+        int total = 0, done = 0; // only habits due today count
+        for (Habit h : all) if (h.req) { total++; if (h.done) done++; }
+        boolean rest = total == 0 && !all.isEmpty();
         boolean allDone = total > 0 && (done == total || HabitLock.today().equals(p.getString("doneDay", "")));
         if (allDone) done = total;
         int left = total - done;
@@ -152,7 +156,8 @@ public class NotoWidget extends AppWidgetProvider {
         String why = p.getString("why", "").trim();
         v.setTextViewText(R.id.w_why, "“" + (why.isEmpty() ? "I’m not going to stay average." : why) + "”");
         String status;
-        if (total == 0) status = "Add your first habit";
+        if (rest) status = "Rest day \u00B7 nothing due";
+        else if (total == 0) status = "Add your first habit";
         else if (allDone) status = "All done! " + total + " of " + total;
         else if (locked) status = "Apps locked · " + left + " left";
         else if (lockOn) status = done + " of " + total + " done · locks at " + clock(lockFrom);
@@ -165,12 +170,12 @@ public class NotoWidget extends AppWidgetProvider {
 
         // rows: open habits first, in the app's order
         List<Habit> order = new ArrayList<>();
-        for (Habit h : all) if (!h.done && !allDone) order.add(h);
-        for (Habit h : all) if (h.done || allDone) order.add(h);
+        for (Habit h : all) if (!h.done) order.add(h);
+        for (Habit h : all) if (h.done) order.add(h);
         for (int i = 0; i < ROWS; i++) {
             if (i >= order.size()) { v.setViewVisibility(ROW[i], View.GONE); continue; }
             Habit h = order.get(i);
-            boolean d = h.done || allDone;
+            boolean d = h.done;
             v.setViewVisibility(ROW[i], View.VISIBLE);
             if (d) {
                 SpannableString s = new SpannableString(h.name);
@@ -194,9 +199,9 @@ public class NotoWidget extends AppWidgetProvider {
             v.setOnClickPendingIntent(ROW[i], tap);
         }
         int hidden = order.size() - Math.min(order.size(), ROWS);
-        if (total == 0) v.setTextViewText(R.id.w_more, "Tap to add a habit in Ultradian");
+        if (all.isEmpty()) v.setTextViewText(R.id.w_more, "Tap to add a habit in Ultradian");
         else v.setTextViewText(R.id.w_more, hidden > 0 ? "+ " + hidden + " more in the app" : "");
-        v.setViewVisibility(R.id.w_more, total == 0 || hidden > 0 ? View.VISIBLE : View.GONE);
+        v.setViewVisibility(R.id.w_more, all.isEmpty() || hidden > 0 ? View.VISIBLE : View.GONE);
         v.setOnClickPendingIntent(R.id.w_more, openIntent(c, null, 7311));
         return v;
     }

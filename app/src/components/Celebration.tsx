@@ -79,7 +79,7 @@ function AllDone({ p }: { p: Extract<Party, { kind: 'allDone' }> }) {
       </motion.div>
       {p.best && <motion.div className="party-badge" {...pop} transition={{ ...pop.transition, delay: 1.5 }}>New best streak!</motion.div>}
       <motion.div className="party-week" {...rise(1.1)}>
-        {week.map(d => <span key={d.day} className={'wd' + (d.done ? ' done' : '') + (d.isToday ? ' today' : '')}>{['S', 'M', 'T', 'W', 'T', 'F', 'S'][new Date(d.day + 'T12:00').getDay()]}<i /></span>)}
+        {week.map(d => <span key={d.day} className={'wd' + (d.done ? ' done' : '') + (d.rest ? ' rest' : '') + (d.isToday ? ' today' : '')}>{['S', 'M', 'T', 'W', 'T', 'F', 'S'][new Date(d.day + 'T12:00').getDay()]}<i /></span>)}
       </motion.div>
       <motion.p className="party-sub" {...rise(1.25)}>
         {lockOn ? 'Your apps are unlocked. ' : ''}{p.evolvedTo !== undefined ? 'Wait… something is happening to your flame!' : nxt ? `${nxt.min - p.streak} more ${nxt.min - p.streak === 1 ? 'day' : 'days'} until ${nxt.name}.` : 'You reached the final form.'}

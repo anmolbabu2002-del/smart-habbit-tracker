@@ -7,6 +7,8 @@ export interface Bubble { title: string; line: string; mood: Mood; tappable: boo
 
 export interface BubbleCtx {
   habits: number;           // habits in total
+  dueToday: number;         // habits that count today (0 = rest day)
+  optional?: string[];      // weekly habits you could get ahead on today
   hadHabits: boolean;       // had habits before (all deleted) vs brand new
   bestStreak: number;
   left: string[];           // names of habits not done yet, in list order
@@ -79,6 +81,13 @@ export function bubbleFor(c: BubbleCtx): Bubble | null {
     };
   }
 
+  // 1b. Rest day: habits exist but none is due today (e.g. a Mon/Wed/Fri habit on a Tuesday)
+  if (!c.dueToday && !c.allDone) {
+    const opt = c.optional || [];
+    const line = opt.length ? `Nothing due today. Want to get ahead on ${names(opt)}?` : c.streak > 0 ? `Nothing due today. Your ${c.streak}-day streak is safe.` : 'Nothing due today. Back at it tomorrow.';
+    return { title: 'Rest day.', line, mood: 'happy', tappable };
+  }
+
   // 2. All done: habits matter more than screen time, so no screen time here
   if (c.allDone) {
     const lines = c.streak > 1 ? [...DONE_LINES, `That’s ${c.streak} days in a row. Keep it going.`] : DONE_LINES;
@@ -118,7 +127,7 @@ export function bubbleFor(c: BubbleCtx): Bubble | null {
   }
 
   // 7. A fresh morning
-  if (n === c.habits && nowMin < 12 * 60) {
+  if (c.dueToday > 0 && n === c.dueToday && nowMin < 12 * 60) {
     return { title: 'Fresh start.', line: `Begin with ${first}.`, mood: 'happy', tappable };
   }
 

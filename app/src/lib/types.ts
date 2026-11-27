@@ -1,6 +1,9 @@
 export type Color = 'orange' | 'mint' | 'blue' | 'purple' | 'yellow' | 'red';
 export const COLORS: Color[] = ['orange', 'mint', 'blue', 'purple', 'yellow', 'red'];
 
+/** When a habit is due (see lib/schedule.ts) */
+export type Schedule = { kind: 'daily' } | { kind: 'days'; days: number[] } | { kind: 'weekly'; times: number };
+
 export interface Habit {
   id: string;
   name: string;
@@ -10,6 +13,7 @@ export interface Habit {
   history: string[];      // days it was done (ymd)
   passDays?: string[];    // days a free pass covered it
   doneAt?: number;        // when it was last ticked off (undo only shortly after)
+  schedules?: { from: string; s: Schedule }[]; // schedule changes, each from a day on (none = every day)
 }
 
 export interface Task {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LockSimple, Plus, ArrowRight } from '@phosphor-icons/react';
+import { LockSimple, Plus, ArrowRight, CaretDown } from '@phosphor-icons/react';
 import { motion } from 'motion/react';
 import { Mascot } from '../components/Mascot';
 import { HabitRow, TaskRow } from '../components/Rows';
@@ -13,7 +13,7 @@ import { TaskEditor } from '../components/TaskEditor';
 import { StreakSheet } from '../components/StreakSheet';
 import { useApp } from '../lib/store';
 import { doneToday } from '../lib/actions';
-import { requiredHabits, pendingHabits, LOCK_APPS, LOCK_FROM, lockStatus, openUsageAccess, openOverlay, type LockStatus } from '../lib/lock';
+import { requiredHabits, pendingHabits, shownHabits, LOCK_APPS, LOCK_FROM, lockStatus, openUsageAccess, openOverlay, type LockStatus } from '../lib/lock';
 import { isNative } from '../lib/native';
 import { stageIndex, streakOf } from '../lib/streak';
 import { dueInfo, longDay, today } from '../lib/dates';
@@ -36,6 +36,9 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
   const left = required.length - done;
   const allDone = required.length > 0 && (left === 0 || s.perfectDays.includes(day));
   const streak = streakOf(s);
+  const shown = shownHabits(s);
+  const offToday = s.habits.filter(h => !shown.includes(h));
+  const [showOff, setShowOff] = useState(false);
   const [usage, setUsage] = useState<Usage | null>(null);
   const [usageOpen, setUsageOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
@@ -57,7 +60,7 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
   const dueLeft = due.filter(t => !t.doneAt).length;
 
   const bubble = bubbleFor({
-    habits: required.length, hadHabits: !!s.hadHabits, bestStreak: s.bestStreak, left: pendingHabits(s).map(h => h.name.trim()), allDone, lockOn, lockFrom: LOCK_FROM,
+    habits: s.habits.length, dueToday: required.length, optional: shown.filter(h => !required.includes(h) && !doneToday(h)).map(h => h.name.trim()), hadHabits: !!s.hadHabits, bestStreak: s.bestStreak, left: pendingHabits(s).map(h => h.name.trim()), allDone, lockOn, lockFrom: LOCK_FROM,
     lockApps: LOCK_APPS.length, now, streak, focusMinutes: s.focus.lastPlanned || 50, usage
   });
 
@@ -95,9 +98,22 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
         <button type="button" className="add-mini" onClick={() => { play('tap'); setEditHabit(null); }} aria-label="Add habit"><Plus size={18} weight="bold" /></button>
       </h2>
       {s.habits.length ? (
-        <div className="stack">
-          {s.habits.map(h => <HabitRow key={h.id} h={h} onOpen={() => setEditHabit(h)} onProve={() => onProve(h)} onView={() => setCalHabit(h)} />)}
-        </div>
+        <>
+          <div className="stack">
+            {shown.map(h => <HabitRow key={h.id} h={h} onOpen={() => setEditHabit(h)} onProve={() => onProve(h)} onView={() => setCalHabit(h)} />)}
+          </div>
+          {offToday.length > 0 && (
+            <div className="not-today">
+              <button type="button" className="not-today-head" onClick={() => { play('tap'); setShowOff(v => !v); }} aria-expanded={showOff}>
+                <span>Not today <small>{offToday.length}</small></span>
+                <CaretDown size={16} weight="bold" className={showOff ? 'up' : ''} />
+              </button>
+              {showOff && <div className="stack">
+                {offToday.map(h => <HabitRow key={h.id} h={h} off onOpen={() => setEditHabit(h)} onProve={() => onProve(h)} onView={() => setCalHabit(h)} />)}
+              </div>}
+            </div>
+          )}
+        </>
       ) : (
         <EmptyHabits onCustom={() => setEditHabit(null)} />
       )}

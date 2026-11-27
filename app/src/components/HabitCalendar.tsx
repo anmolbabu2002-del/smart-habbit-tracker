@@ -6,22 +6,23 @@ import { CaretLeft, CaretRight, Check, X, Ticket, TrendUp, TrendDown, Warning, T
 import { Sheet } from './Sheet';
 import { HabitIcon } from './HabitIcon';
 import { addDays, parseYmd, today, ymd } from '../lib/dates';
-import { habitStreak } from '../lib/actions';
+import { isRequired } from '../lib/schedule';
 import { play } from '../lib/sound';
 import type { Habit } from '../lib/types';
 
 const WD = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-type Cell = { day: string; kind: 'done' | 'pass' | 'missed' | 'today' | 'future' | 'before' };
+type Cell = { day: string; kind: 'done' | 'pass' | 'missed' | 'off' | 'today' | 'future' | 'before' };
 
 function analyse(h: Habit) {
   const t = today(), done = new Set(h.history), pass = new Set(h.passDays || []);
   const start = h.createdAt < t ? h.createdAt : t;
   const days: string[] = [];
-  for (let d = start; d < t; d = addDays(d, 1)) days.push(d); // finished days only (today is still open)
+  // finished days it was due (or done anyway); days off don't count as missed
+  for (let d = start; d < t; d = addDays(d, 1)) if (isRequired(h, d) || done.has(d)) days.push(d);
   const did = (d: string) => done.has(d);
   // runs
   let best = 0, run = 0;
-  for (const d of [...days, t]) { if (did(d)) { run++; best = Math.max(best, run); } else if (d !== t) run = 0; }
+  for (const d of [...days, t]) { if (did(d)) { run++; best = Math.max(best, run); } else if (d !== t && isRequired(h, d)) run = 0; }
   // weekdays
   const byWd = Array.from({ length: 7 }, () => ({ n: 0, ok: 0 }));
   days.forEach(d => { const w = parseYmd(d).getDay(); byWd[w].n++; if (did(d)) byWd[w].ok++; });
@@ -29,14 +30,14 @@ function analyse(h: Habit) {
   const worst = rated.length ? rated.reduce((a, b) => (b.rate < a.rate ? b : a)) : null;
   const bestWd = rated.length ? rated.reduce((a, b) => (b.rate > a.rate ? b : a)) : null;
   // this week vs last week
-  const last7 = Array.from({ length: 7 }, (_, i) => addDays(t, -1 - i)).filter(d => d >= start);
-  const prev7 = Array.from({ length: 7 }, (_, i) => addDays(t, -8 - i)).filter(d => d >= start);
+  const last7 = Array.from({ length: 7 }, (_, i) => addDays(t, -1 - i)).filter(d => days.includes(d));
+  const prev7 = Array.from({ length: 7 }, (_, i) => addDays(t, -8 - i)).filter(d => days.includes(d));
   const pct = (list: string[]) => (list.length ? list.filter(did).length / list.length : 0);
   // two misses in a row
   let doubleMiss = 0;
   for (let i = 1; i < days.length; i++) if (!did(days[i]) && !did(days[i - 1])) doubleMiss++;
   const missed = days.filter(d => !did(d)).length;
-  return { total: h.history.length, rate: days.length ? (days.length - missed) / days.length : did(t) ? 1 : 0, missed, best, current: habitStreak(h), worst, bestWd, week: pct(last7), prevWeek: pct(prev7), hasPrev: prev7.length >= 3, doubleMiss, pass: pass.size, days: days.length };
+  return { total: h.history.length, rate: days.length ? (days.length - missed) / days.length : did(t) ? 1 : 0, missed, best, current: run, worst, bestWd, week: pct(last7), prevWeek: pct(prev7), hasPrev: prev7.length >= 3, doubleMiss, pass: pass.size, days: days.length };
 }
 
 export function HabitCalendar({ habit, onClose }: { habit: Habit | null; onClose: () => void }) {
@@ -49,7 +50,7 @@ export function HabitCalendar({ habit, onClose }: { habit: Habit | null; onClose
   const cells: (Cell | null)[] = [...Array(lead).fill(null)];
   for (let i = 0; i < daysIn; i++) {
     const d = addDays(first, i);
-    const kind: Cell['kind'] = d > t ? 'future' : d < habit.createdAt ? 'before' : pass.has(d) ? 'pass' : done.has(d) ? 'done' : d === t ? 'today' : 'missed';
+    const kind: Cell['kind'] = d > t ? 'future' : d < habit.createdAt ? 'before' : pass.has(d) ? 'pass' : done.has(d) ? 'done' : d === t ? 'today' : isRequired(habit, d) ? 'missed' : 'off';
     cells.push({ day: d, kind });
   }
   const mDone = cells.filter(c => c && (c.kind === 'done' || c.kind === 'pass')).length;

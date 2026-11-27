@@ -1004,3 +1004,27 @@ button.bubble:active { transform: scale(0.985); }
 .wp-list { list-style: none; margin: 0 0 4px; padding: 0; display: grid; gap: 8px; width: 100%; text-align: left; }
 .wp-list li { display: flex; align-items: center; gap: 10px; font-weight: 800; color: var(--ink); font-size: 0.95rem; }
 .wp-list svg { flex: none; color: var(--orange); }
+
+/* ── Habits not due today ── */
+.not-today { margin-top: 10px; }
+.not-today-head { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 8px 4px; border: 0; background: none; font: inherit; color: var(--ink-soft); font-weight: 800; cursor: pointer; }
+.not-today-head small { margin-left: 6px; padding: 1px 8px; border-radius: 99px; background: var(--line); color: var(--ink-soft); font-size: 0.78rem; }
+.not-today-head svg { transition: transform 0.2s; }
+.not-today-head svg.up { transform: rotate(180deg); }
+.card.habit.off .habit-main { opacity: 0.6; }
+
+/* ── Habit editor: repeat ── */
+.repeat { display: grid; gap: 10px; margin-top: 12px; }
+.repeat .seg.three button { font-size: 0.86rem; padding: 9px 0; }
+.rp-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.rp-day { appearance: none; aspect-ratio: 1; max-height: 42px; border-radius: 50%; border: 2px solid var(--line-strong); background: var(--card); color: var(--ink-soft); font: inherit; font-weight: 900; font-size: 0.92rem; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s; }
+.rp-day.on { background: var(--orange); border-color: var(--orange-edge); color: #fff; box-shadow: 0 3px 0 var(--orange-edge); }
+.rp-day:active { transform: scale(0.92); }
+.rp-times { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px; border-radius: 16px; background: var(--bg); }
+.rp-times b { font-size: 1rem; font-weight: 900; color: var(--ink); }
+.rp-step { appearance: none; width: 40px; height: 40px; border-radius: 12px; border: 0; background: var(--card); color: var(--orange-edge); font: inherit; font-size: 1.4rem; font-weight: 900; box-shadow: 0 3px 0 var(--line-strong); cursor: pointer; }
+.rp-step:disabled { color: var(--ink-faint); box-shadow: none; }
+.rp-note { margin: 0 2px; color: var(--ink-soft); font-size: 0.85rem; font-weight: 700; line-height: 1.35; }
+.rp-note b { color: var(--orange-edge); font-weight: 900; }
+.cal-day.off { opacity: 0.4; }
+.wd.rest i { background: none; border: 2px dashed var(--line-strong); box-sizing: border-box; }
