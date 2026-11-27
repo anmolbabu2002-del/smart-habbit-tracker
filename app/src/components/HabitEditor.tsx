@@ -5,6 +5,7 @@ import { Camera, CheckCircle, Trash } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Sheet } from './Sheet';
 import { HabitIcon, HABIT_ICONS, iconFor, colorFor } from './HabitIcon';
+import { CustomIconTiles } from './CustomIcons';
 import { requestDeleteHabit, saveHabit } from '../lib/actions';
 import { proofOf } from '../lib/proof';
 import { play } from '../lib/sound';
@@ -110,6 +111,7 @@ export function HabitEditor({ open, habit, onClose }: { open: boolean; habit?: H
       <AnimatePresence initial={false}>
         {icons && (
           <motion.div className="icon-grid" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
+            <CustomIconTiles current={icon} onPick={id => { setIcon(id); setPicked(true); setIcons(false); }} />
             {HABIT_ICONS.map(id => (
               <button key={id} type="button" className={'icon-pick' + (id === icon ? ' on' : '')} aria-label={id}
                 onClick={() => { play('toggle'); setIcon(id); setPicked(true); setIcons(false); }}>

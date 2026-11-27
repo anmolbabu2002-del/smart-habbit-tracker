@@ -2,6 +2,7 @@
 // Each habit's identity comes from its icon (which the app already picks from the habit's name),
 // so nothing extra is asked when creating a habit. The user can type their own in the calendar.
 import type { Habit } from './types';
+import { identityForCustom } from './customIcons';
 
 const BY_ICON: Record<string, string> = {
   // body
@@ -39,8 +40,8 @@ const BY_ICON: Record<string, string> = {
 export const DEFAULT_IDENTITY = 'someone who shows up';
 
 /** Who this habit makes you: your own words, or the one that goes with its icon */
-export const identityOf = (h: Habit) => (h.identity || '').trim() || BY_ICON[h.icon] || DEFAULT_IDENTITY;
-export const autoIdentity = (icon: string) => BY_ICON[icon] || DEFAULT_IDENTITY;
+export const autoIdentity = (icon: string) => BY_ICON[icon] || identityForCustom(icon) || DEFAULT_IDENTITY;
+export const identityOf = (h: Habit) => (h.identity || '').trim() || autoIdentity(h.icon);
 
 /** Real votes only: days it was done (free-pass days aren't a vote) */
 export function votesOf(h: Habit) {

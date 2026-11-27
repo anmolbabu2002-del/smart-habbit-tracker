@@ -1056,3 +1056,18 @@ button.bubble:active { transform: scale(0.985); }
 .votes.editing { display: grid; gap: 8px; background: var(--bg); box-shadow: none; cursor: default; }
 .votes-lead { font-weight: 800; color: var(--ink-soft); font-size: 0.9rem; }
 .votes-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ── Custom icons: Search and Photo tiles, search panel ── */
+.icon-pick.tool { display: grid; place-items: center; gap: 0; color: var(--orange-edge); background: var(--orange-soft); }
+.icon-pick.tool small { font-size: 0.6rem; font-weight: 900; line-height: 1; margin-top: -2px; }
+.hicon.photo { object-fit: cover; display: block; }
+.isearch { grid-column: 1 / -1; display: grid; gap: 10px; }
+.isearch-bar { display: flex; align-items: center; gap: 8px; padding: 0 6px 0 12px; height: 44px; border-radius: 14px; background: var(--bg); border: 1.5px solid var(--line); color: var(--ink-soft); }
+.isearch-bar input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; font-weight: 700; color: var(--ink); outline: none; }
+.isearch-bar button { appearance: none; border: 0; background: none; color: var(--ink-soft); width: 32px; height: 32px; display: grid; place-items: center; cursor: pointer; }
+.isearch-colors { display: flex; gap: 10px; justify-content: center; }
+.isearch-colors button { appearance: none; width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--card); box-shadow: 0 0 0 2px transparent; cursor: pointer; }
+.isearch-colors button.on { box-shadow: 0 0 0 2.5px var(--ink); }
+.isearch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; max-height: 240px; overflow-y: auto; }
+.isearch-note { grid-column: 1 / -1; text-align: center; color: var(--ink-soft); font-weight: 700; margin: 12px 0; }
+.icon-grid:has(.isearch) > .icon-pick { display: none; } /* while searching, only the results */
