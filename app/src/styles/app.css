@@ -1045,3 +1045,14 @@ button.bubble:active { transform: scale(0.985); }
 .cal-score.met { background: var(--mint); color: #fff; box-shadow: 0 3px 0 var(--mint-edge); }
 .cal-score.missed { background: var(--red-soft); color: var(--red-edge); }
 .cal-score.now { background: var(--orange-soft); color: var(--orange-edge); border: 1.5px dashed var(--orange); }
+
+/* ── Identity votes (habit calendar) ── */
+.votes { appearance: none; width: 100%; margin-top: 12px; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 0; border-radius: 18px; background: var(--hs); font: inherit; color: var(--ink); text-align: left; cursor: pointer; box-shadow: 0 3px 0 color-mix(in srgb, var(--hc) 25%, transparent); }
+.votes-ico { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--hc); color: #fff; flex: none; }
+.votes-text { flex: 1; display: grid; min-width: 0; }
+.votes-text b { font-size: 1.15rem; font-weight: 900; }
+.votes-text small { font-size: 0.92rem; font-weight: 800; color: var(--ink-soft); }
+.votes-pen { color: var(--ink-faint); flex: none; }
+.votes.editing { display: grid; gap: 8px; background: var(--bg); box-shadow: none; cursor: default; }
+.votes-lead { font-weight: 800; color: var(--ink-soft); font-size: 0.9rem; }
+.votes-actions { display: flex; gap: 8px; justify-content: flex-end; }

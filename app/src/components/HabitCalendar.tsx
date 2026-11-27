@@ -2,10 +2,13 @@
 // and insights read from its real history.
 import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { CaretLeft, CaretRight, Check, X, Ticket, TrendUp, TrendDown, Warning, Trophy } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, Check, X, Ticket, TrendUp, TrendDown, Warning, Trophy, IdentificationBadge, PencilSimple } from '@phosphor-icons/react';
 import { Sheet } from './Sheet';
 import { HabitIcon } from './HabitIcon';
 import { addDays, daysBetween, parseYmd, today, weekOf, ymd } from '../lib/dates';
+import { identityOf, autoIdentity, votesOf } from '../lib/identity';
+import { setIdentity } from '../lib/actions';
+import { useApp } from '../lib/store';
 import { describe, doneThisWeek, habitStreakOf, isRequired, scheduleOn, upcomingSchedule } from '../lib/schedule';
 import { play } from '../lib/sound';
 import type { Habit } from '../lib/types';
@@ -124,6 +127,8 @@ export function HabitCalendar({ habit, onClose }: { habit: Habit | null; onClose
         </div>
       )}
 
+      <Votes habit={habit} />
+
       {insights.length > 0 && (
         <div className="cal-insights">
           {insights.slice(0, 3).map((x, i) => <p key={i} className={'ins ' + x.tone}>{x.icon}{x.text}</p>)}
@@ -183,4 +188,33 @@ function withWeekScores(cells: (Cell | null)[], h: Habit): (Cell | Score | null)
 function WeekScore({ count, target, state }: Score) {
   if (state === 'future') return <span />;
   return <span className={'cal-score ' + state}>{state === 'met' ? <Check size={13} weight="bold" /> : null}{count}/{target}</span>;
+}
+
+/** "47 votes for being a reader": tap to say it in your own words */
+function Votes({ habit: opened }: { habit: Habit }) {
+  const habit = useApp().habits.find(h => h.id === opened.id) || opened; // live, so an edit shows at once
+  const [edit, setEdit] = useState(false);
+  const [text, setText] = useState('');
+  const votes = votesOf(habit);
+  const who = identityOf(habit);
+  const save = () => { setIdentity(habit.id, text); play('pop'); setEdit(false); };
+  if (edit) return (
+    <div className="votes editing">
+      <span className="votes-lead">Every tick is a vote for being…</span>
+      <input className="field" autoFocus maxLength={60} placeholder={autoIdentity(habit.icon)} value={text}
+        onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') save(); }} />
+      <div className="votes-actions">
+        <button type="button" className="btn ghost" onClick={() => { play('tap'); setEdit(false); }}>Cancel</button>
+        <button type="button" className="btn" onClick={save}>Save</button>
+      </div>
+    </div>
+  );
+  return (
+    <button type="button" className="votes" style={{ ['--hc' as string]: `var(--${habit.color})`, ['--hs' as string]: `var(--${habit.color}-soft)` }}
+      onClick={() => { play('tap'); setText(habit.identity || ''); setEdit(true); }} aria-label="Change who this habit makes you">
+      <span className="votes-ico"><IdentificationBadge size={26} weight="fill" /></span>
+      <span className="votes-text"><b>{votes} {votes === 1 ? 'vote' : 'votes'}</b><small>for being {who}</small></span>
+      <PencilSimple size={16} weight="bold" className="votes-pen" />
+    </button>
+  );
 }

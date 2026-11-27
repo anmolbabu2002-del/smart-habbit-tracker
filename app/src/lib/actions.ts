@@ -9,6 +9,7 @@ import { haptic } from './native';
 import { burst, party, praise, randomPraise, toast } from './celebrate';
 import { streakOf, stageIndex } from './streak';
 import { syncLock, habitLocked, requiredHabits } from './lock';
+import { identityOf } from './identity';
 import { DAILY, habitStreakOf, isShown, normalise, sameSchedule, upcomingSchedule } from './schedule';
 import type { Color, Habit, Schedule, State, Task } from './types';
 
@@ -40,6 +41,7 @@ export function completeHabit(id: string, at?: At, viaPass = false) {
     burst({ ...at, count: 34, power: 1.1 });
     praise(at.x, at.y - 30, randomPraise());
   }
+  if (!viaPass) toast(`+1 vote for being ${identityOf(h)}`, 'good'); // every tick is a vote for who you're becoming
   afterHabitsChanged();
 }
 
@@ -130,6 +132,11 @@ export function saveHabit(input: { id?: string; name: string; icon: string; colo
     haptic.medium();
   }
   afterHabitsChanged();
+}
+
+/** The habit's identity in the user's own words ('' = back to the one from its icon) */
+export function setIdentity(id: string, text: string) {
+  update(s => { const h = s.habits.find(x => x.id === id); if (h) h.identity = text.trim().replace(/\s+/g, ' ').slice(0, 60) || undefined; });
 }
 
 export function deleteHabit(id: string) {

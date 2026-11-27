@@ -13,6 +13,7 @@ export interface Habit {
   history: string[];      // days it was done (ymd)
   passDays?: string[];    // days a free pass covered it
   doneAt?: number;        // when it was last ticked off (undo only shortly after)
+  identity?: string;      // who it makes you, in the user's words (else from the icon, lib/identity.ts)
   schedules?: { from: string; s: Schedule }[]; // schedule changes, each from a day on (none = every day)
 }
 
