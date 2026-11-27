@@ -112,18 +112,30 @@ public class HabitLockService extends Service {
         handler.postDelayed(tick, TICK_MS);
     }
 
-    /** The app most recently brought to the front, from Android's usage events. */
+    /**
+     * The app in front, from usage events: always the last 10 minutes, taking the newest one by
+     * time. Some phones (Xiaomi and others) write these events seconds late, and a late event must
+     * still count (reading only "new since last time" missed them, so reopening a locked app from
+     * recent apps or the home screen slipped through).
+     */
     private String currentForeground() {
         UsageStatsManager usm = (UsageStatsManager) getSystemService(Context.USAGE_STATS_SERVICE);
         if (usm == null) return foreground;
         long now = System.currentTimeMillis();
-        long from = lastQuery == 0 ? now - 60 * 60 * 1000L : lastQuery - 2000;
-        UsageEvents events = usm.queryEvents(from, now);
+        UsageEvents events;
+        long span = (lastQuery == 0 ? 60 : 10) * 60 * 1000L; // first look after (re)starting: the last hour
+        try { events = usm.queryEvents(now - span, now + 1000); } catch (Exception ex) { return foreground; }
         UsageEvents.Event e = new UsageEvents.Event();
+        long newest = -1;
+        String pkg = null;
         while (events != null && events.hasNextEvent()) {
             events.getNextEvent(e);
-            if (e.getEventType() == 1) foreground = e.getPackageName(); // ACTIVITY_RESUMED / MOVE_TO_FOREGROUND
+            if (e.getEventType() == 1 && e.getTimeStamp() >= newest) { // ACTIVITY_RESUMED / MOVE_TO_FOREGROUND
+                newest = e.getTimeStamp();
+                pkg = e.getPackageName();
+            }
         }
+        if (pkg != null) foreground = pkg;
         lastQuery = now;
         return foreground;
     }
