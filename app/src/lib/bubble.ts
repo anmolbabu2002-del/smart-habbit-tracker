@@ -15,6 +15,7 @@ export interface BubbleCtx {
   allDone: boolean;
   lockOn: boolean;
   lockFrom: number;         // minutes after midnight
+  lockUntil: number;        // minutes after midnight
   lockApps: number;         // how many apps the lock covers
   now: Date;
   streak: number;
@@ -95,12 +96,11 @@ export function bubbleFor(c: BubbleCtx): Bubble | null {
   }
 
   // 3. Apps are locked right now
-  if (c.lockOn && nowMin >= c.lockFrom) {
-    const minsLeft = 24 * 60 - nowMin;
-    const hoursLeft = Math.ceil(minsLeft / 60);
+  if (c.lockOn && nowMin >= c.lockFrom && nowMin < c.lockUntil) {
+    const minsLeft = c.lockUntil - nowMin;
     let line = `Your ${c.lockApps} apps are locked until they’re done.`;
     if (u && (level === 'veryHigh' || level === 'high')) line = `Your ${c.lockApps} apps are locked, after ${fmtTime(u.today)} on them today.`;
-    else if (minsLeft <= 180) line = minsLeft <= 60 ? 'Under an hour left today. You can still do it.' : `Under ${hoursLeft} hours left today. Your apps stay locked.`;
+    else if (minsLeft <= 60) line = `Your apps stay locked till ${clock(c.lockUntil)}, or until they’re done.`;
     return { title: `${togo}.`, line, mood: 'focus', tappable };
   }
 

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Today at a glance: your why on Noto's banner, the progress, and up to 3 habits to tick. -->
+<!-- Today at a glance: your why, big, on Noto's banner; a quiet status line; every habit to tick. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@android:id/background"
     android:layout_width="match_parent"
@@ -22,12 +22,12 @@
         <TextView
             android:id="@+id/w_why"
             android:layout_width="match_parent"
-            android:layout_height="36dp"
+            android:layout_height="45dp"
             android:layout_marginStart="12dp"
-            android:layout_marginTop="7dp"
+            android:layout_marginTop="6dp"
             android:layout_marginEnd="60dp"
-            android:autoSizeMaxTextSize="14sp"
-            android:autoSizeMinTextSize="9sp"
+            android:autoSizeMaxTextSize="17sp"
+            android:autoSizeMinTextSize="10sp"
             android:autoSizeStepGranularity="0.5sp"
             android:autoSizeTextType="uniform"
             android:gravity="top|start"
@@ -37,7 +37,7 @@
             android:shadowDy="2"
             android:shadowRadius="0.01"
             android:textColor="#FFFFFF"
-            android:textSize="14sp"
+            android:textSize="17sp"
             android:textStyle="bold|italic" />
         <TextView
             android:id="@+id/w_status"
@@ -45,17 +45,11 @@
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|start"
             android:layout_marginStart="12dp"
-            android:layout_marginBottom="7dp"
-            android:background="@drawable/widget_pill"
-            android:drawablePadding="4dp"
+            android:layout_marginBottom="5dp"
             android:gravity="center_vertical"
             android:maxLines="1"
-            android:paddingStart="9dp"
-            android:paddingTop="2dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="4dp"
-            android:textColor="#E8542A"
-            android:textSize="10sp"
+            android:textColor="#B3FFFFFF"
+            android:textSize="9sp"
             android:textStyle="bold" />
         <ImageView
             android:id="@+id/w_noto"

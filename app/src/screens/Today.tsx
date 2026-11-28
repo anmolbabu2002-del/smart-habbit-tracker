@@ -13,7 +13,7 @@ import { TaskEditor } from '../components/TaskEditor';
 import { StreakSheet } from '../components/StreakSheet';
 import { useApp } from '../lib/store';
 import { doneToday } from '../lib/actions';
-import { requiredHabits, pendingHabits, shownHabits, LOCK_APPS, LOCK_FROM, lockStatus, openUsageAccess, openOverlay, type LockStatus } from '../lib/lock';
+import { requiredHabits, pendingHabits, shownHabits, LOCK_APPS, LOCK_FROM, LOCK_UNTIL, lockStatus, openUsageAccess, openOverlay, type LockStatus } from '../lib/lock';
 import { isNative } from '../lib/native';
 import { stageIndex, streakOf } from '../lib/streak';
 import { dueInfo, longDay, today } from '../lib/dates';
@@ -60,7 +60,7 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
   const dueLeft = due.filter(t => !t.doneAt).length;
 
   const bubble = bubbleFor({
-    habits: s.habits.length, dueToday: required.length, optional: shown.filter(h => !required.includes(h) && !doneToday(h)).map(h => h.name.trim()), hadHabits: !!s.hadHabits, bestStreak: s.bestStreak, left: pendingHabits(s).map(h => h.name.trim()), allDone, lockOn, lockFrom: LOCK_FROM,
+    habits: s.habits.length, dueToday: required.length, optional: shown.filter(h => !required.includes(h) && !doneToday(h)).map(h => h.name.trim()), hadHabits: !!s.hadHabits, bestStreak: s.bestStreak, left: pendingHabits(s).map(h => h.name.trim()), allDone, lockOn, lockFrom: LOCK_FROM, lockUntil: LOCK_UNTIL,
     lockApps: LOCK_APPS.length, now, streak, focusMinutes: s.focus.lastPlanned || 50, usage
   });
 

@@ -107,6 +107,9 @@ export function loadVision(): Promise<void> {
       st.processor = await lib.AutoProcessor.from_pretrained(MODEL);
       st.vision = await lib.CLIPVisionModelWithProjection.from_pretrained(MODEL, { dtype: 'q8' });
       await fingerprints();
+      // one throwaway run: the very first run is slow, so the first real frame isn't
+      const blank = document.createElement('canvas'); blank.width = blank.height = 32;
+      await st.vision(await st.processor(await lib.RawImage.fromCanvas(blank)));
       st.ready = true;
     } catch (e) {
       st.error = e;
@@ -120,7 +123,18 @@ export function loadVision(): Promise<void> {
   return st.loading;
 }
 
-/** Free the memory once the camera closes */
+let idleTimer = 0;
+/** The camera is open: keep the photo check loaded */
+export function hold() { clearTimeout(idleTimer); }
+/** Nothing needs it now: keep it loaded a while (proving the next habit is instant), then free the memory */
+export function release(ms = 5 * 60_000) { clearTimeout(idleTimer); idleTimer = window.setTimeout(unload, ms); }
+/** Load it ahead of time (only once it's downloaded), so the camera is ready the moment it opens */
+export function warmUp() {
+  if (!('caches' in window) || !localStorage.getItem('photoProofDownloaded') || st.ready || st.loading) return;
+  loadVision().then(() => release(10 * 60_000));
+}
+
+/** Free the memory */
 export function unload() {
   try { st.vision?.dispose?.(); } catch { /* ignore */ }
   try { st.text?.dispose?.(); } catch { /* ignore */ }

@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Check, CameraRotate, Timer, Ticket, ArrowClockwise, ShieldCheck } from '@phosphor-icons/react';
-import { check, loadVision, proofOf, textFingerprint, unload, useProofEngine, type CheckResult } from '../lib/proof';
+import { check, hold, loadVision, proofOf, release, textFingerprint, useProofEngine, type CheckResult } from '../lib/proof';
 import { completeHabit, passLeft } from '../lib/actions';
 import { play } from '../lib/sound';
 import { haptic } from '../lib/native';
@@ -58,12 +58,13 @@ export function ProofCamera({ habit, onClose }: { habit: Habit; onClose: () => v
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   useEffect(() => {
+    hold();
     loadVision();
     if (!proof.known && proof.show) textFingerprint('a photo of ' + proof.show).catch(() => {});
     const off = onBack(() => { closeRef.current(); return true; });
     const vis = () => { if (document.hidden) stop(); else if (phaseRef.current === 'camera') start(); };
     document.addEventListener('visibilitychange', vis);
-    return () => { off(); stop(); document.removeEventListener('visibilitychange', vis); setTimeout(unload, 300); };
+    return () => { off(); stop(); document.removeEventListener('visibilitychange', vis); release(); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 10-second self-timer for workouts: prop the phone up and get into position
@@ -93,6 +94,9 @@ export function ProofCamera({ habit, onClose }: { habit: Habit; onClose: () => v
     setScan({ seen: 0, total: 0, still: false });
     phaseRef.current = 'scanning'; // at once: the loop below reads it before the screen re-renders
     setPhase('scanning');
+    // tapped before the photo check finished loading: it starts watching the moment it's ready
+    await loadVision();
+    if (phaseRef.current !== 'scanning') return;
     const t0 = Date.now(), limit = active ? WATCH_ACTIVE_MS : WATCH_MS;
     let passes = 0, recent: boolean[] = [], best: CheckResult | null = null, prev: Float32Array | null = null, motion = 0, n = 0, last: HTMLCanvasElement | null = null;
     try {
@@ -131,9 +135,11 @@ export function ProofCamera({ habit, onClose }: { habit: Habit; onClose: () => v
   }
 
   const usePass = () => { onClose(); completeHabit(habit.id, { x: innerWidth / 2, y: innerHeight / 2 }, true); };
-  const ready = engine.ready;
+  // the shutter works at once: only a first-time download (or a failed load) holds it back
+  const downloading = !engine.ready && engine.progress > 0 && engine.progress < 1;
+  const ready = !downloading && !engine.error;
   const status = camError || (engine.error ? (navigator.onLine === false ? 'The photo check needs internet once to download. Connect and try again.' : 'Couldn’t load the photo check. Close and try again.')
-    : !ready ? (engine.progress > 0 && engine.progress < 1 ? `Getting the photo check ready (one-time download)… ${Math.round(engine.progress * 100)}%` : 'Starting the photo check…')
+    : downloading ? `Getting the photo check ready (one-time download)… ${Math.round(engine.progress * 100)}%`
     : proof.timer ? 'Prop your phone up, tap the timer and get into position.' : `Show ${proof.show}.`);
 
   return (
@@ -153,7 +159,7 @@ export function ProofCamera({ habit, onClose }: { habit: Habit; onClose: () => v
           {phase === 'scanning' && (
             <motion.div key="scan" className="cam-scan" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
               <span className="cam-scan-dots">{Array.from({ length: NEED }, (_, i) => <i key={i} className={i < scan.seen ? 'on' : ''} />)}</span>
-              {scan.still ? 'Keep moving so it can see you doing it' : proof.timer ? 'Keep going…' : 'Hold it in view…'}
+              {!engine.ready ? 'Getting ready…' : scan.still ? 'Keep moving so it can see you doing it' : proof.timer ? 'Keep going…' : 'Hold it in view…'}
             </motion.div>
           )}
           {phase === 'pass' && <motion.div className="cam-over ok" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}><span className="cam-tick"><Check size={44} weight="bold" /></span>Looks like {habit.name}!</motion.div>}

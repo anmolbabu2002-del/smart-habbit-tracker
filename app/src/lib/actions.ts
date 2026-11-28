@@ -7,10 +7,10 @@ import { proofOf } from './proof';
 import { play } from './sound';
 import { haptic } from './native';
 import { burst, party, praise, randomPraise, toast } from './celebrate';
-import { streakOf, stageIndex } from './streak';
+import { freeDayOf, habitStreak as habitStreakFree, streakOf, stageIndex } from './streak';
 import { syncLock, habitLocked, requiredHabits } from './lock';
 import { identityOf } from './identity';
-import { DAILY, habitStreakOf, isShown, normalise, sameSchedule, upcomingSchedule } from './schedule';
+import { DAILY, isShown, normalise, sameSchedule, upcomingSchedule } from './schedule';
 import type { Color, Habit, Schedule, State, Task } from './types';
 
 type At = { x: number; y: number };
@@ -19,8 +19,9 @@ const BRAND = ['#ff8c42', '#ffc800', '#12c79b', '#1cb0f6', '#a560e8', '#ff4b4b']
 // ── Habits ──
 export const doneToday = (h: Habit, day = today()) => h.history.includes(day);
 /** Days in a row this one habit was done (ending today, or yesterday if not done yet) */
-export const habitStreak = (h: Habit, day = today()) => habitStreakOf(h, day).n;
-export const passLeft = (s: State = getState()) => !s.passes[weekOf()];
+export const habitStreak = (h: Habit, day = today()) => habitStreakFree(getState(), h, day).n;
+/** This week's free pass: not used on a photo, and no missed day used it up */
+export const passLeft = (s: State = getState()) => !s.passes[weekOf()] && !freeDayOf(s, weekOf());
 
 export function completeHabit(id: string, at?: At, viaPass = false) {
   const day = today();

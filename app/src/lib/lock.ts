@@ -1,4 +1,4 @@
-// Habit Lock (Android app only): from 4 PM until every habit of the day is done, the social apps
+// Habit Lock (Android app only): from 4 PM (until 9 PM at the latest) until every habit of the day is done, the social apps
 // below are covered by a lock screen. During a focus session with "Lock social apps" on, they are
 // locked until the timer ends. The blocking itself is native (.github/android/HabitLock*.java).
 import { whyText } from './why';
@@ -12,6 +12,7 @@ import { today } from './dates';
 import type { State } from './types';
 
 export const LOCK_FROM = 16 * 60; // 4:00 PM
+export const LOCK_UNTIL = 21 * 60; // 9:00 PM
 export const LOCK_APPS = [
   { name: 'Instagram', pkgs: ['com.instagram.android', 'com.instagram.lite'] },
   { name: 'YouTube', pkgs: ['com.google.android.youtube'] },
@@ -35,7 +36,7 @@ const label = (h: { name: string }) => h.name.trim();
 
 /** Habits are holding the apps locked right now */
 export function habitLocked(s: State = getState()) {
-  return isNative && s.lock.enabled && requiredHabits(s).length > 0 && minutesNow() >= LOCK_FROM && !dayWon(s);
+  return isNative && s.lock.enabled && requiredHabits(s).length > 0 && minutesNow() >= LOCK_FROM && minutesNow() < LOCK_UNTIL && !dayWon(s);
 }
 
 /** The end of a focus session that locks apps (epoch ms), or 0 */
@@ -56,6 +57,7 @@ export function syncLock() {
     native(PLUGIN, 'update', {
       enabled: s.lock.enabled,
       lockFrom: LOCK_FROM,
+      lockUntil: LOCK_UNTIL,
       today: today(),
       habitCount: requiredHabits(s).length,
       done: dayWon(s),

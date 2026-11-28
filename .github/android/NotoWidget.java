@@ -7,7 +7,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.text.SpannableString;
@@ -181,7 +180,8 @@ public class NotoWidget extends AppWidgetProvider {
         boolean lockOn = p.getBoolean("enabled", false);
         int lockFrom = p.getInt("lockFrom", 16 * 60);
         boolean evening = HabitLock.minutesNow() >= lockFrom;
-        boolean locked = lockOn && left > 0 && evening;
+        int lockUntil = p.getInt("lockUntil", 21 * 60);
+        boolean locked = lockOn && left > 0 && evening && HabitLock.minutesNow() < lockUntil;
         String mood = allDone ? "done" : (left > 0 && evening) ? "risk" : "normal";
 
         // banner
@@ -194,11 +194,10 @@ public class NotoWidget extends AppWidgetProvider {
         else if (total == 0) status = "Add your first habit";
         else if (allDone) status = "All done! " + total + " of " + total;
         else if (locked) status = "Apps locked · " + left + " left";
-        else if (lockOn) status = done + " of " + total + " done · locks at " + clock(lockFrom);
+        else if (lockOn && !evening) status = done + " of " + total + " done · locks at " + clock(lockFrom);
         else status = done + " of " + total + " done";
         v.setTextViewText(R.id.w_status, status);
-        v.setTextColor(R.id.w_status, Color.parseColor("done".equals(mood) ? "#08936F" : "risk".equals(mood) ? "#C8102E" : "#E8542A"));
-        v.setTextViewCompoundDrawables(R.id.w_status, locked ? R.drawable.widget_lock : 0, 0, 0, 0);
+        // quiet on purpose: the why is what should catch the eye
         v.setProgressBar(R.id.w_progress, Math.max(total, 1), done, false);
         v.setOnClickPendingIntent(R.id.w_banner, openIntent(c, null, 7310));
 

@@ -30,7 +30,7 @@ export function Settings({ onBack }: { onBack: () => void }) {
     if (s.lock.enabled) { play('tap'); setCoach(true); return; }
     setLock(true);
     play('toggle');
-    toast('Habit Lock on: social apps lock at 4 PM until your habits are done', 'lock');
+    toast('Habit Lock on: social apps lock from 4 to 9 PM until your habits are done', 'lock');
   };
   const restore = async (f?: File) => {
     if (!f) return;
@@ -50,7 +50,7 @@ export function Settings({ onBack }: { onBack: () => void }) {
       <div className="card set-group">
         <button type="button" className="set-row" onClick={toggleLock} disabled={!isNative}>
           <span className="set-ico orange"><LockSimple size={22} weight="fill" /></span>
-          <span className="set-text"><b>Lock social apps until habits are done</b><small>{isNative ? `From 4 PM: ${LOCK_APPS.map(a => a.name).join(', ')}` : 'Works in the Android app'}</small></span>
+          <span className="set-text"><b>Lock social apps until habits are done</b><small>{isNative ? `4 PM to 9 PM: ${LOCK_APPS.map(a => a.name).join(', ')}` : 'Works in the Android app'}</small></span>
           <Switch on={s.lock.enabled} />
         </button>
         {isNative && <>

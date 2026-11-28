@@ -69,6 +69,7 @@ public class HabitLockPlugin extends Plugin {
         SharedPreferences.Editor e = HabitLock.prefs(getContext()).edit();
         e.putBoolean("enabled", call.getBoolean("enabled", false));
         e.putInt("lockFrom", call.getInt("lockFrom", 16 * 60));
+        e.putInt("lockUntil", call.getInt("lockUntil", 21 * 60));
         e.putInt("habitCount", call.getInt("habitCount", 0));
         String day = call.getString("today", HabitLock.today());
         e.putString("day", day);

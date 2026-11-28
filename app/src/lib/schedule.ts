@@ -99,8 +99,9 @@ export function describe(s: Schedule) {
 /**
  * Per-habit streak. Daily and chosen-days habits count due days in a row (days off are skipped);
  * weekly habits count weeks in a row that hit the target (this week counts once it's hit).
+ * `free`: the week's free day (see freeDayOf in streak.ts), forgiven like a day off.
  */
-export function habitStreakOf(h: Habit, day = today()): { n: number; unit: 'day' | 'week' } {
+export function habitStreakOf(h: Habit, day = today(), free?: (d: string) => boolean): { n: number; unit: 'day' | 'week' } {
   const done = new Set(h.history);
   const s = scheduleOn(h, day);
   if (s.kind === 'weekly') {
@@ -122,7 +123,7 @@ export function habitStreakOf(h: Habit, day = today()): { n: number; unit: 'day'
   let d = done.has(day) ? day : addDays(day, -1), n = 0;
   for (let i = 0; i < 3660 && d >= h.createdAt; i++, d = addDays(d, -1)) {
     if (done.has(d)) n++;
-    else if (isRequired(h, d)) break;
+    else if (isRequired(h, d) && !free?.(d)) break; // the week's free day doesn't break it
   }
   return { n, unit: 'day' };
 }

@@ -1,14 +1,14 @@
-import { Camera, Check, Ticket, Trash, PencilSimple, ArrowsClockwise } from '@phosphor-icons/react';
+import { Camera, Check, Ticket, Trash, PencilSimple, ArrowsClockwise, IdentificationBadge } from '@phosphor-icons/react';
 import { Swipe } from './Swipe';
 import { motion } from 'motion/react';
 import { centerOf } from '../lib/celebrate';
 import { completeHabit, requestDeleteHabit, deleteTask, doneToday, toggleTask, undoHabit } from '../lib/actions';
-import { describe, doneThisWeek, habitStreakOf, isRequired, sameSchedule, scheduleOn, upcomingSchedule } from '../lib/schedule';
+import { describe, doneThisWeek, isRequired, sameSchedule, scheduleOn, upcomingSchedule } from '../lib/schedule';
 import { proofOf } from '../lib/proof';
 import { dueInfo, today } from '../lib/dates';
 import { play } from '../lib/sound';
 import { HabitIcon } from './HabitIcon';
-import { StreakFlame } from './StreakFlame';
+import { votesOf } from '../lib/identity';
 import { WeekStrip } from './WeekStrip';
 import type { Habit, Task } from '../lib/types';
 
@@ -17,7 +17,7 @@ export function HabitRow({ h, onOpen, onProve, onView, off }: { h: Habit; onOpen
   const mode = proofOf(h.name).mode;
   const photo = mode === 'photo';
   const viaPass = done && h.passDays?.includes(today());
-  const { n: streak, unit } = habitStreakOf(h);
+  const votes = votesOf(h); // the fire is the app's one streak; a habit shows its votes
   const sch = scheduleOn(h);
   // a schedule change starts tomorrow; show it now so it doesn't look unsaved
   const next = upcomingSchedule(h);
@@ -34,7 +34,7 @@ export function HabitRow({ h, onOpen, onProve, onView, off }: { h: Habit; onOpen
       { label: 'Edit', icon: <PencilSimple size={20} weight="bold" />, tone: 'blue', run: onOpen },
       { label: 'Delete', icon: <Trash size={20} weight="bold" />, tone: 'red', run: () => requestDeleteHabit(h.id) }
     ]}>
-    <motion.div layout className={'card habit' + (done ? ' done' : '') + (off ? ' off' : '')} style={{ ['--hc' as string]: `var(--${h.color})` }}>
+    <motion.div layout className={'card habit' + (done ? ' done' : '') + (off ? ' off' : '')} style={{ ['--hc' as string]: `var(--${h.color})`, ['--hs' as string]: `var(--${h.color}-soft)` }}>
       <div className="habit-main" role="button" tabIndex={0} onClick={() => { if (onView) { play('tap'); onView(); } }}>
         <span className="habit-tile" style={{ background: `var(--${h.color}-soft)` }}><HabitIcon icon={h.icon} color={h.color} size={30} /></span>
         <span className="habit-text">
@@ -45,7 +45,7 @@ export function HabitRow({ h, onOpen, onProve, onView, off }: { h: Habit; onOpen
               {!done && !off && !changing && photo && <Camera size={14} weight="fill" />}
               {sub}
             </>}
-            {streak > 0 && !off && <span className="mini-streak"><StreakFlame stage={2} size={16} still />{streak}{unit === 'week' ? 'w' : ''}</span>}
+            {votes > 0 && !off && <span className="mini-votes" aria-label={`${votes} ${votes === 1 ? 'vote' : 'votes'}`}><IdentificationBadge size={15} weight="fill" />{votes}</span>}
           </small>
         </span>
       </div>

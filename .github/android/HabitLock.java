@@ -85,7 +85,8 @@ final class HabitLock {
         SharedPreferences p = prefs(c);
         if (!p.getBoolean("enabled", false)) return false;
         if (p.getInt("habitCount", 0) <= 0) return false;
-        if (minutesNow() < p.getInt("lockFrom", 16 * 60)) return false;
+        int m = minutesNow();
+        if (m < p.getInt("lockFrom", 16 * 60) || m >= p.getInt("lockUntil", 21 * 60)) return false;
         return !today().equals(p.getString("doneDay", ""));
     }
 
@@ -185,6 +186,14 @@ final class HabitLock {
         midnight.set(Calendar.SECOND, 30);
         midnight.set(Calendar.MILLISECOND, 0);
         at = Math.min(at, midnight.getTimeInMillis());
+        // the end of the lock window (9 PM): the lock lifts
+        Calendar until = Calendar.getInstance();
+        int lockUntil = p.getInt("lockUntil", 21 * 60);
+        until.set(Calendar.HOUR_OF_DAY, lockUntil / 60);
+        until.set(Calendar.MINUTE, lockUntil % 60);
+        until.set(Calendar.SECOND, 5);
+        until.set(Calendar.MILLISECOND, 0);
+        if (until.getTimeInMillis() > now) at = Math.min(at, until.getTimeInMillis());
         if (focus) {
             // wake right after the session ends (or in 15 minutes, whichever is first)
             at = Math.min(at, Math.min(focusUntil(c) + 1500L, now + 15 * 60 * 1000L));

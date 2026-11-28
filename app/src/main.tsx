@@ -10,7 +10,9 @@ import { restoreIfWiped, getState, update } from './lib/store';
 import { migrateFromV1 } from './lib/migrate';
 import { clearOldReminders, syncLock } from './lib/lock';
 import { importOldQuote } from './lib/why';
-import { backgroundDownload } from './lib/proof';
+import { backgroundDownload, needsPhoto, release, warmUp } from './lib/proof';
+import { shownHabits } from './lib/lock';
+import { today } from './lib/dates';
 import { afterHabitsChanged } from './lib/actions';
 import { dailyBackup } from './lib/backup';
 import { initSystemBars } from './lib/systemBars';
@@ -40,5 +42,12 @@ async function boot() {
   setTimeout(dailyBackup, 8000);
   const idle = (window as unknown as { requestIdleCallback?: (f: () => void) => void }).requestIdleCallback || ((f: () => void) => setTimeout(f, 4000));
   idle(() => backgroundDownload(getState().habits.map(h => h.name)));
+  // a photo habit is waiting today: have the photo check ready before the camera opens
+  const photoWaiting = () => shownHabits().some(h => !h.history.includes(today()) && needsPhoto(h.name));
+  setTimeout(() => { if (photoWaiting()) warmUp(); }, 2500);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) release(60_000); // in the background: free the memory after a minute
+    else if (photoWaiting()) warmUp();
+  });
 }
 boot();

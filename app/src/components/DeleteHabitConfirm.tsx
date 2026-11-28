@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useApp } from '../lib/store';
 import { deleteHabit } from '../lib/actions';
-import { habitStreakOf } from '../lib/schedule';
+import { habitStreak } from '../lib/streak';
 import { onBack } from '../lib/back';
 import { play } from '../lib/sound';
 import { HabitIcon } from './HabitIcon';
@@ -20,7 +20,7 @@ export function DeleteHabitConfirm() {
   useEffect(() => (id ? onBack(() => { setId(null); return true; }) : undefined), [id]);
 
   const h = id ? s.habits.find(x => x.id === id) : undefined;
-  const st = h ? habitStreakOf(h) : { n: 0, unit: 'day' as const };
+  const st = h ? habitStreak(s, h) : { n: 0, unit: 'day' as const };
   const streak = st.n;
   const days = h ? h.history.length : 0;
   const what = streak > 1

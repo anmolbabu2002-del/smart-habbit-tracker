@@ -8,8 +8,9 @@ import { HabitIcon } from './HabitIcon';
 import { addDays, daysBetween, parseYmd, today, weekOf, ymd } from '../lib/dates';
 import { identityOf, autoIdentity, votesOf } from '../lib/identity';
 import { setIdentity } from '../lib/actions';
-import { useApp } from '../lib/store';
-import { describe, doneThisWeek, habitStreakOf, isRequired, scheduleOn, upcomingSchedule } from '../lib/schedule';
+import { getState, useApp } from '../lib/store';
+import { freeDays, habitStreak } from '../lib/streak';
+import { describe, doneThisWeek, isRequired, scheduleOn, upcomingSchedule } from '../lib/schedule';
 import { play } from '../lib/sound';
 import type { Habit } from '../lib/types';
 
@@ -17,15 +18,16 @@ const WD = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'S
 type Cell = { day: string; kind: 'done' | 'pass' | 'missed' | 'off' | 'today' | 'future' | 'before' };
 
 function analyse(h: Habit) {
-  const t = today(), done = new Set(h.history), pass = new Set(h.passDays || []);
+  const t = today(), done = new Set(h.history), pass = new Set(h.passDays || []), free = freeDays(getState());
   const start = h.createdAt < t ? h.createdAt : t;
   const days: string[] = [];
   // finished days it was due (or done anyway); days off don't count as missed
   for (let d = start; d < t; d = addDays(d, 1)) if (isRequired(h, d) || done.has(d)) days.push(d);
   const did = (d: string) => done.has(d);
+  const kept = (d: string) => done.has(d) || free(d); // the week's free day isn't a miss (but isn't a done day either)
   // runs
   let best = 0, run = 0;
-  for (const d of [...days, t]) { if (did(d)) { run++; best = Math.max(best, run); } else if (d !== t && isRequired(h, d)) run = 0; }
+  for (const d of [...days, t]) { if (did(d)) { run++; best = Math.max(best, run); } else if (d !== t && isRequired(h, d) && !free(d)) run = 0; }
   // weekdays
   const byWd = Array.from({ length: 7 }, () => ({ n: 0, ok: 0 }));
   days.forEach(d => { const w = parseYmd(d).getDay(); byWd[w].n++; if (did(d)) byWd[w].ok++; });
@@ -39,7 +41,7 @@ function analyse(h: Habit) {
   // two misses in a row
   let doubleMiss = 0;
   for (let i = 1; i < days.length; i++) if (!did(days[i]) && !did(days[i - 1])) doubleMiss++;
-  const missed = days.filter(d => !did(d)).length;
+  const missed = days.filter(d => !kept(d)).length;
   return { total: h.history.length, rate: days.length ? (days.length - missed) / days.length : did(t) ? 1 : 0, missed, best, current: run, worst, bestWd, week: pct(last7), prevWeek: pct(prev7), hasPrev: prev7.length >= 3, doubleMiss, pass: pass.size, days: days.length };
 }
 
@@ -57,7 +59,7 @@ function analyseWeeks(h: Habit) {
   }
   let best = 0, run = 0;
   for (const w of weeks) { if (w.met) { run++; best = Math.max(best, run); } else run = 0; }
-  const st = habitStreakOf(h);
+  const st = habitStreak(getState(), h);
   const s = scheduleOn(h);
   const target = s.kind === 'weekly' ? s.times : 7;
   const now = doneThisWeek(h);
@@ -71,15 +73,15 @@ export function HabitCalendar({ habit, onClose }: { habit: Habit | null; onClose
   const wk = useMemo(() => (habit && scheduleOn(habit).kind === 'weekly' ? analyseWeeks(habit) : null), [habit]);
   if (!habit || !a) return <Sheet open={false} onClose={onClose}>{null}</Sheet>;
 
-  const t = today(), done = new Set(habit.history), pass = new Set(habit.passDays || []);
+  const t = today(), done = new Set(habit.history), pass = new Set(habit.passDays || []), free = freeDays(getState());
   const first = ymd(month), lead = (month.getDay() + 6) % 7, daysIn = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
   const cells: (Cell | null)[] = [...Array(lead).fill(null)];
   for (let i = 0; i < daysIn; i++) {
     const d = addDays(first, i);
-    const kind: Cell['kind'] = d > t ? 'future' : d < habit.createdAt ? 'before' : pass.has(d) ? 'pass' : done.has(d) ? 'done' : d === t ? 'today' : !wk && isRequired(habit, d) ? 'missed' : 'off';
+    const kind: Cell['kind'] = d > t ? 'future' : d < habit.createdAt ? 'before' : pass.has(d) ? 'pass' : done.has(d) ? 'done' : d === t ? 'today' : !wk && isRequired(habit, d) ? (free(d) ? 'pass' : 'missed') : 'off';
     cells.push({ day: d, kind });
   }
-  const mDone = cells.filter(c => c && (c.kind === 'done' || c.kind === 'pass')).length;
+  const mDone = cells.filter(c => c && (c.kind === 'done' || (c.kind === 'pass' && done.has(c.day)))).length;
   const mMissed = cells.filter(c => c?.kind === 'missed').length;
   const canNext = new Date(month.getFullYear(), month.getMonth() + 1, 1) <= new Date();
   const go = (n: number) => { play('tap'); setMonth(new Date(month.getFullYear(), month.getMonth() + n, 1)); };

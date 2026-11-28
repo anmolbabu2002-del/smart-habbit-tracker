@@ -46,7 +46,7 @@ public class HabitLockService extends Service {
 
     private static final String CHANNEL = "habit_lock";
     private static final int NOTIFICATION_ID = 7302;
-    private static final long TICK_MS = 600;
+    private static final long TICK_MS = 250;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private WindowManager windowManager;
