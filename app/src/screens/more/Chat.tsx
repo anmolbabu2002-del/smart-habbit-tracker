@@ -7,7 +7,6 @@ import { play } from '../../lib/sound';
 import { streakOf } from '../../lib/streak';
 import { requiredHabits } from '../../lib/lock';
 import { doneToday } from '../../lib/actions';
-import { dueInfo } from '../../lib/dates';
 import { weekMinutes } from '../../lib/focus';
 import { Sheet } from '../../components/Sheet';
 import { HabitIcon } from '../../components/HabitIcon';
@@ -16,7 +15,7 @@ import { Page } from './Page';
 type Msg = { role: 'user' | 'model'; text: string };
 type ChatT = { id: string; title: string; messages: Msg[]; createdAt: string };
 const PERSONAS = [{ id: 'savage', label: 'Savage' }, { id: 'supportive', label: 'Supportive' }, { id: 'professional', label: 'Professional' }];
-const STARTERS = ['Plan my evening around my tasks', 'Roast my habits today', 'Help me study smarter', 'Give me a 5-minute motivation boost'];
+const STARTERS = ['Plan my evening around my habits', 'Roast my habits today', 'Help me study smarter', 'Give me a 5-minute motivation boost'];
 
 async function loadChats(): Promise<ChatT[]> {
   const mine = await blobGet<ChatT[]>('aiChats');
@@ -35,7 +34,6 @@ function context() {
     currentTime: new Date().toLocaleString(),
     habits: { total: req.length, completed: req.filter(h => doneToday(h)).length },
     streak: streakOf(s),
-    tasksDueToday: s.tasks.filter(t => !t.doneAt && ['today', 'overdue'].includes(dueInfo(t.due).group)).length,
     focusMinutesThisWeek: weekMinutes(s).reduce((n, d) => n + d.minutes, 0),
     aiPersonality: localStorage.getItem('aiPersonality') || 'savage',
     globalMemory: localStorage.getItem('aiGlobalMemory') || ''
@@ -110,7 +108,7 @@ export function Chat({ onBack }: { onBack: () => void }) {
           <div className="chat-hello">
             <HabitIcon icon="chat" color="blue" size={72} />
             <b>Hey {getState().name || 'there'}! What are we crushing today?</b>
-            <span>I can see your habits, streak, tasks and focus time.</span>
+            <span>I can see your habits, streak and focus time.</span>
             <div className="chips wrap center">
               {PERSONAS.map(p => <button key={p.id} type="button" className={'chip' + (persona === p.id ? ' on' : '')} onClick={() => { play('toggle'); setPersona(p.id); localStorage.setItem('aiPersonality', p.id); }}>{p.label}</button>)}
             </div>

@@ -1,8 +1,7 @@
 // Everything that changes data goes through here, so the sounds, haptics, celebrations,
 // streak and Habit Lock always stay in step.
 import { getState, update, uid } from './store';
-import { today, weekOf, dueInfo, addDays } from './dates';
-import { nextDue } from './parseTask';
+import { today, weekOf, addDays } from './dates';
 import { proofOf } from './proof';
 import { play } from './sound';
 import { haptic } from './native';
@@ -11,7 +10,7 @@ import { freeDayOf, habitStreak as habitStreakFree, streakOf, stageIndex } from 
 import { syncLock, habitLocked, requiredHabits } from './lock';
 import { identityOf } from './identity';
 import { DAILY, isShown, normalise, sameSchedule, upcomingSchedule } from './schedule';
-import type { Color, Habit, Schedule, State, Task } from './types';
+import type { Color, Habit, Schedule, State } from './types';
 
 type At = { x: number; y: number };
 const BRAND = ['#ff8c42', '#ffc800', '#12c79b', '#1cb0f6', '#a560e8', '#ff4b4b'];
@@ -167,76 +166,6 @@ export function lockedToast(what: string) {
   toast(`${what} is off until today’s habits are done`, 'lock');
 }
 
-// ── Tasks ──
-export function addTask(t: { title: string; note?: string; due?: string; repeat?: Task['repeat'] }) {
-  const title = t.title.trim();
-  if (!title) return;
-  update(s => { s.tasks.unshift({ id: uid(), title, note: t.note?.trim() || undefined, due: t.due || (t.repeat ? today() : undefined), repeat: t.repeat, createdAt: Date.now() }); });
-  play('add');
-  haptic.tap();
-}
-
-export function editTask(id: string, patch: Partial<Pick<Task, 'title' | 'note' | 'due' | 'repeat'>>) {
-  update(s => {
-    const t = s.tasks.find(x => x.id === id);
-    if (!t) return;
-    if (patch.title !== undefined) t.title = patch.title.trim() || t.title;
-    if ('note' in patch) t.note = patch.note?.trim() || undefined;
-    if ('due' in patch) t.due = patch.due || undefined;
-    if ('repeat' in patch) { t.repeat = patch.repeat || undefined; if (t.repeat && !t.due) t.due = today(); }
-  });
-}
-
-export function toggleTask(id: string, at?: At) {
-  const t = getState().tasks.find(x => x.id === id);
-  if (!t) return;
-  if (t.doneAt) {
-    update(s => { const x = s.tasks.find(y => y.id === id)!; delete x.doneAt; s.tasksDone = Math.max(0, s.tasksDone - 1); });
-    play('pop');
-    return;
-  }
-  update(s => {
-    const x = s.tasks.find(y => y.id === id)!;
-    x.doneAt = today();
-    s.tasksDone += 1;
-    // A repeating task comes back on its next date
-    if (x.repeat && x.due) {
-      const nextDate = nextDue(x.due, x.repeat);
-      s.tasks.unshift({ id: uid(), title: x.title, note: x.note, due: nextDate, repeat: x.repeat, createdAt: Date.now() });
-      delete x.repeat;
-    }
-  });
-  play('check');
-  haptic.tap();
-  if (at) burst({ ...at, count: 16, power: 0.7, colors: ['#12c79b', '#ffc800', '#1cb0f6'] });
-  // Cleared everything due today?
-  const s = getState();
-  const dueNow = s.tasks.filter(x => { const g = dueInfo(x.due).group; return g === 'today' || g === 'overdue'; });
-  if (t.due && dueNow.length > 1 && dueNow.every(x => x.doneAt)) {
-    setTimeout(() => { play('combo'); haptic.success(); toast('Everything due today is done!', 'good'); }, 350);
-  }
-  const n = s.tasksDone;
-  if ([10, 25, 50, 100, 250, 500, 1000].includes(n)) feat(`tasks-${n}`, 'checklist', `${n} tasks done`, n >= 100 ? 'You get things done. Seriously.' : 'Tick, tick, tick. Keep it rolling!');
-}
-
-export function deleteTask(id: string) {
-  update(s => { s.tasks = s.tasks.filter(t => t.id !== id); });
-  play('whoosh');
-}
-
-/** Overdue tasks: move them all to today in one tap */
-export function moveOverdueToToday() {
-  const t0 = today();
-  const n = getState().tasks.filter(t => !t.doneAt && t.due && t.due < t0).length;
-  update(s => { s.tasks.forEach(t => { if (!t.doneAt && t.due && t.due < t0) t.due = t0; }); });
-  play('whoosh');
-  toast(`Moved ${n} ${n === 1 ? 'task' : 'tasks'} to today`, 'good');
-}
-
-export function clearDone() {
-  update(s => { s.tasks = s.tasks.filter(t => !t.doneAt); });
-  play('whoosh');
-}
 
 // ── Milestones ("feats"): each celebrated once ──
 export function feat(id: string, icon: string, title: string, text: string) {

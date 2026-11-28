@@ -1,14 +1,13 @@
-// The journal that does something: a morning plan that becomes today's tasks, an evening
-// review that fills itself in with what you actually did, a brain dump you can turn into
-// tasks, and Anmol AI reading your week back to you. Same storage as before.
+// The journal: a morning plan, an evening review that fills itself in with what you actually
+// did, a brain dump, and Anmol AI reading your week back to you. Same storage as before.
 import { isRequired } from '../../lib/schedule';
 import { useMemo, useState } from 'react';
-import { Plus, MagnifyingGlass, Trash, Check, Sparkle, ArrowRight } from '@phosphor-icons/react';
+import { Plus, MagnifyingGlass, Trash, Check, Sparkle } from '@phosphor-icons/react';
 import { AnimatePresence } from 'motion/react';
 import { makeSlice, getState } from '../../lib/store';
 import { play } from '../../lib/sound';
 import { burst, praise, toast } from '../../lib/celebrate';
-import { addTask, doneToday } from '../../lib/actions';
+import { doneToday } from '../../lib/actions';
 import { addDays, fmtMinutes, today, ymd } from '../../lib/dates';
 import { api, haptic } from '../../lib/native';
 import { HabitIcon } from '../../components/HabitIcon';
@@ -41,10 +40,9 @@ const pretty = (ms: number) => new Date(ms).toLocaleDateString(undefined, { week
 function todaySummary() {
   const s = getState(), d = today();
   const habits = s.habits.filter(h => doneToday(h, d));
-  const tasks = s.tasks.filter(t => t.doneAt === d);
   const focus = s.focus.sessions.filter(x => x.day === d).reduce((n, x) => n + x.minutes, 0);
   const due = s.habits.filter(h => isRequired(h, d) || doneToday(h, d));
-  return { habits: `${habits.length}/${due.length}`, habitNames: habits.map(h => h.name), tasks: tasks.map(t => t.title), focus };
+  return { habits: `${habits.length}/${due.length}`, habitNames: habits.map(h => h.name), focus };
 }
 
 export function Journal({ onBack }: { onBack: () => void }) {
@@ -143,13 +141,10 @@ export function Journal({ onBack }: { onBack: () => void }) {
 function Editor({ entry, template, onClose }: { entry: Entry | null; template: Template; onClose: () => void }) {
   const f0 = entry?.fields || {};
   const [fields, setFields] = useState<Record<string, string>>(() => entry && !entry.fields ? { body: htmlToText(entry.content), title: entry.title === 'Untitled' ? '' : entry.title } : { ...f0 });
-  const [makeTasks, setMakeTasks] = useState(!entry);
   const [prompt, setPrompt] = useState('');
-  const [picked, setPicked] = useState<Set<number>>(new Set());
   const [confirm, setConfirm] = useState(false);
   const set = (k: string, v: string) => setFields(f => ({ ...f, [k]: v }));
   const summary = useMemo(todaySummary, []);
-  const dumpLines = (fields.body || '').split('\n').map(l => l.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
 
   function save() {
     let title = '', html = '';
@@ -158,13 +153,11 @@ function Editor({ entry, template, onClose }: { entry: Entry | null; template: T
       if (!top.length && !fields.grateful?.trim()) { onClose(); return; }
       title = 'Morning plan';
       html = `<p><b>Top 3 today</b></p>${top.map((t, i) => `<p>${i + 1}. ${esc(t)}</p>`).join('')}${fields.grateful ? `<p><b>Grateful for</b><br>${esc(fields.grateful)}</p>` : ''}${fields.feel ? `<p><b>I want to feel</b><br>${esc(fields.feel)}</p>` : ''}`;
-      if (makeTasks && !entry) top.forEach(t => addTask({ title: t, due: today() }));
     } else if (template === 'evening') {
       if (!['win', 'block', 'lesson', 'tomorrow'].some(k => fields[k]?.trim())) { onClose(); return; }
       title = 'Evening review';
-      html = `<p><b>Today</b><br>Habits ${summary.habits} · ${summary.tasks.length} tasks done · ${fmtMinutes(summary.focus)} focused</p>`
+      html = `<p><b>Today</b><br>Habits ${summary.habits} · ${fmtMinutes(summary.focus)} focused</p>`
         + [['win', 'Win'], ['block', 'What got in the way'], ['lesson', 'Lesson'], ['tomorrow', 'Tomorrow’s #1']].filter(([k]) => fields[k]?.trim()).map(([k, l]) => `<p><b>${l}</b><br>${esc(fields[k])}</p>`).join('');
-      if (makeTasks && !entry && fields.tomorrow?.trim()) addTask({ title: fields.tomorrow.trim(), due: addDays(today(), 1) });
     } else {
       if (!fields.body?.trim()) { onClose(); return; }
       title = fields.title?.trim() || (template === 'dump' ? 'Brain dump' : 'Untitled');
@@ -175,19 +168,12 @@ function Editor({ entry, template, onClose }: { entry: Entry | null; template: T
     journal.set(entry ? all.map(e => (e.date === entry.date ? next : e)) : [...all, next]);
     play('check'); haptic.success();
     if (!entry) { burst({ x: innerWidth / 2, y: 120, count: 26, power: 0.8 }); praise(innerWidth / 2, 120, 'Saved!'); }
-    if (!entry && makeTasks && (template === 'morning' || (template === 'evening' && fields.tomorrow?.trim()))) toast(template === 'morning' ? 'Added to today’s tasks' : 'Added to tomorrow’s tasks', 'good');
     onClose();
   }
   function del() {
     if (!confirm) { setConfirm(true); play('tap'); return; }
     journal.set(journal.get().filter(e => e.date !== entry!.date));
     play('whoosh'); toast('Entry deleted'); onClose();
-  }
-  function dumpToTasks() {
-    const lines = [...picked].map(i => dumpLines[i]).filter(Boolean);
-    lines.forEach(l => addTask({ title: l }));
-    play('combo'); toast(`${lines.length} ${lines.length === 1 ? 'task' : 'tasks'} added`, 'good');
-    setPicked(new Set());
   }
 
   const t = T[template];
@@ -198,7 +184,6 @@ function Editor({ entry, template, onClose }: { entry: Entry | null; template: T
       {template === 'morning' && <>
         <h3 className="field-label">Today’s top 3</h3>
         {[1, 2, 3].map(i => <input key={i} className="field" placeholder={['The most important thing', 'Second', 'Third'][i - 1]} value={fields[`top${i}`] || ''} onChange={e => set(`top${i}`, e.target.value)} />)}
-        {!entry && <label className="jr-check"><input type="checkbox" checked={makeTasks} onChange={e => setMakeTasks(e.target.checked)} /> Add these to today’s tasks</label>}
         <h3 className="field-label">I’m grateful for</h3>
         <input className="field" placeholder="One small thing" value={fields.grateful || ''} onChange={e => set('grateful', e.target.value)} />
         <h3 className="field-label">Today I want to feel</h3>
@@ -208,26 +193,16 @@ function Editor({ entry, template, onClose }: { entry: Entry | null; template: T
       {template === 'evening' && <>
         <div className="card jr-sum">
           <b>Your day</b>
-          <span>Habits {summary.habits} · {summary.tasks.length} {summary.tasks.length === 1 ? 'task' : 'tasks'} done · {fmtMinutes(summary.focus)} focused</span>
-          {summary.tasks.length > 0 && <small>Done: {summary.tasks.slice(0, 4).join(', ')}{summary.tasks.length > 4 ? '…' : ''}</small>}
+          <span>Habits {summary.habits} · {fmtMinutes(summary.focus)} focused</span>
+          {summary.habitNames.length > 0 && <small>Done: {summary.habitNames.slice(0, 4).join(', ')}{summary.habitNames.length > 4 ? '…' : ''}</small>}
         </div>
         {[['win', 'Today’s win', 'Big or tiny'], ['block', 'What got in the way?', 'Be honest, no judging'], ['lesson', 'One lesson', 'What will you do differently?'], ['tomorrow', 'Tomorrow’s #1', 'The one thing that matters most']].map(([k, l, p]) => (
           <div key={k} className="jr-field"><h3 className="field-label">{l}</h3><textarea className="field" rows={2} placeholder={p} value={fields[k] || ''} onChange={e => set(k, e.target.value)} /></div>
         ))}
-        {!entry && <label className="jr-check"><input type="checkbox" checked={makeTasks} onChange={e => setMakeTasks(e.target.checked)} /> Add tomorrow’s #1 to tasks</label>}
       </>}
 
       {template === 'dump' && <>
         <textarea className="field plain journal-body" autoFocus={!entry} placeholder={'Everything on your mind, one thing per line…\nCall the bank\nIdea for the project\nWorried about the exam'} value={fields.body || ''} onChange={e => set('body', e.target.value)} />
-        {dumpLines.length > 0 && (
-          <div className="card jr-dump">
-            <b>Turn lines into tasks</b>
-            {dumpLines.map((l, i) => (
-              <label key={i} className="jr-check"><input type="checkbox" checked={picked.has(i)} onChange={e => { const n = new Set(picked); if (e.target.checked) n.add(i); else n.delete(i); setPicked(n); }} /> {l}</label>
-            ))}
-            <button type="button" className="btn block" disabled={!picked.size} onClick={dumpToTasks}>Add {picked.size || ''} to Tasks <ArrowRight size={18} weight="bold" /></button>
-          </div>
-        )}
       </>}
 
       {template === 'free' && <>

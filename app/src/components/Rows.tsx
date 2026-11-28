@@ -1,16 +1,16 @@
-import { Camera, Check, Ticket, Trash, PencilSimple, ArrowsClockwise, IdentificationBadge } from '@phosphor-icons/react';
+import { Camera, Check, Ticket, Trash, PencilSimple, IdentificationBadge } from '@phosphor-icons/react';
 import { Swipe } from './Swipe';
 import { motion } from 'motion/react';
 import { centerOf } from '../lib/celebrate';
-import { completeHabit, requestDeleteHabit, deleteTask, doneToday, toggleTask, undoHabit } from '../lib/actions';
+import { completeHabit, requestDeleteHabit, doneToday, undoHabit } from '../lib/actions';
 import { describe, doneThisWeek, isRequired, sameSchedule, scheduleOn, upcomingSchedule } from '../lib/schedule';
 import { proofOf } from '../lib/proof';
-import { dueInfo, today } from '../lib/dates';
+import { today } from '../lib/dates';
 import { play } from '../lib/sound';
 import { HabitIcon } from './HabitIcon';
 import { votesOf } from '../lib/identity';
 import { WeekStrip } from './WeekStrip';
-import type { Habit, Task } from '../lib/types';
+import type { Habit } from '../lib/types';
 
 export function HabitRow({ h, onOpen, onProve, onView, off }: { h: Habit; onOpen: () => void; onProve: () => void; onView?: () => void; off?: boolean }) {
   const done = doneToday(h);
@@ -60,26 +60,6 @@ export function HabitRow({ h, onOpen, onProve, onView, off }: { h: Habit; onOpen
       ) : (
         <button type="button" className="btn round ghost" aria-label={`Mark ${h.name} done`} onClick={e => completeHabit(h.id, centerOf(e.currentTarget))}><Check size={22} weight="bold" /></button>
       )}
-    </motion.div>
-    </Swipe>
-  );
-}
-
-export function TaskRow({ t, onOpen }: { t: Task; onOpen: () => void }) {
-  const due = dueInfo(t.due);
-  return (
-    <Swipe actions={[{ label: 'Delete', icon: <Trash size={20} weight="bold" />, tone: 'red', run: () => deleteTask(t.id) }]}
-      onSwipeRight={() => toggleTask(t.id, { x: 60, y: innerHeight / 2 })}>
-    <motion.div layout className={'task' + (t.doneAt ? ' done' : '')} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 40 }}>
-      <button type="button" className={'task-check' + (t.doneAt ? ' on' : '')} aria-label={t.doneAt ? `Mark ${t.title} not done` : `Complete ${t.title}`}
-        onClick={e => toggleTask(t.id, centerOf(e.currentTarget))}>
-        {t.doneAt && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 600, damping: 15 }}><Check size={16} weight="bold" /></motion.span>}
-      </button>
-      <button type="button" className="task-text" onClick={() => { play('tap'); onOpen(); }}>
-        <b>{t.title}</b>
-        {t.note && <small>{t.note}</small>}
-      </button>
-      {due.label && !t.doneAt && <span className={'due ' + due.tone}>{t.repeat && <ArrowsClockwise size={11} weight="bold" />}{due.label}</span>}
     </motion.div>
     </Swipe>
   );

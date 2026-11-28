@@ -1,32 +1,28 @@
 import { useEffect, useState } from 'react';
 import { LockSimple, Plus, ArrowRight, CaretDown } from '@phosphor-icons/react';
-import { motion } from 'motion/react';
 import { Mascot } from '../components/Mascot';
-import { HabitRow, TaskRow } from '../components/Rows';
+import { HabitRow } from '../components/Rows';
 import { StreakFlame } from '../components/StreakFlame';
-import { HabitIcon } from '../components/HabitIcon';
 import { EmptyHabits } from '../components/EmptyHabits';
 import { WhyLine } from '../components/Why';
 import { HabitCalendar } from '../components/HabitCalendar';
 import { HabitEditor } from '../components/HabitEditor';
-import { TaskEditor } from '../components/TaskEditor';
 import { StreakSheet } from '../components/StreakSheet';
 import { useApp } from '../lib/store';
 import { doneToday } from '../lib/actions';
 import { requiredHabits, pendingHabits, shownHabits, LOCK_APPS, LOCK_FROM, LOCK_UNTIL, lockStatus, openUsageAccess, openOverlay, type LockStatus } from '../lib/lock';
 import { isNative } from '../lib/native';
 import { stageIndex, streakOf } from '../lib/streak';
-import { dueInfo, longDay, today } from '../lib/dates';
+import { longDay, today } from '../lib/dates';
 import { play } from '../lib/sound';
 import { readUsage, type Usage } from '../lib/usage';
 import { bubbleFor } from '../lib/bubble';
 import { UsageSheet } from '../components/UsageSheet';
-import type { Habit, Task } from '../lib/types';
+import type { Habit } from '../lib/types';
 
 export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFocus: () => void }) {
   const s = useApp();
   const [editHabit, setEditHabit] = useState<Habit | null | undefined>(undefined); // undefined = closed, null = new
-  const [editTask, setEditTask] = useState<Task | null | undefined>(undefined);
   const [streakOpen, setStreakOpen] = useState(false);
   const [calHabit, setCalHabit] = useState<Habit | null>(null);
 
@@ -55,9 +51,6 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
   }, [done]);
   const lockOn = s.lock.enabled;
 
-  const due = s.tasks.filter(t => { const g = dueInfo(t.due).group; return (g === 'today' || g === 'overdue') && (!t.doneAt || t.doneAt === day); })
-    .sort((a, b) => Number(!!a.doneAt) - Number(!!b.doneAt) || (a.due || '').localeCompare(b.due || ''));
-  const dueLeft = due.filter(t => !t.doneAt).length;
 
   const bubble = bubbleFor({
     habits: s.habits.length, dueToday: required.length, optional: shown.filter(h => !required.includes(h) && !doneToday(h)).map(h => h.name.trim()), hadHabits: !!s.hadHabits, bestStreak: s.bestStreak, left: pendingHabits(s).map(h => h.name.trim()), allDone, lockOn, lockFrom: LOCK_FROM, lockUntil: LOCK_UNTIL,
@@ -118,19 +111,7 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
         <EmptyHabits onCustom={() => setEditHabit(null)} />
       )}
 
-      {due.length > 0 && <>
-        <h2 className="section-title">Due today {dueLeft > 0 && <small>{dueLeft} left</small>}</h2>
-        <motion.div layout className="card list">{due.map(t => <TaskRow key={t.id} t={t} onOpen={() => setEditTask(t)} />)}</motion.div>
-      </>}
-
-      {dueLeft > 0 && <button type="button" className="card focus-cta" onClick={() => { play('tap'); onFocus(); }}>
-        <span className="tile"><HabitIcon icon="clock" color="purple" size={30} /></span>
-        <span><b>Focus on today’s tasks</b><small>{dueLeft} left. Lock the distractions and go.</small></span>
-        <span className="go"><ArrowRight size={20} weight="bold" /></span>
-      </button>}
-
       <HabitEditor open={editHabit !== undefined} habit={editHabit} onClose={() => setEditHabit(undefined)} />
-      <TaskEditor open={editTask !== undefined} task={editTask} defaultDue={day} onClose={() => setEditTask(undefined)} />
       <StreakSheet open={streakOpen} onClose={() => setStreakOpen(false)} />
       <UsageSheet open={usageOpen} usage={usage} onClose={() => setUsageOpen(false)} onFocus={left > 0 ? onFocus : undefined} />
       <HabitCalendar habit={calHabit} onClose={() => setCalHabit(null)} />

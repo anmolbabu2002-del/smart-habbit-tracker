@@ -1,10 +1,9 @@
-import { HouseSimple, ListChecks, Timer, SquaresFour } from '@phosphor-icons/react';
+import { HouseSimple, Timer, SquaresFour } from '@phosphor-icons/react';
 
-export type Tab = 'today' | 'tasks' | 'focus' | 'more';
+export type Tab = 'today' | 'focus' | 'more';
 
 const TABS: { id: Tab; label: string; Icon: typeof HouseSimple }[] = [
   { id: 'today', label: 'Today', Icon: HouseSimple },
-  { id: 'tasks', label: 'Tasks', Icon: ListChecks },
   { id: 'focus', label: 'Focus', Icon: Timer },
   { id: 'more', label: 'More', Icon: SquaresFour }
 ];

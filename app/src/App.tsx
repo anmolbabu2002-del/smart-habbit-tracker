@@ -9,7 +9,6 @@ import { CelebrationHost } from './components/Celebration';
 import { Toasts } from './components/Toasts';
 import { ProofCamera } from './components/ProofCamera';
 import { Today } from './screens/Today';
-import { Tasks } from './screens/Tasks';
 import { FocusSetup, FocusRun } from './screens/Focus';
 import { More, type MorePage } from './screens/More';
 const Library = lazy(() => import('./screens/more/Library').then(m => ({ default: m.Library })));
@@ -28,7 +27,7 @@ import type { Habit } from './lib/types';
 export function App() {
   const s = useApp();
   const q = new URLSearchParams(location.search);
-  const [tab, setTab] = useState<Tab>((q.get('tab') as Tab) || (q.get('page') ? 'more' : 'today'));
+  const [tab, setTab] = useState<Tab>((['today', 'focus', 'more'].includes(q.get('tab') || '') ? q.get('tab') as Tab : '') || (q.get('page') ? 'more' : 'today'));
   const [proving, setProving] = useState<Habit | null>(null);
   const [page, setPage] = useState<MorePage | null>((q.get('page') as MorePage) || null);
   const closePage = useCallback(() => setPage(null), []);
@@ -66,7 +65,6 @@ export function App() {
       <AnimatePresence mode="wait" initial={false}>
         <motion.div key={tab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.16 }}>
           {tab === 'today' && <Today onProve={setProving} onFocus={() => go('focus')} />}
-          {tab === 'tasks' && <Tasks />}
           {tab === 'focus' && <FocusSetup />}
           {tab === 'more' && <More open={setPage} />}
         </motion.div>

@@ -7,7 +7,7 @@ import { HabitIcon } from '../components/HabitIcon';
 import { Sheet } from '../components/Sheet';
 import { useApp } from '../lib/store';
 import { doneToday } from '../lib/actions';
-import { dueInfo, fmtMinutes, today } from '../lib/dates';
+import { fmtMinutes, today } from '../lib/dates';
 import { endFocus, remainingMs, startFocus, weekMinutes, elapsedMs, weekGiveUps } from '../lib/focus';
 import { needsPhoto } from '../lib/proof';
 import { isNative, haptic } from '../lib/native';
@@ -24,11 +24,9 @@ const QUIT_PRESSES = 10;
 export function FocusSetup() {
   const s = useApp();
   const picks: Pick[] = useMemo(() => [
-    ...s.tasks.filter(t => !t.doneAt && ['overdue', 'today', 'anytime'].includes(dueInfo(t.due).group))
-      .map((t): Pick => ({ key: 't' + t.id, label: t.title, icon: 'checklist', color: 'blue', kind: dueInfo(t.due).label ? `Task · ${dueInfo(t.due).label.toLowerCase()}` : 'Task', ref: { kind: 'task', id: t.id } })),
     ...s.habits.filter(h => isShown(h) && !doneToday(h))
       .map((h): Pick => ({ key: 'h' + h.id, label: h.name, icon: h.icon, color: h.color, kind: needsPhoto(h.name) ? 'Habit · prove with a photo after' : 'Habit · ticked off when you finish', ref: { kind: 'habit', id: h.id } }))
-  ], [s.tasks, s.habits]);
+  ], [s.habits]);
   const [sel, setSel] = useState<string>(picks[0]?.key || 'other');
   const [other, setOther] = useState('');
   const [mins, setMins] = useState(s.focus.lastPlanned || 50);

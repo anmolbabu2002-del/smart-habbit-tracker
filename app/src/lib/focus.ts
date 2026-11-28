@@ -1,4 +1,4 @@
-// Focus sessions: a timer tied to a task or habit, with social apps locked while it runs.
+// Focus sessions: a timer, on its own or tied to a habit, with social apps locked while it runs.
 // Time is kept as timestamps, so it stays right if the app is closed or the phone sleeps.
 import { getState, update, uid } from './store';
 import { addDays, today, weekOf } from './dates';
@@ -71,7 +71,7 @@ export function endFocus(finished: boolean) {
   // A full session on a habit: tick-habits are ticked off; photo habits still need their photo
   const habit = finished && a.ref?.kind === 'habit' ? getState().habits.find(h => h.id === a.ref!.id) : undefined;
   const photo = habit && proofOf(habit.name).mode === 'photo' && !habit.history.includes(today());
-  party({ kind: 'focus', minutes, label: a.label, icon: a.icon, weekMinutes: week, finished, taskId: finished && a.ref?.kind === 'task' ? a.ref.id : undefined, proveHabitId: photo ? habit!.id : undefined });
+  party({ kind: 'focus', minutes, label: a.label, icon: a.icon, weekMinutes: week, finished, proveHabitId: photo ? habit!.id : undefined });
   if (habit && !photo) setTimeout(() => completeHabit(habit.id, { x: innerWidth / 2, y: innerHeight / 2 }), 300);
 
   // Milestones
