@@ -3,7 +3,7 @@ import { Swipe } from './Swipe';
 import { motion } from 'motion/react';
 import { centerOf } from '../lib/celebrate';
 import { completeHabit, requestDeleteHabit, deleteTask, doneToday, toggleTask, undoHabit } from '../lib/actions';
-import { describe, doneThisWeek, habitStreakOf, isRequired, scheduleOn, upcomingSchedule } from '../lib/schedule';
+import { describe, doneThisWeek, habitStreakOf, isRequired, sameSchedule, scheduleOn, upcomingSchedule } from '../lib/schedule';
 import { proofOf } from '../lib/proof';
 import { dueInfo, today } from '../lib/dates';
 import { play } from '../lib/sound';
@@ -19,8 +19,12 @@ export function HabitRow({ h, onOpen, onProve, onView, off }: { h: Habit; onOpen
   const viaPass = done && h.passDays?.includes(today());
   const { n: streak, unit } = habitStreakOf(h);
   const sch = scheduleOn(h);
+  // a schedule change starts tomorrow; show it now so it doesn't look unsaved
+  const next = upcomingSchedule(h);
+  const changing = !off && !sameSchedule(sch, next);
   const week = sch.kind === 'weekly' ? `${doneThisWeek(h)} of ${sch.times} this week` : '';
-  const sub = off ? describe(upcomingSchedule(h))
+  const sub = off ? describe(next)
+    : changing ? `${describe(next)} · starts tomorrow`
     : done ? (viaPass ? 'Free pass used' : week || 'Done today')
     : week ? (isRequired(h) ? `${week} · due today` : week)
     : photo ? 'Prove it with a photo' : 'Tap when done';
@@ -37,8 +41,8 @@ export function HabitRow({ h, onOpen, onProve, onView, off }: { h: Habit; onOpen
           <b>{h.name}</b>
           <small>
             {viaPass && <Ticket size={14} weight="fill" />}
-            {sch.kind === 'days' || (off && upcomingSchedule(h).kind === 'days') ? <WeekStrip h={h} /> : <>
-              {!done && !off && photo && <Camera size={14} weight="fill" />}
+            {sch.kind === 'days' || next.kind === 'days' ? <WeekStrip h={h} /> : <>
+              {!done && !off && !changing && photo && <Camera size={14} weight="fill" />}
               {sub}
             </>}
             {streak > 0 && !off && <span className="mini-streak"><StreakFlame stage={2} size={16} still />{streak}{unit === 'week' ? 'w' : ''}</span>}

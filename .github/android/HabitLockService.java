@@ -29,7 +29,11 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Runs only while Habit Lock is on (from 4 PM until today's habits are done). About twice a
@@ -50,6 +54,10 @@ public class HabitLockService extends Service {
     private String overlayPackage;
     private String foreground = "";
     private long lastQuery = 0;
+    /** Each activity's last lifecycle event: "pkg/class" -> {event type, time} */
+    private final Map<String, long[]> activities = new HashMap<>();
+    /** When the lock screen's own buttons sent the user away (the app's "stopped" can come late) */
+    private long sentAwayAt = 0;
     private long lastNotified = 0;
 
     private final Runnable tick = new Runnable() {
@@ -102,7 +110,9 @@ public class HabitLockService extends Service {
             return;
         }
         String fg = currentForeground();
-        if (HabitLock.shouldBlock(this, fg)) showOverlay(fg);
+        String target = HabitLock.shouldBlock(this, fg) ? fg
+            : getPackageName().equals(fg) ? null : stillOpenBlocked();
+        if (target != null) showOverlay(target);
         else hideOverlay();
         if (System.currentTimeMillis() - lastNotified > 60_000) {
             NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -130,14 +140,48 @@ public class HabitLockService extends Service {
         String pkg = null;
         while (events != null && events.hasNextEvent()) {
             events.getNextEvent(e);
-            if (e.getEventType() == 1 && e.getTimeStamp() >= newest) { // ACTIVITY_RESUMED / MOVE_TO_FOREGROUND
+            int type = e.getEventType();
+            if (type == 1 && e.getTimeStamp() >= newest) { // ACTIVITY_RESUMED / MOVE_TO_FOREGROUND
                 newest = e.getTimeStamp();
                 pkg = e.getPackageName();
             }
+            if (type == 1 || type == 2 || type == 23) { // resumed, paused, stopped
+                String key = e.getPackageName() + "/" + e.getClassName();
+                long[] last = activities.get(key);
+                if (last == null || e.getTimeStamp() >= last[1]) activities.put(key, new long[] { type, e.getTimeStamp() });
+            } else if (type == 26 || type == 27) { // phone shut down / started: nothing is open any more
+                activities.clear();
+            }
+        }
+        // forget activities that closed long ago
+        for (Iterator<long[]> it = activities.values().iterator(); it.hasNext();) {
+            long[] v = it.next();
+            if (v[0] == 23 && now - v[1] > span) it.remove();
         }
         if (pkg != null) foreground = pkg;
         lastQuery = now;
         return foreground;
+    }
+
+    /**
+     * A blocked app that never really left the screen. Half a swipe to the home screen and back
+     * makes the phone log "home screen opened", but the app itself never gets "stopped" (Android
+     * logs that only once you've truly left). So an app counts as open until it is stopped.
+     */
+    private String stillOpenBlocked() {
+        Set<String> blocked = HabitLock.blocked(this);
+        String best = null;
+        long bestTime = -1;
+        for (Map.Entry<String, long[]> en : activities.entrySet()) {
+            long[] v = en.getValue();
+            // before Android 10 there is no "stopped", so "paused" means it left
+            boolean open = v[0] == 1 || (v[0] == 2 && Build.VERSION.SDK_INT >= 29);
+            if (!open || v[1] < sentAwayAt) continue;
+            String p = en.getKey().substring(0, en.getKey().indexOf('/'));
+            if (!blocked.contains(p) || !HabitLock.shouldBlock(this, p)) continue;
+            if (v[1] > bestTime) { bestTime = v[1]; best = p; }
+        }
+        return best;
     }
 
     private String appName(String pkg) {
@@ -253,6 +297,7 @@ public class HabitLockService extends Service {
         button.setCornerRadius(dp(16));
         prove.setBackground(button);
         prove.setOnClickListener(v -> {
+            sentAwayAt = System.currentTimeMillis();
             Intent open = getPackageManager().getLaunchIntentForPackage(getPackageName());
             if (open != null) {
                 open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
@@ -271,6 +316,7 @@ public class HabitLockService extends Service {
         home.setTextColor(Color.parseColor("#D0D5DD"));
         home.setBackgroundColor(Color.TRANSPARENT);
         home.setOnClickListener(v -> {
+            sentAwayAt = System.currentTimeMillis();
             Intent h = new Intent(Intent.ACTION_MAIN);
             h.addCategory(Intent.CATEGORY_HOME);
             h.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
