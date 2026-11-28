@@ -113,8 +113,9 @@ export function saveHabit(input: { id?: string; name: string; icon: string; colo
       }
     }
     // a new schedule starts tomorrow, so it can't be used to dodge today
+    // (a habit added today changes from today, so that one could dodge the lock; others can't)
     const next = input.schedule ? normalise(input.schedule) : null;
-    if (old && next && !sameSchedule(next, upcomingSchedule(old)) && habitLocked()) { lockedToast('Changing a habit’s days'); return; }
+    if (old && next && !sameSchedule(next, upcomingSchedule(old)) && old.createdAt === today() && habitLocked()) { lockedToast('Changing a new habit’s days'); return; }
     update(s => {
       const h = s.habits.find(x => x.id === input.id);
       if (!h) return;

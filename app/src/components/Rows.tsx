@@ -3,7 +3,7 @@ import { Swipe } from './Swipe';
 import { motion } from 'motion/react';
 import { centerOf } from '../lib/celebrate';
 import { completeHabit, requestDeleteHabit, doneToday, undoHabit } from '../lib/actions';
-import { describe, doneThisWeek, isRequired, sameSchedule, scheduleOn, upcomingSchedule } from '../lib/schedule';
+import { describe, doneThisWeek, isRequired, sameSchedule, scheduleOn, upcomingSchedule, weekTarget } from '../lib/schedule';
 import { proofOf } from '../lib/proof';
 import { today } from '../lib/dates';
 import { play } from '../lib/sound';
@@ -22,7 +22,7 @@ export function HabitRow({ h, onOpen, onProve, onView, off }: { h: Habit; onOpen
   // a schedule change starts tomorrow; show it now so it doesn't look unsaved
   const next = upcomingSchedule(h);
   const changing = !off && !sameSchedule(sch, next);
-  const week = sch.kind === 'weekly' ? `${doneThisWeek(h)} of ${sch.times} this week` : '';
+  const week = sch.kind === 'weekly' ? `${doneThisWeek(h)} of ${weekTarget(h)} this week` : '';
   const sub = off ? describe(next)
     : changing ? `${describe(next)} · starts tomorrow`
     : done ? (viaPass ? 'Free pass used' : week || 'Done today')

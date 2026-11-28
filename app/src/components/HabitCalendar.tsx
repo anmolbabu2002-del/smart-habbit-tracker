@@ -5,12 +5,12 @@ import { motion } from 'motion/react';
 import { CaretLeft, CaretRight, Check, X, Ticket, TrendUp, TrendDown, Warning, Trophy, IdentificationBadge, PencilSimple } from '@phosphor-icons/react';
 import { Sheet } from './Sheet';
 import { HabitIcon } from './HabitIcon';
-import { addDays, daysBetween, parseYmd, today, weekOf, ymd } from '../lib/dates';
+import { addDays, parseYmd, today, weekOf, ymd } from '../lib/dates';
 import { identityOf, autoIdentity, votesOf } from '../lib/identity';
 import { setIdentity } from '../lib/actions';
 import { getState, useApp } from '../lib/store';
 import { freeDays, habitStreak } from '../lib/streak';
-import { describe, doneThisWeek, isRequired, scheduleOn, upcomingSchedule } from '../lib/schedule';
+import { describe, doneThisWeek, isRequired, scheduleOn, upcomingSchedule, weekNeed, weekTarget } from '../lib/schedule';
 import { play } from '../lib/sound';
 import type { Habit } from '../lib/types';
 
@@ -50,18 +50,14 @@ function analyseWeeks(h: Habit) {
   const t = today(), thisWeek = weekOf(t);
   const weeks: { start: string; count: number; target: number; met: boolean }[] = [];
   for (let w = weekOf(h.createdAt); w < thisWeek; w = addDays(w, 7)) {
-    const s = scheduleOn(h, addDays(w, 6));
-    const target = s.kind === 'weekly' ? s.times : 7;
-    const end = addDays(w, 6), from = w < h.createdAt ? h.createdAt : w;
+    const end = addDays(w, 6), target = weekNeed(h, w);
     const count = h.history.filter(d => d >= w && d <= end).length;
-    const avail = Math.min(target, daysBetween(from, end) + 1); // the first week may be short
-    weeks.push({ start: w, count, target, met: count >= avail });
+    weeks.push({ start: w, count, target, met: count >= target });
   }
   let best = 0, run = 0;
   for (const w of weeks) { if (w.met) { run++; best = Math.max(best, run); } else run = 0; }
   const st = habitStreak(getState(), h);
-  const s = scheduleOn(h);
-  const target = s.kind === 'weekly' ? s.times : 7;
+  const target = weekTarget(h) || 7;
   const now = doneThisWeek(h);
   return { current: st.n, best: Math.max(best, st.n), rate: weeks.length ? weeks.filter(w => w.met).length / weeks.length : now >= target ? 1 : 0,
     missedWeeks: weeks.filter(w => !w.met).length, target, now, last: weeks.at(-1) };
@@ -176,12 +172,9 @@ function withWeekScores(cells: (Cell | null)[], h: Habit): (Cell | Score | null)
     const real = row.find(Boolean) as Cell | undefined;
     if (!real) { out.push(null); continue; }
     const start = weekOf(real.day), end = addDays(start, 6);
-    const s = scheduleOn(h, end);
-    const target = s.kind === 'weekly' ? s.times : 7;
+    const target = weekNeed(h, start);
     const count = h.history.filter(d => d >= start && d <= end).length;
-    const from = start < h.createdAt ? h.createdAt : start;
-    const need = Math.min(target, Math.max(0, daysBetween(from, end) + 1));
-    const state = start > thisWeek || end < h.createdAt ? 'future' : start === thisWeek ? (count >= target ? 'met' : 'now') : count >= need ? 'met' : 'missed';
+    const state = start > thisWeek || end < h.createdAt ? 'future' : count >= target ? 'met' : start === thisWeek ? 'now' : 'missed';
     out.push({ score: true, start, count, target, state });
   }
   return out;

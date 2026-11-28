@@ -3,9 +3,9 @@
 // locked until the timer ends. The blocking itself is native (.github/android/HabitLock*.java).
 import { whyText } from './why';
 import { needsPhoto } from './proof';
-import { doneThisWeek, isRequired, isShown, scheduleOn } from './schedule';
+import { doneThisWeek, isRequired, isShown, scheduleOn, weekTarget } from './schedule';
 /** "1/3" for times-a-week habits (shown on the widget), else empty */
-const weekLabel = (h: import('./types').Habit) => { const s = scheduleOn(h); return s.kind === 'weekly' ? `${doneThisWeek(h)}/${s.times}` : ''; };
+const weekLabel = (h: import('./types').Habit) => { const s = scheduleOn(h); return s.kind === 'weekly' ? `${doneThisWeek(h)}/${weekTarget(h)}` : ''; };
 import { native, isNative, listenNative } from './native';
 import { getState } from './store';
 import { today } from './dates';

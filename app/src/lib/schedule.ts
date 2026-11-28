@@ -10,7 +10,7 @@
 //
 // Changes take effect the next day (no dodging today), so a habit keeps a list of schedules
 // with the day each one starts.
-import { addDays, parseYmd, today, weekOf } from './dates';
+import { addDays, daysBetween, parseYmd, today, weekOf } from './dates';
 import type { Habit, Schedule } from './types';
 
 export const MIN_PER_WEEK = 3;
@@ -59,12 +59,37 @@ export const doneThisWeek = (h: Habit, day = today()) => doneBefore(h, day) + (h
 /** Days left in the week, counting the given day (Monday = 7, Sunday = 1) */
 const daysLeftInWeek = (day: string) => 7 - ((weekday(day) + 6) % 7);
 
+/**
+ * This week's real target for a times-a-week habit. Normally the full number; fewer when the
+ * habit (or its times-a-week schedule) started mid-week, since only the days left can count:
+ * e.g. 5 a week, started on Thursday = 4 this week. Days done earlier that week still count.
+ */
+export function weekTarget(h: Habit, day = today()): number {
+  const s = scheduleOn(h, day);
+  if (s.kind !== 'weekly') return 0;
+  const w = weekOf(day), end = addDays(w, 6);
+  let from = h.createdAt;
+  for (const e of h.schedules || []) if (e.from <= day && e.from > from) from = e.from;
+  const start = from > w ? from : w;
+  if (start === w) return s.times;
+  const doneEarlier = h.history.filter(d => d >= w && d < start).length;
+  return Math.min(s.times, doneEarlier + daysBetween(start, end) + 1);
+}
+
+/** What a whole week (Monday ymd) asks of a habit: its times-a-week target, or every day it existed */
+export function weekNeed(h: Habit, weekStart: string): number {
+  const end = addDays(weekStart, 6);
+  if (scheduleOn(h, end).kind === 'weekly') return weekTarget(h, end);
+  const from = weekStart < h.createdAt ? h.createdAt : weekStart;
+  return Math.max(0, daysBetween(from, end) + 1);
+}
+
 /** Appears on Today */
 export function isShown(h: Habit, day = today()) {
   if (!exists(h, day)) return false;
   const s = scheduleOn(h, day);
   if (s.kind === 'days') return s.days.includes(weekday(day));
-  if (s.kind === 'weekly') return doneBefore(h, day) < s.times || h.history.includes(day);
+  if (s.kind === 'weekly') return doneBefore(h, day) < weekTarget(h, day) || h.history.includes(day);
   return true;
 }
 
@@ -74,7 +99,7 @@ export function isRequired(h: Habit, day = today()) {
   const s = scheduleOn(h, day);
   if (s.kind === 'days') return s.days.includes(weekday(day));
   if (s.kind === 'weekly') {
-    const remaining = s.times - doneBefore(h, day);
+    const remaining = weekTarget(h, day) - doneBefore(h, day);
     return remaining > 0 && remaining >= daysLeftInWeek(day);
   }
   return true;
@@ -108,15 +133,12 @@ export function habitStreakOf(h: Habit, day = today(), free?: (d: string) => boo
     let n = 0, w = weekOf(day);
     const firstWeek = weekOf(h.createdAt);
     // this week counts only once the target is met
-    if (doneThisWeek(h, day) >= s.times) n++;
+    if (doneThisWeek(h, day) >= weekTarget(h, day)) n++;
     w = addDays(w, -7);
     for (let i = 0; i < 520 && w >= firstWeek; i++, w = addDays(w, -7)) {
-      const target = scheduleOn(h, w).kind === 'weekly' ? (scheduleOn(h, w) as { times: number }).times : 7;
       const end = addDays(w, 6);
       const count = h.history.filter(d => d >= w && d <= end).length;
-      // the first week may be short: needs every day that was left in it, up to the target
-      const avail = w === firstWeek ? Math.min(target, 7 - ((weekday(h.createdAt) + 6) % 7)) : target;
-      if (count >= avail) n++; else break;
+      if (count >= weekNeed(h, w)) n++; else break; // a short first week needs only the days that were left
     }
     return { n, unit: 'week' };
   }
