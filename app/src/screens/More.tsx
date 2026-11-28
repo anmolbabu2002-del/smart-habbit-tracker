@@ -6,7 +6,7 @@ export type MorePage = 'library' | 'journal' | 'chat' | 'meditate' | 'settings';
 const TILES: { id: MorePage; title: string; sub: string; icon: string; color: Color; wide?: boolean }[] = [
   { id: 'library', title: 'Library', sub: 'Read and listen to books', icon: 'book', color: 'orange', wide: true },
   { id: 'chat', title: 'Anmol AI', sub: 'Your coach', icon: 'chat', color: 'blue' },
-  { id: 'journal', title: 'Journal', sub: 'Clear your head', icon: 'pencil', color: 'purple' },
+  { id: 'journal', title: 'Reflection', sub: 'One question a night', icon: 'moon', color: 'purple' },
   { id: 'meditate', title: 'Meditate', sub: 'Breathe', icon: 'lotus', color: 'mint' },
   { id: 'settings', title: 'Settings', sub: 'Lock, backup, theme', icon: 'gear', color: 'yellow' }
 ];

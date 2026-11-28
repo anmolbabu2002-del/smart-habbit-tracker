@@ -3,7 +3,7 @@
 import { fmtTime, levelOf, MIN, type Usage } from './usage';
 
 export type Mood = 'happy' | 'cheer' | 'focus' | 'sleepy';
-export interface Bubble { title: string; line: string; mood: Mood; tappable: boolean }
+export interface Bubble { title: string; line: string; mood: Mood; tappable: boolean; reflect?: boolean }
 
 export interface BubbleCtx {
   habits: number;           // habits in total
@@ -21,6 +21,7 @@ export interface BubbleCtx {
   streak: number;
   focusMinutes: number;     // the user's usual focus length
   usage: Usage | null;
+  reflected?: boolean;      // tonight's reflection is written
 }
 
 const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`;
@@ -80,6 +81,12 @@ export function bubbleFor(c: BubbleCtx): Bubble | null {
       line: c.lockOn ? `Add your first habit. ${c.lockApps} apps lock at ${clock(c.lockFrom)} until it’s done.` : 'Start with one small thing you’ll do every day.',
       mood: 'happy', tappable
     };
+  }
+
+  // 1a. After 9 PM: tonight's question is ready (tap opens Reflection)
+  if (nowMin >= 21 * 60 && c.reflected === false) {
+    if (c.allDone) return { title: 'All done for today!', line: 'Tonight’s question is ready. Tap to reflect.', mood: 'cheer', tappable: true, reflect: true };
+    return { title: n ? `${togo}.` : 'Tonight’s question is ready.', line: n ? 'Tonight’s question is ready. Tap to reflect.' : 'Two minutes to look back on today. Tap to reflect.', mood: 'sleepy', tappable: true, reflect: true };
   }
 
   // 1b. Rest day: habits exist but none is due today (e.g. a Mon/Wed/Fri habit on a Tuesday)

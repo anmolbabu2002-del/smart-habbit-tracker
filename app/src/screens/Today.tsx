@@ -14,6 +14,7 @@ import { requiredHabits, pendingHabits, shownHabits, LOCK_APPS, LOCK_FROM, LOCK_
 import { isNative } from '../lib/native';
 import { stageIndex, streakOf } from '../lib/streak';
 import { longDay, today } from '../lib/dates';
+import { journal, openReflection, reflectedToday } from '../lib/reflect';
 import { play } from '../lib/sound';
 import { readUsage, type Usage } from '../lib/usage';
 import { bubbleFor } from '../lib/bubble';
@@ -22,6 +23,7 @@ import type { Habit } from '../lib/types';
 
 export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFocus: () => void }) {
   const s = useApp();
+  const entries = journal.use();
   const [editHabit, setEditHabit] = useState<Habit | null | undefined>(undefined); // undefined = closed, null = new
   const [streakOpen, setStreakOpen] = useState(false);
   const [calHabit, setCalHabit] = useState<Habit | null>(null);
@@ -54,7 +56,7 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
 
   const bubble = bubbleFor({
     habits: s.habits.length, dueToday: required.length, optional: shown.filter(h => !required.includes(h) && !doneToday(h)).map(h => h.name.trim()), hadHabits: !!s.hadHabits, bestStreak: s.bestStreak, left: pendingHabits(s).map(h => h.name.trim()), allDone, lockOn, lockFrom: LOCK_FROM, lockUntil: LOCK_UNTIL,
-    lockApps: LOCK_APPS.length, now, streak, focusMinutes: s.focus.lastPlanned || 50, usage
+    lockApps: LOCK_APPS.length, now, streak, focusMinutes: s.focus.lastPlanned || 50, usage, reflected: reflectedToday(entries)
   });
 
   return (
@@ -76,7 +78,7 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
         <div className="hero-top">
           <Mascot size={58} mood={bubble?.mood || 'happy'} />
           {bubble?.tappable
-            ? <button type="button" className="bubble tap" onClick={() => { play('tap'); setUsageOpen(true); }}><b>{bubble.title}</b><span>{bubble.line}</span></button>
+            ? <button type="button" className="bubble tap" onClick={() => { play('tap'); if (bubble.reflect) openReflection(); else setUsageOpen(true); }}><b>{bubble.title}</b><span>{bubble.line}</span></button>
             : <div className="bubble"><b>{bubble?.title}</b><span>{bubble?.line}</span></div>}
         </div>
         {required.length > 0 && (

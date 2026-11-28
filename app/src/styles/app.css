@@ -1081,3 +1081,26 @@ button.bubble:active { transform: scale(0.985); }
 .cam-scan-dots { display: inline-flex; gap: 6px; }
 .cam-scan-dots i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.6); transition: background 0.2s, border-color 0.2s; }
 .cam-scan-dots i.on { background: var(--mint); border-color: var(--mint); }
+
+/* Reflection: one question a night */
+.rf-card { padding: 16px; display: grid; gap: 12px; background: linear-gradient(160deg, var(--purple-soft), var(--card) 55%); border-color: color-mix(in srgb, var(--purple) 30%, transparent); box-shadow: 0 4px 0 color-mix(in srgb, var(--purple) 22%, transparent); }
+.rf-top { display: flex; align-items: center; justify-content: space-between; }
+.rf-eyebrow { display: inline-flex; align-items: center; gap: 5px; color: var(--purple-edge); font-weight: 900; font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.rf-swap { appearance: none; border: 0; background: var(--card); color: var(--purple-edge); font: inherit; font-weight: 900; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 5px; padding: 6px 11px; border-radius: 99px; box-shadow: 0 2px 0 color-mix(in srgb, var(--purple) 25%, transparent); cursor: pointer; }
+.rf-swap:active { transform: scale(0.95); }
+.rf-q { margin: 0; font-size: 1.38rem; line-height: 1.3; font-weight: 900; color: var(--ink); letter-spacing: -0.01em; }
+.rf-q.in-editor { margin: 4px 2px 12px; }
+.rf-reasons { display: flex; flex-wrap: wrap; gap: 7px; }
+.rf-reason { appearance: none; border: 2px solid var(--line-strong); background: var(--card); color: var(--ink-soft); font: inherit; font-weight: 800; font-size: 0.88rem; padding: 6px 12px; border-radius: 99px; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+.rf-reason.on { background: var(--purple); border-color: var(--purple-edge); color: #fff; box-shadow: 0 3px 0 var(--purple-edge); }
+.rf-answer { resize: none; min-height: 84px; line-height: 1.45; }
+.rf-good { display: flex; align-items: center; gap: 10px; padding: 4px 12px; border-radius: 14px; background: var(--yellow-soft); color: var(--yellow-edge, #c99a00); }
+.rf-good input { flex: 1; border: 0; background: none; font: inherit; font-weight: 800; color: var(--ink); padding: 10px 0; outline: none; min-width: 0; }
+.rf-good input::placeholder { color: color-mix(in srgb, var(--ink) 45%, transparent); }
+.rf-done { appearance: none; width: 100%; text-align: left; font: inherit; color: var(--ink); cursor: pointer; padding: 16px; display: grid; gap: 6px; border-color: color-mix(in srgb, var(--mint) 45%, transparent); box-shadow: 0 4px 0 color-mix(in srgb, var(--mint) 25%, transparent); }
+.rf-done .rf-eyebrow { color: var(--mint-edge); }
+.rf-done b { font-size: 1.1rem; font-weight: 900; line-height: 1.3; }
+.rf-done span:last-child { color: var(--ink-soft); font-weight: 600; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.rf-free { appearance: none; width: 100%; margin-top: 10px; text-align: left; font: inherit; color: var(--ink); cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.rf-free span { display: grid; }
+.rf-free small { color: var(--ink-soft); font-weight: 700; font-size: 0.82rem; }

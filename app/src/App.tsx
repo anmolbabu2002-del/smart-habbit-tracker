@@ -12,7 +12,7 @@ import { Today } from './screens/Today';
 import { FocusSetup, FocusRun } from './screens/Focus';
 import { More, type MorePage } from './screens/More';
 const Library = lazy(() => import('./screens/more/Library').then(m => ({ default: m.Library })));
-const Journal = lazy(() => import('./screens/more/Journal').then(m => ({ default: m.Journal })));
+const Reflection = lazy(() => import('./screens/more/Reflection').then(m => ({ default: m.Reflection })));
 const Chat = lazy(() => import('./screens/more/Chat').then(m => ({ default: m.Chat })));
 const Meditate = lazy(() => import('./screens/more/Meditate').then(m => ({ default: m.Meditate })));
 const Settings = lazy(() => import('./screens/more/Settings').then(m => ({ default: m.Settings })));
@@ -46,6 +46,9 @@ export function App() {
     // Something asked for a habit's photo proof (e.g. after a focus session)
     const prove = (e: Event) => { const h = getState().habits.find(x => x.id === (e as CustomEvent).detail); if (h) setProving(h); };
     window.addEventListener('ultradian:prove', prove);
+    // Something asked for a page under More (e.g. Noto's "Tonight's question is ready")
+    const openPage = (e: Event) => { setTab('more'); setPage((e as CustomEvent).detail as MorePage); };
+    window.addEventListener('ultradian:page', openPage);
     // A new day: refresh everything and tell Habit Lock
     let last = today();
     const tick = () => { const d = today(); if (d !== last) { last = d; setDay(d); afterHabitsChanged(); } else syncLock(); };
@@ -54,7 +57,7 @@ export function App() {
     takeWidgetTicks();
     listenWidget();
     document.addEventListener('visibilitychange', vis);
-    return () => { off(); clearInterval(iv); document.removeEventListener('visibilitychange', vis); window.removeEventListener('ultradian:prove', prove); };
+    return () => { off(); clearInterval(iv); document.removeEventListener('visibilitychange', vis); window.removeEventListener('ultradian:prove', prove); window.removeEventListener('ultradian:page', openPage); };
   }, []);
 
   const go = (t: Tab) => { if (t !== tab) { play('tap'); setTab(t); window.scrollTo({ top: 0 }); } };
@@ -72,7 +75,7 @@ export function App() {
       <TabBar active={tab} onChange={go} />
       <Suspense fallback={null}><AnimatePresence>
         {page === 'library' && <Library key="library" onBack={closePage} />}
-        {page === 'journal' && <Journal key="journal" onBack={closePage} />}
+        {page === 'journal' && <Reflection key="journal" onBack={closePage} />}
         {page === 'chat' && <Chat key="chat" onBack={closePage} />}
         {page === 'meditate' && <Meditate key="meditate" onBack={closePage} />}
         {page === 'settings' && <Settings key="settings" onBack={closePage} />}
