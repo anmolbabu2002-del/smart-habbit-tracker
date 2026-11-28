@@ -98,6 +98,7 @@ public class HabitLockService extends Service {
     }
 
     private void step() {
+        FocusDnd.sync(this);
         if (!HabitLock.isLockActive(this)) {
             stopEverything();
             HabitLock.scheduleNext(this);

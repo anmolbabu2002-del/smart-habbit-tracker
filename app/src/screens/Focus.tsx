@@ -1,10 +1,11 @@
 import { isShown } from '../lib/schedule';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { LockSimple, CaretDown, Check, PencilSimple, Phone } from '@phosphor-icons/react';
+import { LockSimple, CaretDown, Check, PencilSimple, Phone, GearSix } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Mascot } from '../components/Mascot';
 import { HabitIcon } from '../components/HabitIcon';
 import { Sheet } from '../components/Sheet';
+import { FocusSettings } from '../components/FocusSettings';
 import { useApp } from '../lib/store';
 import { doneToday } from '../lib/actions';
 import { fmtMinutes, today } from '../lib/dates';
@@ -31,6 +32,8 @@ export function FocusSetup() {
   const [other, setOther] = useState('');
   const [mins, setMins] = useState(s.focus.lastPlanned || 50);
   const [picker, setPicker] = useState(false);
+  const [settings, setSettings] = useState(false);
+  const whole = s.focus.wholePhone !== false, silent = !!s.focus.silence;
   const chosen = picks.find(p => p.key === sel);
   const week = weekMinutes(s);
   const weekTotal = week.reduce((n, d) => n + d.minutes, 0);
@@ -44,7 +47,9 @@ export function FocusSetup() {
 
   return (
     <main className="screen">
-      <header className="page-head"><h1>Focus</h1></header>
+      <header className="page-head focus-head"><h1>Focus</h1>
+        <button type="button" className="rd-ic" aria-label="Focus settings" onClick={() => { play('tap'); setSettings(true); }}><GearSix size={24} weight="bold" /></button>
+      </header>
 
       <section className="card focus-hero">
         <div className="fh-time"><b>{mins}</b><span>min</span></div>
@@ -59,7 +64,7 @@ export function FocusSetup() {
           <CaretDown size={18} weight="bold" />
         </button>
         <button type="button" className="btn big block" onClick={start}>Start focus</button>
-        <p className="fh-note"><LockSimple size={14} weight="fill" /> {isNative ? 'Your whole phone locks until the timer ends. Calls still work.' : 'In the Android app, your whole phone locks until the timer ends.'}</p>
+        <p className="fh-note"><LockSimple size={14} weight="fill" /> {!isNative ? 'In the Android app, your whole phone locks until the timer ends.' : `${whole ? 'Your whole phone locks' : 'Social apps lock'} until the timer ends.${silent ? ` Notifications${s.focus.blockCalls ? ' and calls' : ''} are silenced.` : ' Calls still work.'}`}</p>
       </section>
 
       <section className="card week">
@@ -76,6 +81,7 @@ export function FocusSetup() {
         </div>
       </section>
 
+      <FocusSettings open={settings} onClose={() => setSettings(false)} />
       <Sheet open={picker} onClose={() => setPicker(false)} title="Focus on">
         <div className="pick-list">
           {picks.map(p => (
@@ -101,6 +107,7 @@ export function FocusSetup() {
 const MESSAGES: [number, string][] = [[0, 'Settling in. Breathe and begin.'], [0.15, 'You’re in the zone. Keep going!'], [0.5, 'Halfway there!'], [0.8, 'Final stretch. Finish strong!'], [0.97, 'Almost done…']];
 
 export function FocusRun({ a }: { a: ActiveFocus }) {
+  const fs = useApp().focus;
   const [, setTick] = useState(0);
   const [presses, setPresses] = useState(0);
   const halfPlayed = useRef(false);
@@ -168,8 +175,8 @@ export function FocusRun({ a }: { a: ActiveFocus }) {
         </div>
       </div>
       <p className="run-msg">{msg}</p>
-      <div className="run-lock"><LockSimple size={16} weight="fill" /> {isNative ? 'Phone locked until the timer ends' : 'Phone lock works in the Android app'}</div>
-      <div className="run-calls"><Phone size={14} weight="fill" /> Calls still work</div>
+      <div className="run-lock"><LockSimple size={16} weight="fill" /> {!isNative ? 'Phone lock works in the Android app' : fs.wholePhone !== false ? 'Phone locked until the timer ends' : 'Social apps locked until the timer ends'}</div>
+      <div className="run-calls"><Phone size={14} weight="fill" /> {fs.silence && fs.blockCalls ? 'Calls silenced (a second call within 15 min rings)' : fs.silence ? 'Notifications silenced · calls still work' : 'Calls still work'}</div>
       <AnimatePresence>
         {presses > 0 && quitLeft > 0 && (
           <motion.div className="run-quit" key="quit" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>

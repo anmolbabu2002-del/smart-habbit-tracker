@@ -133,6 +133,7 @@ final class HabitLock {
 
     /** Start or stop the blocking service to match the current state, then plan the next check. */
     static void refresh(Context c) {
+        FocusDnd.sync(c); // Do Not Disturb on for a focus session, back to the user's own after
         boolean active = isLockActive(c);
         if (active && hasUsageAccess(c) && canDrawOverlays(c)) {
             Intent i = new Intent(c, HabitLockService.class);

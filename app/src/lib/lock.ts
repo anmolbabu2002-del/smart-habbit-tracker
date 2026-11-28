@@ -66,17 +66,20 @@ export function syncLock() {
       blocked: LOCK_APPS.flatMap(x => x.pkgs),
       focusUntil: focusLockUntil(s),
       focusLabel: a ? a.label : '',
-      focusStrict: !!a,
+      focusStrict: !!a && s.focus.wholePhone !== false,
+      focusDnd: !!s.focus.silence,
+      focusCalls: !!s.focus.silence && !!s.focus.blockCalls,
       why: whyText(),
       widget: shownHabits(s).map(h => ({ id: h.id, name: label(h), color: h.color, photo: needsPhoto(h.name), done: h.history.includes(today()), req: isRequired(h), week: weekLabel(h) }))
     }).catch(e => console.warn('Habit Lock: update failed', e));
   }, 250);
 }
 
-export type LockStatus = { usageAccess: boolean; overlay: boolean };
-export const lockStatus = () => native<LockStatus>(PLUGIN, 'getStatus').catch(() => ({ usageAccess: false, overlay: false }));
+export type LockStatus = { usageAccess: boolean; overlay: boolean; dnd?: boolean };
+export const lockStatus = () => native<LockStatus>(PLUGIN, 'getStatus').catch((): LockStatus => ({ usageAccess: false, overlay: false, dnd: false }));
 export const openUsageAccess = () => native(PLUGIN, 'openUsageAccessSettings');
 export const openOverlay = () => native(PLUGIN, 'openOverlaySettings');
+export const openDndAccess = () => native(PLUGIN, 'openDndSettings');
 
 /** The lock screen's "Do it now" button opens the app on Today */
 export function onOpenHabits(cb: (app?: string) => void) {

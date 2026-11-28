@@ -63,7 +63,8 @@ export interface State {
   bestStreak: number;
   celebratedDay: string;  // last day the "all done" party ran
   passes: Record<string, { habitId: string; day: string }>; // week (Monday ymd) → pass used
-  focus: { sessions: FocusSession[]; lastPlanned: number; lockApps: boolean; active?: ActiveFocus; giveUps?: { day: string; minutes: number }[] };
+  focus: { sessions: FocusSession[]; lastPlanned: number; lockApps: boolean; active?: ActiveFocus; giveUps?: { day: string; minutes: number }[];
+    wholePhone?: boolean; silence?: boolean; blockCalls?: boolean }; // focus settings (whole phone is on unless switched off)
   lock: { enabled: boolean };
   feats: string[];        // milestones already celebrated
   tasksDone: number;      // lifetime count, for milestones

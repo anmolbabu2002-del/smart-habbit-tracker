@@ -60,6 +60,7 @@ public class HabitLockPlugin extends Plugin {
         r.put("overlay", HabitLock.canDrawOverlays(c));
         r.put("locked", HabitLock.isLockActive(c));
         r.put("running", HabitLockService.running);
+        r.put("dnd", FocusDnd.granted(c));
         call.resolve(r);
     }
 
@@ -85,6 +86,9 @@ public class HabitLockPlugin extends Plugin {
         e.putLong("focusUntil", call.getData().optLong("focusUntil", 0L));
         e.putString("focusLabel", call.getString("focusLabel", ""));
         e.putBoolean("focusStrict", call.getBoolean("focusStrict", false));
+        // focus settings: silence notifications (Do Not Disturb), and calls too
+        e.putBoolean("focusDnd", call.getBoolean("focusDnd", false));
+        e.putBoolean("focusCalls", call.getBoolean("focusCalls", false));
         e.putString("why", call.getString("why", ""));
         // the widget's habit list; ticks made on the widget and not yet taken stay ticked
         try {
@@ -220,6 +224,20 @@ public class HabitLockPlugin extends Plugin {
             // Some phones only open the general list
             Intent general = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             try { c.startActivity(general); } catch (Exception ignored) { call.reject("Couldn't open Usage access settings"); return; }
+        }
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void openDndSettings(PluginCall call) {
+        Context c = getContext();
+        Intent i = new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS);
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            c.startActivity(i);
+        } catch (Exception ex) {
+            call.reject("Couldn't open Do Not Disturb access settings");
+            return;
         }
         call.resolve();
     }

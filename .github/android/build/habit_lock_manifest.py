@@ -22,6 +22,7 @@ permissions = '''
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <queries>
         <package android:name="com.instagram.android" />
         <package android:name="com.instagram.lite" />

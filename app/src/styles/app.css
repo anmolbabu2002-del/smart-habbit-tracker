@@ -1104,3 +1104,10 @@ button.bubble:active { transform: scale(0.985); }
 .rf-free { appearance: none; width: 100%; margin-top: 10px; text-align: left; font: inherit; color: var(--ink); cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
 .rf-free span { display: grid; }
 .rf-free small { color: var(--ink-soft); font-weight: 700; font-size: 0.82rem; }
+
+/* Focus settings */
+.focus-head { display: flex; align-items: center; justify-content: space-between; }
+.fs-ask { margin-top: 12px; padding: 14px 16px; display: grid; gap: 8px; background: var(--purple-soft); border-color: transparent; box-shadow: none; }
+.fs-ask b { font-weight: 900; }
+.fs-ask ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-weight: 700; color: var(--ink-soft); }
+.fs-ask .btn { margin-top: 4px; display: inline-flex; justify-content: center; align-items: center; gap: 6px; }
