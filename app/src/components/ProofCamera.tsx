@@ -177,8 +177,8 @@ export function ProofCamera({ habit, onClose }: { habit: Habit; onClose: () => v
 
       {(phase === 'fail' || phase === 'error') && (
         <div className="cam-result">
-          <b>{phase === 'error' ? 'The photo check didn’t load' : `This doesn’t look like ${habit.name}`}</b>
-          <small>{phase === 'error' ? 'Check your internet once, then try again.' : (result as { still?: boolean } | null)?.still ? 'It saw the activity but nothing moving. Do it for real in front of the camera, not a photo or screen.' : `${result?.looksLike ? `It looks more like ${result.looksLike.replace(/^an? /, '')}. ` : ''}${proof.timer ? 'Prop the phone up with your whole body in view and use the timer.' : 'Try another angle with the activity clearly in the photo.'}`}</small>
+          <b>{phase === 'error' ? 'The photo check didn’t load' : (result as { still?: boolean } | null)?.still ? 'Keep moving' : `Couldn’t see ${habit.name} clearly`}</b>
+          <small>{phase === 'error' ? 'Check your internet once, then try again.' : (result as { still?: boolean } | null)?.still ? 'It needs to see you doing it live, not a photo or a screen.' : proof.timer ? 'Prop the phone up so your whole body is in view, then use the timer.' : 'Try again with it clearly in the frame and good light.'}</small>
           <button type="button" className="btn block" onClick={() => { play('tap'); setPhase('camera'); }}><ArrowClockwise size={20} weight="bold" /> Retake</button>
         </div>
       )}

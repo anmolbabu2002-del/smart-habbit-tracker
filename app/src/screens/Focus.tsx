@@ -64,7 +64,7 @@ export function FocusSetup() {
           <CaretDown size={18} weight="bold" />
         </button>
         <button type="button" className="btn big block" onClick={start}>Start focus</button>
-        <p className="fh-note"><LockSimple size={14} weight="fill" /> {!isNative ? 'In the Android app, your whole phone locks until the timer ends.' : `${whole ? 'Your whole phone locks' : 'Social apps lock'} until the timer ends.${silent ? ` Notifications${s.focus.blockCalls ? ' and calls' : ''} are silenced.` : ' Calls still work.'}`}</p>
+        <p className="fh-note"><LockSimple size={14} weight="fill" /> {!isNative ? 'In the Android app, your whole phone locks until the timer ends.' : `${whole ? 'Your whole phone locks' : 'Social apps lock'} until the timer ends.${silent ? '' : ' Calls still work.'}`}</p>
       </section>
 
       <section className="card week">
@@ -176,7 +176,7 @@ export function FocusRun({ a }: { a: ActiveFocus }) {
       </div>
       <p className="run-msg">{msg}</p>
       <div className="run-lock"><LockSimple size={16} weight="fill" /> {!isNative ? 'Phone lock works in the Android app' : fs.wholePhone !== false ? 'Phone locked until the timer ends' : 'Social apps locked until the timer ends'}</div>
-      <div className="run-calls"><Phone size={14} weight="fill" /> {fs.silence && fs.blockCalls ? 'Calls silenced (a second call within 15 min rings)' : fs.silence ? 'Notifications silenced · calls still work' : 'Calls still work'}</div>
+      {!fs.silence && <div className="run-calls"><Phone size={14} weight="fill" /> Calls still work</div>}
       <AnimatePresence>
         {presses > 0 && quitLeft > 0 && (
           <motion.div className="run-quit" key="quit" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
