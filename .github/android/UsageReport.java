@@ -47,8 +47,12 @@ final class UsageReport {
         long sinceMidnight = now - starts[0];
         long from = starts[PAST];
 
-        Map<String, Long> openSince = new HashMap<>();
-        Map<String, Boolean> seen = new HashMap<>();
+        // Counted like Digital Wellbeing: each activity of an app is open from "resumed" until
+        // "paused"/"stopped"; the app is in use while any of its activities is open. The screen
+        // turning off, the lock screen or a shutdown ends everything. An unmatched "closed" event
+        // (an app that wasn't seen opening, e.g. a background update) counts nothing.
+        Map<String, Long> pkgSince = new HashMap<>();        // app in use since
+        Map<String, java.util.Set<String>> openActs = new HashMap<>();
         UsageEvents ev;
         try {
             ev = usm.queryEvents(from, now);
@@ -58,24 +62,34 @@ final class UsageReport {
         UsageEvents.Event e = new UsageEvents.Event();
         while (ev != null && ev.hasNextEvent()) {
             ev.getNextEvent(e);
+            int type = e.getEventType();
+            long t = e.getTimeStamp();
+            if (type == 16 || type == 17 || type == 26) { // screen off, lock screen, shutdown: nothing is in use
+                for (Map.Entry<String, Long> o : pkgSince.entrySet()) add(out.get(o.getKey()), o.getValue(), t, starts, sinceMidnight, now);
+                pkgSince.clear();
+                openActs.clear();
+                continue;
+            }
             String pkg = e.getPackageName();
             App app = out.get(pkg);
             if (app == null) continue;
-            int type = e.getEventType();
-            long t = e.getTimeStamp();
-            if (type == UsageEvents.Event.MOVE_TO_FOREGROUND) {
-                if (!openSince.containsKey(pkg)) openSince.put(pkg, t);
-                seen.put(pkg, true);
-            } else if (type == UsageEvents.Event.MOVE_TO_BACKGROUND) {
-                Long start = openSince.remove(pkg);
-                // already open when the window began
-                if (start == null && !seen.containsKey(pkg)) start = from;
-                seen.put(pkg, true);
-                if (start != null) add(app, start, t, starts, sinceMidnight, now);
+            String act = String.valueOf(e.getClassName());
+            java.util.Set<String> acts = openActs.get(pkg);
+            if (type == 1) { // resumed
+                if (acts == null) { acts = new java.util.HashSet<>(); openActs.put(pkg, acts); }
+                acts.add(act);
+                if (!pkgSince.containsKey(pkg)) pkgSince.put(pkg, t);
+            } else if (type == 2 || type == 23) { // paused, stopped
+                if (acts == null || !acts.remove(act)) continue; // never seen opening: count nothing
+                if (acts.isEmpty()) {
+                    openActs.remove(pkg);
+                    Long start = pkgSince.remove(pkg);
+                    if (start != null) add(app, start, t, starts, sinceMidnight, now);
+                }
             }
         }
         // still open right now (Ultradian is in front, so this is rare, but count it)
-        for (Map.Entry<String, Long> open : openSince.entrySet()) {
+        for (Map.Entry<String, Long> open : pkgSince.entrySet()) {
             App app = out.get(open.getKey());
             if (app != null) add(app, open.getValue(), now, starts, sinceMidnight, now);
         }
@@ -83,7 +97,7 @@ final class UsageReport {
     }
 
     private static void add(App app, long a, long b, long[] starts, long sinceMidnight, long now) {
-        if (b <= a) return;
+        if (app == null || b <= a) return;
         app.today += overlap(a, b, starts[0], now);
         for (int i = 1; i <= PAST; i++) {
             long dayStart = starts[i], dayEnd = starts[i - 1];

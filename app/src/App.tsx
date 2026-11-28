@@ -66,7 +66,7 @@ export function App() {
     <div className="app">
       <AnimatePresence mode="wait" initial={false}>
         <motion.div key={tab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.16 }}>
-          {tab === 'today' && <Today onProve={setProving} onFocus={() => go('focus')} />}
+          {tab === 'today' && <Today onProve={setProving} />}
           {tab === 'focus' && <FocusSetup />}
           {tab === 'more' && <More open={setPage} />}
         </motion.div>

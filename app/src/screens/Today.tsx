@@ -18,10 +18,9 @@ import { journal, openReflection, reflectedToday } from '../lib/reflect';
 import { play } from '../lib/sound';
 import { readUsage, type Usage } from '../lib/usage';
 import { bubbleFor } from '../lib/bubble';
-import { UsageSheet } from '../components/UsageSheet';
 import type { Habit } from '../lib/types';
 
-export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFocus: () => void }) {
+export function Today({ onProve }: { onProve: (h: Habit) => void }) {
   const s = useApp();
   const entries = journal.use();
   const [editHabit, setEditHabit] = useState<Habit | null | undefined>(undefined); // undefined = closed, null = new
@@ -38,7 +37,6 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
   const offToday = s.habits.filter(h => !shown.includes(h));
   const [showOff, setShowOff] = useState(false);
   const [usage, setUsage] = useState<Usage | null>(null);
-  const [usageOpen, setUsageOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
   // screen time: on open, when coming back to the app, and every 2 minutes
   useEffect(() => {
@@ -77,8 +75,8 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
       <section className={'card hero' + (allDone ? ' won' : '')}>
         <div className="hero-top">
           <Mascot size={58} mood={bubble?.mood || 'happy'} />
-          {bubble?.tappable
-            ? <button type="button" className="bubble tap" onClick={() => { play('tap'); if (bubble.reflect) openReflection(); else setUsageOpen(true); }}><b>{bubble.title}</b><span>{bubble.line}</span></button>
+          {bubble?.reflect
+            ? <button type="button" className="bubble tap" onClick={() => { play('tap'); openReflection(); }}><b>{bubble.title}</b><span>{bubble.line}</span></button>
             : <div className="bubble"><b>{bubble?.title}</b><span>{bubble?.line}</span></div>}
         </div>
         {required.length > 0 && (
@@ -115,7 +113,6 @@ export function Today({ onProve, onFocus }: { onProve: (h: Habit) => void; onFoc
 
       <HabitEditor open={editHabit !== undefined} habit={editHabit} onClose={() => setEditHabit(undefined)} />
       <StreakSheet open={streakOpen} onClose={() => setStreakOpen(false)} />
-      <UsageSheet open={usageOpen} usage={usage} onClose={() => setUsageOpen(false)} onFocus={left > 0 ? onFocus : undefined} />
       <HabitCalendar habit={calHabit} onClose={() => setCalHabit(null)} />
     </main>
   );
