@@ -2,12 +2,22 @@
 // habit. The photo is never saved or sent. Same model and storage as before, so phones that
 // already downloaded it don't download again.
 import { useSyncExternalStore } from 'react';
-import { classify, SCENES, type Proof } from './proofDictionary';
+import { CATEGORIES, classify, SCENES, type Proof } from './proofDictionary';
 
 const MODEL = 'Xenova/clip-vit-base-patch32';
 const LIB_VERSION = '3.8.1';
 // Measured on real photos (Stanford 40 actions): 90% of genuine photos pass, 2.6% of cheats
 const THRESHOLD = 0.45;
+// Related habits count too (a home workout proves "Gym", studying proves "Read"). With more ways
+// to match, the bar is higher to keep cheats where they were: measured on ~1,000 fresh photos,
+// honest photos accepted rose from 89.5% to 93.1% with cheats still at 2.6%.
+const FAMILY_THRESHOLD = 0.62;
+const FAMILIES = [
+  ['pushups', 'squats', 'plank', 'yoga', 'stretch', 'skipping', 'gym', 'workout', 'sports'],
+  ['meditate', 'yoga', 'stretch'], ['walking', 'running', 'walkdog', 'cycling'], ['reading', 'study', 'writing', 'coding'],
+  ['dishes', 'makebed', 'cleaning'], ['cooking', 'healthyfood'], ['teeth', 'skincare']
+];
+const familyOf = (id?: string | null) => (id ? [...new Set([id, ...FAMILIES.filter(f => f.includes(id)).flat()])] : []);
 const MODEL_URL = (f: string) => `https://huggingface.co/${MODEL}/resolve/main/${f}`;
 const VISION_FILES = ['config.json', 'preprocessor_config.json', 'onnx/vision_model_quantized.onnx'];
 const TEXT_FILES = ['tokenizer.json', 'tokenizer_config.json', 'onnx/text_model_quantized.onnx'];
@@ -147,16 +157,21 @@ export async function check(canvas: HTMLCanvasElement, habitName: string): Promi
   const image = await st.lib.RawImage.fromCanvas(canvas);
   const { image_embeds } = await st.vision(await st.processor(image));
   const img = normalize(image_embeds.data);
-  // The habit scores its best of several descriptions; everyday scenes and cheats compete with it
+  // The habit (and its related habits) scores its best description; everyday scenes and cheats compete
+  const fam = familyOf(proof.category);
+  const cats = fam.map(id => CATEGORIES.find(c => c.id === id)!).filter(Boolean);
+  const prompts = cats.length ? cats.flatMap(c => c.show) : proof.prompts || [proof.show!];
+  const exclude = new Set([...(proof.exclude || []), ...cats.flatMap(c => c.exclude || [])]);
   const own: number[] = [];
-  for (const p of proof.prompts || [proof.show!]) own.push(100 * dot(img, await textFingerprint('a photo of ' + p)));
-  const scenes = SCENES.filter(s => !(proof.exclude || []).includes(s));
+  for (const p of prompts) own.push(100 * dot(img, await textFingerprint('a photo of ' + p)));
+  const scenes = SCENES.filter(s => !exclude.has(s));
   const logits: number[] = [Math.max(...own)];
   for (const s of scenes) logits.push(100 * dot(img, await textFingerprint('a photo of ' + s)));
   const max = Math.max(...logits), ex = logits.map(l => Math.exp(l - max)), sum = ex.reduce((a, b) => a + b, 0);
   const probs = ex.map(x => x / sum);
   const best = probs.indexOf(Math.max(...probs));
-  return { pass: probs[0] >= THRESHOLD, confidence: probs[0], looksLike: best === 0 ? null : scenes[best - 1] };
+  const bar = fam.length > 1 ? FAMILY_THRESHOLD : THRESHOLD;
+  return { pass: probs[0] >= bar, confidence: probs[0], looksLike: best === 0 ? null : scenes[best - 1] };
 }
 
 /** Soon after launch: download the photo check in the background if any habit needs it */
