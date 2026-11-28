@@ -16,7 +16,7 @@ import { today } from './lib/dates';
 import { afterHabitsChanged } from './lib/actions';
 import { dailyBackup } from './lib/backup';
 import { initSystemBars } from './lib/systemBars';
-import { isNative } from './lib/native';
+import { isNative, native } from './lib/native';
 
 function serviceWorker() {
   if (!('serviceWorker' in navigator)) return;
@@ -36,6 +36,8 @@ async function boot() {
   if (!getState().lockDefaulted) update(d => { d.lock.enabled = true; d.lockDefaulted = true; });
   document.documentElement.dataset.theme = getState().theme;
   createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
+  // first screen drawn: Android's launch screen (the app icon) can go
+  if (isNative) requestAnimationFrame(() => requestAnimationFrame(() => { native('UltradianHabitLock', 'appReady').catch(() => {}); }));
   afterHabitsChanged();
   importOldQuote().finally(syncLock);
   clearOldReminders();

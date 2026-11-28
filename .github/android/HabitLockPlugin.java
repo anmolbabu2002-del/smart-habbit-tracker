@@ -228,6 +228,13 @@ public class HabitLockPlugin extends Plugin {
         call.resolve();
     }
 
+    /** The web app drew its first screen: the launch screen can go */
+    @PluginMethod
+    public void appReady(PluginCall call) {
+        MainActivity.webReady = true;
+        call.resolve();
+    }
+
     @PluginMethod
     public void openDndSettings(PluginCall call) {
         Context c = getContext();

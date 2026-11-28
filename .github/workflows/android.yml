@@ -115,9 +115,11 @@ jobs:
           # Drawn by tools/app-icon (normal, all done, crying); AppIcon.java switches between them.
           res=android/app/src/main/res
           rm -f $res/mipmap-anydpi-v26/ic_launcher*.xml $res/mipmap-*/ic_launcher*.png
-          # launch screen: Noto on the dark background instead of the Capacitor logo
+          # launch screen: Android's own splash, the app icon on the app's background (no Capacitor logo)
           find $res -name 'splash.png' -delete
           cp -r ../.github/android/res/. $res/
+          python3 ../.github/android/build/splash_theme.py android/app
+          grep -A6 'NoActionBarLaunch' $res/values/styles.xml
           ls $res/mipmap-anydpi-v26 $res/mipmap-xxxhdpi
           grep -c "activity-alias" android/app/src/main/AndroidManifest.xml
 

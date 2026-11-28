@@ -9,6 +9,9 @@
     <link rel="apple-touch-icon" href="icon-512-v3.png" />
     <link rel="manifest" href="manifest.json" />
     <title>Ultradian</title>
+    <!-- the right background from the very first frame (before the CSS loads), light or dark -->
+    <script>try { if (JSON.parse(localStorage.getItem('ultradian.v2') || '{}').theme === 'dark') document.documentElement.dataset.theme = 'dark'; } catch (e) {}</script>
+    <style>html, body { background: #f7f9fc; } html[data-theme='dark'], html[data-theme='dark'] body { background: #131820; }</style>
   </head>
   <body>
     <div id="root"></div>
