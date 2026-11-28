@@ -8,7 +8,6 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(SystemBarsPlugin.class);
         registerPlugin(HabitLockPlugin.class);
-        registerPlugin(ReadAloudPlugin.class);
         super.onCreate(savedInstanceState);
     }
 

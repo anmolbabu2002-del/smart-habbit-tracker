@@ -11,7 +11,6 @@ import { ProofCamera } from './components/ProofCamera';
 import { Today } from './screens/Today';
 import { FocusSetup, FocusRun } from './screens/Focus';
 import { More, type MorePage } from './screens/More';
-const Library = lazy(() => import('./screens/more/Library').then(m => ({ default: m.Library })));
 const Reflection = lazy(() => import('./screens/more/Reflection').then(m => ({ default: m.Reflection })));
 const Chat = lazy(() => import('./screens/more/Chat').then(m => ({ default: m.Chat })));
 const Meditate = lazy(() => import('./screens/more/Meditate').then(m => ({ default: m.Meditate })));
@@ -74,7 +73,6 @@ export function App() {
       </AnimatePresence>
       <TabBar active={tab} onChange={go} />
       <Suspense fallback={null}><AnimatePresence>
-        {page === 'library' && <Library key="library" onBack={closePage} />}
         {page === 'journal' && <Reflection key="journal" onBack={closePage} />}
         {page === 'chat' && <Chat key="chat" onBack={closePage} />}
         {page === 'meditate' && <Meditate key="meditate" onBack={closePage} />}

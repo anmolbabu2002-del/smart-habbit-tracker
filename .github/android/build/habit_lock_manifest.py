@@ -20,7 +20,6 @@ permissions = '''
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <queries>
@@ -33,9 +32,6 @@ permissions = '''
         <package android:name="com.zhiliaoapp.musically" />
         <package android:name="com.ss.android.ugc.trill" />
         <package android:name="com.zhiliaoapp.musically.go" />
-        <intent>
-            <action android:name="android.intent.action.TTS_SERVICE" />
-        </intent>
     </queries>
 '''
 components = '''
@@ -47,10 +43,6 @@ components = '''
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Blocks the user's chosen social media apps until their daily habits are done" />
         </service>
-        <service
-            android:name="com.anmoljha.ultradian.ReadAloudService"
-            android:exported="false"
-            android:foregroundServiceType="mediaPlayback" />
         <service
             android:name="com.anmoljha.ultradian.NotoWidgetService"
             android:exported="false"
